@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { ProductCard } from "@/components/product-card"
+import  ProductCard  from "@/components/product-card"
 import { BrandFilters } from "@/components/brand-filters"
 import { Button } from "@/components/ui/button"
 import { Home, ChevronRight, Star, Filter } from "lucide-react"
