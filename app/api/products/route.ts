@@ -1,3 +1,5 @@
+// /api/products/route.ts
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/lib/models/product";
 import { Company } from "@/lib/models/company";
@@ -31,6 +33,28 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
+
+    // ── WISHLIST BATCH FETCH ──────────────────────────────
+    const ids = searchParams.get("ids");
+    if (ids) {
+      const idList = ids
+        .split(",")
+        .filter((id) => mongoose.Types.ObjectId.isValid(id));
+
+      if (!idList.length) {
+        return NextResponse.json({ products: [] });
+      }
+
+      const products = await Product.find({ _id: { $in: idList } })
+        .populate("company", "name slug")
+        .populate("category", "name slug")
+        .select("name slug image images sizes company category stock")
+        .lean();
+
+      return NextResponse.json({ products });
+    }
+    // ─────────────────────────────────────────────────────
+
     const company = searchParams.get("company");
     const category = searchParams.get("category");
     const page = Number.parseInt(searchParams.get("page") || "1");
@@ -50,8 +74,8 @@ export async function GET(request: NextRequest) {
 
     // Optimize company and category lookups with parallel queries
     const [companyDoc, categoryDoc] = await Promise.all([
-      company ? Company.findOne({ slug: company, isActive: true }).select('_id') : null,
-      category ? Category.findOne({ slug: category, isActive: true }).select('_id parent') : null,
+      company ? Company.findOne({ slug: company, isActive: true }).select("_id") : null,
+      category ? Category.findOne({ slug: category, isActive: true }).select("_id parent") : null,
     ]);
 
     if (companyDoc) {
@@ -64,7 +88,7 @@ export async function GET(request: NextRequest) {
         const subCategories = await Category.find({
           parent: categoryDoc._id,
           isActive: true,
-        }).select('_id');
+        }).select("_id");
         const categoryIds = [
           categoryDoc._id,
           ...subCategories.map((sub) => sub._id),
@@ -87,12 +111,12 @@ export async function GET(request: NextRequest) {
       Product.find(query)
         .populate("company", "name slug")
         .populate("category", "name slug")
-        .select('name slug price discountPrice image images stock company category createdAt')
+        .select("name slug price discountPrice image images stock company category createdAt")
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 })
-        .lean(), // Use lean() for better performance
-      Product.countDocuments(query)
+        .lean(),
+      Product.countDocuments(query),
     ]);
 
     const responseData = {
@@ -130,10 +154,10 @@ export async function POST(request: Request) {
     await connectDB();
 
     const body = await request.json();
-    
+
     console.log("🔍 Full request body keys:", Object.keys(body));
     console.log("🔍 Raw body.sizes:", body.sizes);
-    
+
     const {
       name,
       slug,
@@ -155,14 +179,6 @@ export async function POST(request: Request) {
       isActive,
     } = body;
 
-    // console.log(" POST /api/products - Received data:");
-    // console.log("  Results:", results);
-    // console.log("  SuitableFor:", suitableFor);
-    // console.log("  Sizes:", sizes);
-    // console.log(" After destructuring - sizes variable:", sizes);
-
-    // console.log(" Creating product with sizes:", sizes);
-    
     const product = new Product({
       name,
       slug: slug || name.toLowerCase().replace(/\s+/g, "-"),
@@ -184,31 +200,10 @@ export async function POST(request: Request) {
       isActive: isActive ?? true,
     });
 
-    // console.log(" Immediately after new Product():");
-    // console.log("  product.sizes:", product.sizes);
-    // console.log("  product.sizes type:", typeof product.sizes);
-    // console.log("  product.sizes is array:", Array.isArray(product.sizes));
-
-    // console.log(" About to save product with:");
-    // console.log("  Results:", product.results);
-    // console.log("  SuitableFor:", product.suitableFor);
-    // console.log("  Sizes before save:", product.sizes);
-
     await product.save();
-    
-    // console.log(" After save - Sizes in DB:", product.sizes);
-    
-    // console.log(" Product saved successfully with ID:", product._id);
-    // console.log("  Saved Results:", product.results);
-    // console.log("  Saved SuitableFor:", product.suitableFor);
-    // console.log("  Saved Sizes:", product.sizes);
-    // console.log("  Saved Sizes count:", product.sizes?.length);
 
-    // Convert Mongoose document to plain object
     const productObject = product.toObject ? product.toObject() : product;
-    // console.log(" Product object for response:", JSON.stringify(productObject, null, 2));
-    // console.log(" Response sizes:", productObject.sizes);
-    
+
     return NextResponse.json(productObject, { status: 201 });
   } catch (error) {
     console.error("Error creating product:", error);

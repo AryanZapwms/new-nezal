@@ -772,18 +772,26 @@ export default function AddProductPage() {
                           />
                           <Button
                             type="button"
-                            onClick={() => {
-                              if (resultImageUrl.trim() && resultInput.title.trim()) {
-                                setResults([...results, { image: resultImageUrl.trim(), title: resultInput.title, text: resultInput.text }])
-                                setResultInput({ image: "", title: "", text: "" })
-                                setResultImageUrl("")
+                             onClick={() => {
+                              if (!resultInput.title.trim()) {
+                                setMessage("Please enter a result title.")
+                                return
                               }
+                              setResults([...results, { image: resultImageUrl.trim(), title: resultInput.title, text: resultInput.text }])
+                              setResultInput({ image: "", title: "", text: "" })
+                              setResultImageUrl("")
+                              setMessage("")
                             }}
                             variant="outline"
                           >
                             Add Result
                           </Button>
                         </div>
+                         {resultImageUrl && (
+                          <div className="relative h-20 w-32 rounded overflow-hidden mb-2">
+                            <Image src={resultImageUrl} alt="Result preview" fill className="object-cover" />
+                          </div>
+                        )}
                         <div className="text-center">
                           <p className="text-xs text-muted-foreground mb-2">Or upload from device:</p>
                           <label className="flex items-center justify-center border-2 border-dashed border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition">

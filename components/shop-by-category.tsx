@@ -44,6 +44,24 @@ interface ShopByCategoryProps {
   companySlug: string;
 }
 
+// ── Map title → /collections?category= slug ───────────
+const TITLE_TO_CATEGORY: Record<string, string> = {
+  "face care":  "face-care",
+  "body care":  "body-care",
+  "hair care":  "hair-care",
+  "gift kits":  "gift-kits",
+  "gift kit":   "gift-kits",
+  // add more mappings here if your admin uses different titles
+};
+
+function getCategoryHref(title: string): string {
+  const key = title.toLowerCase().trim();
+  const category = TITLE_TO_CATEGORY[key];
+  if (category) return `/collections?category=${category}`;
+  // fallback — show all collections
+  return `/collections`;
+}
+
 // ── Category SVG Icons ────────────────────────────────
 const CategoryIcon = ({ title }: { title: string }) => {
   const t = title.toLowerCase();
@@ -76,6 +94,22 @@ const CategoryIcon = ({ title }: { title: string }) => {
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
       </svg>
     );
+  if (t.includes("hair"))
+    return (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2C8 2 5 5 5 9c0 2.5 1 4.5 3 6l1 7h6l1-7c2-1.5 3-3.5 3-6 0-4-3-7-7-7z" />
+      </svg>
+    );
+  if (t.includes("gift"))
+    return (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 12v10H4V12" />
+        <path d="M22 7H2v5h20V7z" />
+        <path d="M12 22V7" />
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+      </svg>
+    );
   return <Leaf className="h-5 w-5" />;
 };
 
@@ -97,21 +131,18 @@ const getCategoryImage = (title: string): string => {
   if (t.includes("hair")) {
     return "https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=400&h=400&fit=crop";
   }
-  if (t.includes("acne")) {
-    return "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=400&h=400&fit=crop";
-  }
-  if (t.includes("pigmentation") || t.includes("dark spot")) {
-    return "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400&h=400&fit=crop";
+  if (t.includes("gift")) {
+    return "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&h=400&fit=crop";
   }
   return "https://images.unsplash.com/photo-1612817288484-6f916006741a?w=400&h=400&fit=crop";
 };
 
-// ── Trust bar (unchanged) ──────────────────────────────
+// ── Trust bar ──────────────────────────────────────────
 const trustFeatures = [
-  { icon: Leaf, label: "Natural Ingredients", sub: "Pure herbal extracts" },
-  { icon: Shield, label: "Safe & Effective", sub: "Dermatologically tested" },
-  { icon: Package, label: "Sustainable", sub: "Eco‑friendly packaging" },
-  { icon: Users, label: "Loved by Many", sub: "10,000+ happy customers" },
+  { icon: Leaf,    label: "Natural Ingredients", sub: "Pure herbal extracts"       },
+  { icon: Shield,  label: "Safe & Effective",    sub: "Dermatologically tested"    },
+  { icon: Package, label: "Sustainable",         sub: "Eco‑friendly packaging"     },
+  { icon: Users,   label: "Loved by Many",       sub: "10,000+ happy customers"   },
 ];
 
 // ── Main Component ─────────────────────────────────────
@@ -120,11 +151,8 @@ export function ShopByCategory({ companyId, companySlug }: ShopByCategoryProps) 
   const [settings, setSettings] = useState<ShopByCategorySettings>({ isVisible: true, limit: 6 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const addItem = useCartStore((s) => s.addItem);
   const { toast } = useToast();
 
-  // Fetch categories (backend still uses "concern" endpoint)
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -182,26 +210,6 @@ export function ShopByCategory({ companyId, companySlug }: ShopByCategoryProps) 
     [items, settings.limit]
   );
 
-  const handleAddToCart = (e: React.MouseEvent, item: ShopByCategoryItem) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const p = item.product && typeof item.product === "object" ? (item.product as CategoryProduct) : null;
-    if (!p) {
-      toast({ title: "Unavailable", description: "Product info not available.", variant: "destructive" });
-      return;
-    }
-    addItem({
-      productId: p._id,
-      name: p.name,
-      price: p.price ?? 0,
-      discountPrice: p.discountPrice,
-      image: p.image,
-      quantity: 1,
-      company: p.company,
-    });
-    toast({ title: "Added to cart", description: `${p.name} added.` });
-  };
-
   if (loading) {
     return (
       <section className="py-12">
@@ -241,7 +249,7 @@ export function ShopByCategory({ companyId, companySlug }: ShopByCategoryProps) 
 
   return (
     <>
-      {/* Trust bar - using shadcn colors */}
+      {/* Trust bar */}
       <div className="border-b border-border bg-muted/30 py-5">
         <div className="container-nezal">
           <div className="flex flex-wrap items-center justify-center gap-6 md:justify-between">
@@ -288,7 +296,8 @@ export function ShopByCategory({ companyId, companySlug }: ShopByCategoryProps) 
             className="grid grid-cols-2 gap-6 lg:grid-cols-4"
           >
             {activeItems.map((item) => {
-              const shopHref = `/shop?concern=${encodeURIComponent(item.title)}${companySlug ? `&company=${companySlug}` : ''}`;
+              // ✅ THE FIX — links to /collections?category=face-care etc.
+              const href = getCategoryHref(item.title);
 
               const imageUrl =
                 item.image?.startsWith("http") || (typeof item.product === "object" && item.product?.image?.startsWith("http"))
@@ -329,15 +338,18 @@ export function ShopByCategory({ companyId, companySlug }: ShopByCategoryProps) 
                         />
                       </div>
                     </div>
-                    <div className="mt-5 flex flex-col gap-2">
+
+                    <div className="mt-5">
                       <Link
-                        href={shopHref}
+                        href={href}
                         className="flex w-full items-center justify-center rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-md"
                       >
                         Shop Now
                       </Link>
                     </div>
                   </div>
+
+                  {/* Bottom hover bar */}
                   <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary transition-all duration-300 group-hover:w-full" />
                 </motion.div>
               );

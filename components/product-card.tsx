@@ -1,3 +1,4 @@
+// components/product-card.tsx
 "use client";
 
 import { useState } from "react";
@@ -13,6 +14,7 @@ import {
 
 import { useCartStore } from "@/lib/store/cart-store";
 import { useToast } from "@/hooks/use-toast";
+import { WishlistButton } from "@/components/wishlist-button";
 
 import { Phone } from "lucide-react";
 
@@ -60,59 +62,34 @@ export default function ProductCard({
 
   const { toast } = useToast();
 
-  const addItem = useCartStore(
-    (state) => state.addItem
-  );
+  const addItem = useCartStore((state) => state.addItem);
+  const getTotalItems = useCartStore((state) => state.getTotalItems);
 
-  const getTotalItems = useCartStore(
-    (state) => state.getTotalItems
-  );
-
-  const [selectedSize, setSelectedSize] =
-    useState<Size | null>(null);
-
-  const [showBulkOrderModal, setShowBulkOrderModal] =
-    useState(false);
-
-  const [imgLoaded, setImgLoaded] =
-    useState(false);
-
-  const [imgError, setImgError] =
-    useState(false);
+  const [selectedSize, setSelectedSize] = useState<Size | null>(null);
+  const [showBulkOrderModal, setShowBulkOrderModal] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const discount = discountPrice
-    ? Math.round(
-        ((price - discountPrice) / price) * 100
-      )
+    ? Math.round(((price - discountPrice) / price) * 100)
     : 0;
 
   const displayPrice =
     hasMultipleSizes && sizes.length > 0
-      ? Math.min(
-          ...sizes.map(
-            (s) => s.discountPrice || s.price
-          )
-        )
+      ? Math.min(...sizes.map((s) => s.discountPrice || s.price))
       : discountPrice || price;
 
   const isOutOfStock = hasMultipleSizes
     ? sizes.every((s) => s.stock < 1)
     : stock < 1;
 
-  function handleShopNow(
-    e: React.MouseEvent<HTMLButtonElement>
-  ) {
+  function handleShopNow(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     e.stopPropagation();
-
-    router.push(
-      `/shop/${company.slug}/product/${id}`
-    );
+    router.push(`/shop/${company.slug}/product/${id}`);
   }
 
-  function handleAddToCart(
-    e: React.MouseEvent<HTMLButtonElement>
-  ) {
+  function handleAddToCart(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     e.stopPropagation();
 
@@ -123,18 +100,13 @@ export default function ProductCard({
       return;
     }
 
-    if (
-      hasMultipleSizes &&
-      sizes.length > 0
-    ) {
+    if (hasMultipleSizes && sizes.length > 0) {
       if (!selectedSize) {
         toast({
           title: "Size required",
-          description:
-            "Please select a size.",
+          description: "Please select a size.",
           variant: "destructive",
         });
-
         return;
       }
 
@@ -142,19 +114,14 @@ export default function ProductCard({
         productId: id,
         name,
         price: selectedSize.price,
-        discountPrice:
-          selectedSize.discountPrice,
+        discountPrice: selectedSize.discountPrice,
         image,
         quantity: 1,
         company,
         selectedSize,
       });
 
-      toast({
-        title: "Added to cart",
-        description: `${name} added.`,
-      });
-
+      toast({ title: "Added to cart", description: `${name} added.` });
       return;
     }
 
@@ -168,32 +135,32 @@ export default function ProductCard({
       company,
     });
 
-    toast({
-      title: "Added to cart",
-      description: `${name} added.`,
-    });
+    toast({ title: "Added to cart", description: `${name} added.` });
   }
 
   return (
     <>
       <div
         className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-        style={{
-          borderColor: "var(--color-border)",
-        }}
-        onClick={() =>
-          router.push(
-            `/shop/${company.slug}/product/${id}`
-          )
-        }
+        style={{ borderColor: "var(--color-border)" }}
+        onClick={() => router.push(`/shop/${company.slug}/product/${id}`)}
       >
         {/* IMAGE */}
         <div className="relative aspect-square overflow-hidden bg-[var(--color-bg-cream)]">
+          {/* DISCOUNT BADGE */}
           {discount > 0 && (
             <div className="absolute right-3 top-3 z-10 rounded-full bg-red-500 px-2 py-1 text-xs font-bold text-white">
               {discount}% OFF
             </div>
           )}
+
+          {/* ❤️ WISHLIST BUTTON — top left */}
+          <div
+            className="absolute left-2 top-2 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <WishlistButton productId={id} />
+          </div>
 
           {image && !imgError ? (
             <Image
@@ -202,9 +169,7 @@ export default function ProductCard({
               fill
               className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width:768px) 50vw, 25vw"
-              onLoad={() =>
-                setImgLoaded(true)
-              }
+              onLoad={() => setImgLoaded(true)}
               onError={() => {
                 setImgError(true);
                 setImgLoaded(true);
@@ -223,11 +188,9 @@ export default function ProductCard({
             </div>
           )}
 
-          {!imgLoaded &&
-            image &&
-            !imgError && (
-              <div className="absolute inset-0 animate-pulse bg-neutral-100" />
-            )}
+          {!imgLoaded && image && !imgError && (
+            <div className="absolute inset-0 animate-pulse bg-neutral-100" />
+          )}
         </div>
 
         {/* CONTENT */}
@@ -238,69 +201,48 @@ export default function ProductCard({
 
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-[var(--color-text-heading)]">
-              ₹
-              {Math.round(
-                displayPrice
-              ).toLocaleString()}
+              ₹{Math.round(displayPrice).toLocaleString()}
             </span>
 
-            {(discountPrice ||
-              hasMultipleSizes) && (
+            {(discountPrice || hasMultipleSizes) && (
               <span className="text-sm text-neutral-400 line-through">
-                ₹
-                {price.toLocaleString()}
+                ₹{price.toLocaleString()}
               </span>
             )}
           </div>
 
           {/* SIZE SELECT */}
-          {hasMultipleSizes &&
-            sizes.length > 0 && (
-              <select
-                value={
-                  selectedSize
-                    ? `${selectedSize.size}-${selectedSize.quantity}`
-                    : ""
-                }
-                onChange={(e) => {
-                  const found =
-                    sizes.find(
-                      (s) =>
-                        `${s.size}-${s.quantity}` ===
-                        e.target.value
-                    ) || null;
-
-                  setSelectedSize(found);
-                }}
-                onClick={(e) =>
-                  e.stopPropagation()
-                }
-                className="rounded-xl border px-3 py-2 text-sm outline-none"
-              >
-                <option value="">
-                  Select size
+          {hasMultipleSizes && sizes.length > 0 && (
+            <select
+              value={
+                selectedSize
+                  ? `${selectedSize.size}-${selectedSize.quantity}`
+                  : ""
+              }
+              onChange={(e) => {
+                const found =
+                  sizes.find(
+                    (s) => `${s.size}-${s.quantity}` === e.target.value
+                  ) || null;
+                setSelectedSize(found);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-xl border px-3 py-2 text-sm outline-none"
+            >
+              <option value="">Select size</option>
+              {sizes.map((s, index) => (
+                <option key={index} value={`${s.size}-${s.quantity}`}>
+                  {s.size} ({s.quantity}
+                  {s.unit}) — ₹{s.discountPrice ?? s.price}
                 </option>
-
-                {sizes.map((s, index) => (
-                  <option
-                    key={index}
-                    value={`${s.size}-${s.quantity}`}
-                  >
-                    {s.size} ({s.quantity}
-                    {s.unit}) — ₹
-                    {s.discountPrice ??
-                      s.price}
-                  </option>
-                ))}
-              </select>
-            )}
+              ))}
+            </select>
+          )}
 
           {/* BUTTONS */}
           <div
             className="mt-auto flex flex-col gap-2"
-            onClick={(e) =>
-              e.stopPropagation()
-            }
+            onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
@@ -315,52 +257,33 @@ export default function ProductCard({
               onClick={handleAddToCart}
               disabled={
                 isOutOfStock ||
-                (hasMultipleSizes &&
-                  sizes.length > 0 &&
-                  !selectedSize)
+                (hasMultipleSizes && sizes.length > 0 && !selectedSize)
               }
               className="h-10 rounded-xl bg-black text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isOutOfStock
-                ? "Out of Stock"
-                : "Add to Cart"}
+              {isOutOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* MODAL */}
-      <Dialog
-        open={showBulkOrderModal}
-        onOpenChange={
-          setShowBulkOrderModal
-        }
-      >
+      {/* BULK ORDER MODAL */}
+      <Dialog open={showBulkOrderModal} onOpenChange={setShowBulkOrderModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Bulk Order Enquiry
-            </DialogTitle>
+            <DialogTitle>Bulk Order Enquiry</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <p className="text-sm text-neutral-600">
-              You've reached the cart limit.
-              Please contact us for bulk
-              orders.
+              You've reached the cart limit. Please contact us for bulk orders.
             </p>
 
             <div className="space-y-2">
-              {[
-                "+91 9820623835",
-                "+91 9819079079",
-              ].map((num) => (
+              {["+91 9820623835", "+91 9819079079"].map((num) => (
                 <a
                   key={num}
-                  href={`tel:${num.replace(
-                    /\s/g,
-                    ""
-                  )}`}
+                  href={`tel:${num.replace(/\s/g, "")}`}
                   className="flex items-center gap-3 rounded-xl border p-3"
                 >
                   <Phone className="h-4 w-4" />

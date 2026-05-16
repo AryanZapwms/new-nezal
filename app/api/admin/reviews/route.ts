@@ -1,3 +1,4 @@
+// app/api/admin/reviews/route.ts
 import mongoose from "mongoose"
 import { NextResponse, type NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
           id: review._id.toString(),
           product: review.product
             ? {
-                id: review.product._id.toString(),
+                id: review.product._id?.toString() ?? null,
                 name: review.product.name,
                 image: review.product.image || "",
                 slug: review.product.slug,
@@ -80,13 +81,13 @@ export async function GET(request: NextRequest) {
           userName: review.userName,
           userEmail: review.userEmail,
           reply: review.reply
-            ? {
-                message: review.reply.message,
-                repliedAt: review.reply.repliedAt,
-                repliedBy: review.reply.repliedBy.toString(),
-                repliedByName: review.reply.repliedByName,
-              }
-            : null,
+  ? {
+      message: review.reply.message ?? null,
+      repliedAt: review.reply.repliedAt ?? null,
+      repliedBy: review.reply.repliedBy?.toString() ?? null,
+      repliedByName: review.reply.repliedByName ?? null,
+    }
+  : null,
           createdAt: review.createdAt,
           updatedAt: review.updatedAt,
         })),

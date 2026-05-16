@@ -1,13 +1,10 @@
+// app/admin/users/page.tsx
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Trash2, Edit2, Search } from "lucide-react"
+import { Trash2, Edit2, Search, Check, X, Users, ShieldCheck, UserCheck } from "lucide-react"
 
 interface User {
   _id: string
@@ -27,13 +24,11 @@ export default function UsersPage() {
   const [editRole, setEditRole] = useState<"user" | "admin">("user")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8 // show 8 users per page
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const itemsPerPage = 8
 
   useEffect(() => {
-    if (!session) {
-      router.push("/auth/login")
-      return
-    }
+    if (!session) { router.push("/auth/login"); return }
     fetchUsers()
   }, [session, router])
 
@@ -66,17 +61,23 @@ export default function UsersPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
+    if (userId === (session?.user as any)?.id) {
+      alert("You cannot delete your own account.")
+      return
+    }
     if (!confirm("Are you sure you want to delete this user?")) return
+    setDeletingId(userId)
     try {
       const res = await fetch(`/api/users/${userId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete user")
       await fetchUsers()
     } catch (error) {
       console.error("Error deleting user:", error)
+    } finally {
+      setDeletingId(null)
     }
   }
 
-  // 🔍 Filter users by search query
   const filteredUsers = useMemo(() => {
     const query = searchQuery.toLowerCase()
     return users.filter(
@@ -87,180 +88,215 @@ export default function UsersPage() {
     )
   }, [users, searchQuery])
 
-  // 📄 Pagination logic
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
   const startIdx = (currentPage - 1) * itemsPerPage
   const paginatedUsers = filteredUsers.slice(startIdx, startIdx + itemsPerPage)
 
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page)
-  }
+  const adminCount = users.filter((u) => u.role === "admin").length
+  const activeCount = users.filter((u) => u.isActive).length
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading users...</p>
+      <main style={{ fontFamily: "'DM Sans', sans-serif", background: "#fafaf9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "#a8a29e", fontSize: 14 }}>Loading users…</p>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-foreground">Users Management</h1>
+    <main style={{ fontFamily: "'DM Sans', sans-serif", background: "#fafaf9", minHeight: "100vh" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
+        .search-input { transition: border-color 0.15s ease; }
+        .search-input:focus { outline: none; border-color: #d97706; }
+        .user-row { transition: background 0.1s ease; }
+        .user-row:hover { background: #fafaf9; }
+        .icon-btn { transition: all 0.15s ease; border: 1px solid #e7e5e4; background: white; cursor: pointer; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; }
+        .icon-btn:hover { border-color: #d97706; color: #d97706; }
+        .icon-btn.danger:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+        .icon-btn.save { background: #1c1917; border-color: #1c1917; color: white; }
+        .icon-btn.save:hover { background: #292524; }
+        .role-select { border: 1px solid #e7e5e4; border-radius: 6px; padding: 4px 8px; font-size: 12px; background: white; color: #1c1917; font-family: 'DM Sans', sans-serif; }
+        .role-select:focus { outline: none; border-color: #d97706; }
+        .page-btn { border: 1px solid #e7e5e4; background: white; border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #44403c; transition: all 0.15s ease; }
+        .page-btn:hover:not(:disabled) { border-color: #d97706; color: #d97706; }
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      `}</style>
 
-          {/* 🔍 Search bar */}
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users by name, email, or role..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="pl-9"
-            />
-          </div>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
+        {/* Header */}
+        <div style={{ marginBottom: 36 }}>
+          <h1 style={{ fontFamily: "'Paytone', serif", fontSize: 36, fontWeight: 400, color: "#1c1917", margin: 0, lineHeight: 1.1 }}>
+            User Management
+          </h1>
+          <p style={{ color: "#78716c", fontSize: 14, marginTop: 6 }}>
+            View, edit roles, and remove users from the platform.
+          </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              All Users ({filteredUsers.length}
-              {searchQuery ? " filtered" : ""})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredUsers.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No users found
+        {/* Stats row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+          {[
+            { icon: <Users size={15} />, label: "Total Users", value: users.length },
+            { icon: <ShieldCheck size={15} />, label: "Admins", value: adminCount },
+            { icon: <UserCheck size={15} />, label: "Active", value: activeCount },
+          ].map((s, i) => (
+            <div key={i} style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 12, padding: "18px 22px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, color: "#a8a29e", marginBottom: 8 }}>
+                {s.icon}
+                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase" }}>{s.label}</span>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-semibold text-foreground">Name</th>
-                      <th className="text-left py-3 px-4 font-semibold text-foreground">Email</th>
-                      <th className="text-left py-3 px-4 font-semibold text-foreground">Role</th>
-                      <th className="text-left py-3 px-4 font-semibold text-foreground">Joined</th>
-                      <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedUsers.map((user) => (
-                      <tr key={user._id} className="border-b border-border hover:bg-muted/50">
-                        <td className="py-3 px-4 text-foreground">{user.name}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{user.email}</td>
-                        <td className="py-3 px-4">
-                          {editingId === user._id ? (
-                            <select
-                              value={editRole}
-                              onChange={(e) =>
-                                setEditRole(e.target.value as "user" | "admin")
-                              }
-                              className="px-2 py-1 border border-border rounded bg-background text-foreground"
-                            >
-                              <option value="user">User</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          ) : (
-                            <Badge
-                              variant={
-                                user.role === "admin" ? "default" : "secondary"
-                              }
-                            >
-                              {user.role}
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground">
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-2">
-                            {editingId === user._id ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    handleEditRole(user._id, editRole)
-                                  }
-                                  className="bg-transparent"
-                                >
-                                  Save
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setEditingId(null)}
-                                  className="bg-transparent"
-                                >
-                                  Cancel
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditingId(user._id)
-                                    setEditRole(user.role)
-                                  }}
-                                  className="bg-transparent"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() =>
-                                    handleDeleteUser(user._id)
-                                  }
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, fontWeight: 400, color: "#1c1917", margin: 0 }}>{s.value}</p>
+            </div>
+          ))}
+        </div>
 
-        {/* Pagination controls */}
-        {filteredUsers.length > 0 && (
-          <div className="flex justify-center items-center gap-3 mt-8">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages || 1}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === totalPages || totalPages === 0}
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              Next
-            </Button>
+        {/* Table card */}
+        <div style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 14, overflow: "hidden" }}>
+          {/* Table header bar */}
+          <div style={{ padding: "18px 24px", borderBottom: "1px solid #f5f5f4", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: "#1c1917", margin: 0 }}>
+              {filteredUsers.length} {searchQuery ? "matching" : "total"} users
+            </p>
+            <div style={{ position: "relative", width: 280 }}>
+              <Search size={13} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#a8a29e" }} />
+              <input
+                type="text"
+                placeholder="Search by name, email or role…"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
+                className="search-input"
+                style={{
+                  width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
+                  border: "1px solid #e7e5e4", borderRadius: 8, fontSize: 12, color: "#1c1917",
+                  background: "#fafaf9", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box",
+                }}
+              />
+            </div>
           </div>
-        )}
+
+          {/* Table */}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", minWidth: 700, borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #f5f5f4" }}>
+                  {["Name", "Email", "Role", "Joined", "Actions"].map((h) => (
+                    <th key={h} style={{ padding: "10px 24px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "#a8a29e", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: "48px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13 }}>
+                      No users found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedUsers.map((user) => (
+                    <tr key={user._id} className="user-row" style={{ borderBottom: "1px solid #f5f5f4" }}>
+                      <td style={{ padding: "14px 24px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{
+                            width: 32, height: 32, borderRadius: "50%", background: "#fef3c7",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 600, color: "#d97706", flexShrink: 0,
+                          }}>
+                            {user.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#1c1917" }}>{user.name}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        <span style={{ fontSize: 12, color: "#78716c" }}>{user.email}</span>
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        {editingId === user._id ? (
+                          <select
+                            value={editRole}
+                            onChange={(e) => setEditRole(e.target.value as "user" | "admin")}
+                            className="role-select"
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        ) : (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", padding: "3px 10px",
+                            borderRadius: 99, fontSize: 11, fontWeight: 500,
+                            background: user.role === "admin" ? "#fef3c7" : "#f5f5f4",
+                            color: user.role === "admin" ? "#d97706" : "#78716c",
+                          }}>
+                            {user.role}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        <span style={{ fontSize: 12, color: "#a8a29e" }}>
+                          {new Date(user.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {editingId === user._id ? (
+                            <>
+                              <button className="icon-btn save" title="Save" onClick={() => handleEditRole(user._id, editRole)}>
+                                <Check size={13} />
+                              </button>
+                              <button className="icon-btn" title="Cancel" onClick={() => setEditingId(null)}>
+                                <X size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="icon-btn"
+                                title="Edit role"
+                                onClick={() => { setEditingId(user._id); setEditRole(user.role) }}
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              {user._id !== (session?.user as any)?.id && (
+                                <button
+                                  className="icon-btn danger"
+                                  title="Delete user"
+                                  onClick={() => handleDeleteUser(user._id)}
+                                  disabled={deletingId === user._id}
+                                  style={{ opacity: deletingId === user._id ? 0.5 : 1 }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {filteredUsers.length > itemsPerPage && (
+            <div style={{ padding: "14px 24px", borderTop: "1px solid #f5f5f4", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <p style={{ fontSize: 12, color: "#a8a29e", margin: 0 }}>
+                Showing {startIdx + 1}–{Math.min(startIdx + itemsPerPage, filteredUsers.length)} of {filteredUsers.length}
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+                  Previous
+                </button>
+                <button className="page-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   )

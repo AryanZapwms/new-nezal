@@ -1,6 +1,7 @@
 /**
  * ============================================================
  *  NEZAL HERBOCARE — MongoDB Seed Script
+ *  seed.js
  *  Run: node seed.js
  *  Seeds: users, companies, categories, products,
  *         promos, reviews, orders

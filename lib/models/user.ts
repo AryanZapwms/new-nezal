@@ -1,3 +1,4 @@
+// /lib/models/user.ts
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -33,6 +34,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     // NEW field:
     isVerified: {
       type: Boolean,

@@ -507,7 +507,13 @@ const ProductDetailPage = memo(function ProductDetailPage() {
     )
   }
 
-  const allImages = product.images?.length ? product.images : [product.image]
+  const allImages = [
+  ...(product.images || []),
+  product.image,
+].filter((img): img is string => typeof img === "string" && img.trim().length > 0)
+
+const currentImage =
+  allImages[selectedImage] || allImages[0] || null
 
   // ═══════════════════════════════════════════════════════
   //  RENDER
@@ -553,13 +559,19 @@ const ProductDetailPage = memo(function ProductDetailPage() {
                 </div>
               )}
 
-              <Image
-                src={allImages[selectedImage]}
-                alt={product.name}
-                fill
-                className="object-contain p-8 transition-transform duration-300 hover:scale-105"
-                priority
-              />
+           {currentImage ? (
+  <Image
+    src={currentImage}
+    alt={product.name}
+    fill
+    className="object-contain p-8 transition-transform duration-300 hover:scale-105"
+    priority
+  />
+) : (
+  <div className="flex h-full items-center justify-center text-gray-400">
+    No image available
+  </div>
+)}
 
               {/* Prev / Next arrows for mobile */}
               {allImages.length > 1 && (

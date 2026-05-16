@@ -1,3 +1,4 @@
+// app/api/users/[id]/route.ts
 import { connectDB } from "@/lib/db"
 import { User } from "@/lib/models/user"
 import { getServerSession } from "next-auth"
