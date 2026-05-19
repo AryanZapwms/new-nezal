@@ -6,6 +6,7 @@ import { HomeCarousel } from "@/components/home-carousel"
 import { ShopByCategory } from "@/components/shop-by-category"
 import WhyChoose from "@/components/why-choose"
 import Testimonials from "@/components/testimonials"
+import { AnimatedTestimonials } from "@/components/AnimatedTestimonials"
 
 import { getCachedSync, fetchWithCache, invalidateCache } from "@/lib/cacheClient"
 import { BRAND } from "@/lib/config"
@@ -587,7 +588,7 @@ export default function Home() {
 
       {/* Testimonials */}
       <section className="py-12 md:py-16 bg-muted">
-        <Testimonials companySlug="default" />
+      <AnimatedTestimonials />
       </section>
 
       {/* Floating buttons */}

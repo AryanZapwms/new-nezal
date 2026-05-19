@@ -19,6 +19,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { getCachedSync, fetchWithCache, initCache } from "@/lib/cacheClient";
 import { BRAND } from "@/lib/config";
 import { MobileNav } from "@/components/layout/MobileNav"
+import { Button } from "./ui/button";
 
 /* ─── Types ─────────────────────────────────────────────── */
 
@@ -441,13 +442,20 @@ export function Header() {
 
                 {isAdmin ? (
                   /* ADMIN — Dashboard button only */
+                  <>
                   <Link
                     href="/admin"
-                    className="flex items-center gap-2 rounded-full px-4 py-2 bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
+                    className="flex items-center gap-2 rounded-full px-4 py-2 bg-[#efb01d] text-white text-sm font-semibold hover:bg-green-700 transition-colors"
                   >
                     <LayoutDashboard className="h-4 w-4" />
                     Dashboard
                   </Link>
+              
+
+                            <Button className="bg-red-500 text-sm rounded-xl" onClick={() => signOut({ callbackUrl: "/" })}>
+                              Sign out
+                            </Button>
+                </>
                 ) : (
                   /* REGULAR USER — Search, Wishlist, Cart, Account */
                   <>

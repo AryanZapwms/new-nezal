@@ -111,7 +111,7 @@ export default function NotFound() {
 
                 <button
                   type="submit"
-                  className="rounded-xl bg-gradient-to-r from-[#B18D0C] to-[#9a7608] px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105"
+                  className="rounded-xl bg-gradient-to-r from-[#3e8b1b] to-[#39e817] px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105"
                 >
                   Search
                 </button>
@@ -128,7 +128,7 @@ export default function NotFound() {
 
                 <Link
                   href="/shop"
-                  className="rounded-lg bg-[#B18D0C] px-4 py-2 font-medium text-white hover:opacity-95 transition"
+                  className="rounded-lg bg-[#047906] px-4 py-2 font-medium text-white hover:opacity-95 transition"
                 >
                   Browse Shop
                 </Link>
@@ -216,7 +216,7 @@ export default function NotFound() {
                       <div className="mt-5">
                         <Link
                           href="/shop"
-                          className="inline-block rounded-lg border border-[#B18D0C] px-4 py-2 text-[#B18D0C] transition hover:bg-[#B18D0C] hover:text-white"
+                          className="inline-block rounded-lg border border-[#11bd19] px-4 py-2 text-[#11bd19] transition hover:bg-[#B18D0C] hover:text-white"
                         >
                           Explore products
                         </Link>
