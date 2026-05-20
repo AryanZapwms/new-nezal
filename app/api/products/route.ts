@@ -10,7 +10,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // Simple in-memory cache for API responses
 const apiCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 2; // 2 minutes for API responses
+const CACHE_TTL = process.env.NODE_ENV === "development" ? 0 : 1000 * 60 * 2; // 2 minutes for API responses
 
 function getCacheKey(params: Record<string, string>) {
   return JSON.stringify(params);

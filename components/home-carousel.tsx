@@ -20,8 +20,10 @@ interface HomeCarouselProps {
 const staticImages: CarouselImage[] = [
   { _id: "1", url: "/image1.jpg" },
   { _id: "2", url: "/image2.jpg" },
-  { _id: "2", url: "/image3.jpg" },
-  { _id: "2", url: "/image4.jpg" },
+  { _id: "3", url: "/image3.jpg" },
+  { _id: "4", url: "/image4.jpg" },
+    { _id: "5", url: "/image5.jpg" },
+     { _id: "6", url: "/image6.jpg" },
 ]
 
 export function HomeCarousel({ images }: HomeCarouselProps) {

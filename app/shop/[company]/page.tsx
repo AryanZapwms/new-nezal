@@ -84,7 +84,7 @@ async function fetchProductsAPI(params: {
     : Array.isArray(json?.data)
     ? json.data
     : []
-  const total = typeof json?.total === "number" ? json.total : (json?.totalItems ?? json?.count ?? products.length)
+  const total = json?.pagination?.total ?? json?.total ?? json?.totalItems ?? json?.count ?? products.length
   return { products, total: Number(total ?? products.length) }
 }
 
@@ -111,7 +111,9 @@ export default function CompanyShopPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalProducts, setTotalProducts] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState("")
+  
 
   // Fetch company metadata (unchanged)
   useEffect(() => {
@@ -159,8 +161,9 @@ export default function CompanyShopPage() {
           { ttlMs: TTL, maxAgeMs: MAX_AGE, backgroundRefresh: true, persistToStorage: true }
         )
         if (!mounted) return
-        setProducts(fetched)
-        setTotalPages(Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE)))
+       setProducts(fetched)
+setTotalProducts(total)
+setTotalPages(Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE)))
       } catch (err) {
         console.error("Error fetching products:", err)
         if (!mounted) return
@@ -348,7 +351,7 @@ export default function CompanyShopPage() {
                           </Button>
                         </div>
                         <div className="text-center mt-3 text-xs text-[--color-text-muted]">
-                          Showing {(page - 1) * PRODUCTS_PER_PAGE + 1}-{Math.min(page * PRODUCTS_PER_PAGE, totalPages * PRODUCTS_PER_PAGE)} of {totalPages * PRODUCTS_PER_PAGE} products
+                         Showing {(page - 1) * PRODUCTS_PER_PAGE + 1}-{Math.min(page * PRODUCTS_PER_PAGE, totalProducts)} of {totalProducts} products
                         </div>
                       </div>
                     )}

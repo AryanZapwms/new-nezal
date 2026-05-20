@@ -1,3 +1,4 @@
+// app/admin/products/page.tsx
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
@@ -199,7 +200,7 @@ export default function ProductsPage() {
                               href={`/shop/${product.company?.name?.toLowerCase().replace(/\\s+/g, '-')}/product/${product._id}`}
                               className="flex-1"
                             >
-                              <Button size="sm" variant="ghost" className="w-full justify-start">
+                              <Button size="sm" variant="ghost" className="w-full justify-start bg-[#dcd8d8] ">
                                 <Eye className="w-4 h-4 mr-2" />
                                 View
                               </Button>
