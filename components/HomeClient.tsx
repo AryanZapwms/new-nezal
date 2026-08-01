@@ -107,7 +107,7 @@ export default function HomeClient({ products, showFloatingButtons = false, comp
       <div className="fixed left-4 bottom-6 z-50 flex flex-col gap-3">
         {/* Amazon */}
         <a
-          href="https://www.amazon.in/stores/NEZAL/page/C2DBA1DC-D672-44B2-A08C-633F5CDBA91A"
+          href="https://www.amazon.in/stores/NezalHerbocare/page/1A98EADC-3102-41B3-A29C-CA4E797E3E14?lp_asin=B0BR3HH1KG&ref_=ast_bln"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Shop on Amazon"

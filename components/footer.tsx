@@ -130,7 +130,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="tel:+912229659955"
+                  href="tel:+917710076400"
                   className="text-[13px] transition-colors hover:text-white"
                   style={{ color: "var(--color-text-footer)" }}
                 >
