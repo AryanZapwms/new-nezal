@@ -16,6 +16,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          command_timeout: 30m
           script: |
             set -e
             export PATH="/root/.nvm/versions/node/v20.19.0/bin:$PATH"
@@ -65,7 +66,7 @@ jobs:
             # half-updated.
             ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
-            
+
             # First deploy ever: starts the app. Every deploy after that:
             # reloads it one instance at a time with zero dropped requests.
             pm2 startOrReload "$APP_ROOT/current/ecosystem.config.js" --update-env
