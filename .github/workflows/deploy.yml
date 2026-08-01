@@ -1,0 +1,76 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            export PATH="/root/.nvm/versions/node/v20.19.0/bin:$PATH"
+
+            APP_ROOT="/home/nezalherbocare.com"
+            # Reuse the existing public_html checkout as the persistent git
+            # source — it's already configured with working credentials
+            # (SSH key trusted / HTTPS creds cached). Cloning a fresh copy
+            # elsewhere just to pull from hits host-key verification issues
+            # for whatever user runs this script, since that user has never
+            # talked to github.com before. No need to clone twice — this
+            # folder stops being served directly once RELEASES_DIR + current
+            # take over below, it just becomes the pull source.
+            REPO_DIR="$APP_ROOT/public_html"
+            RELEASES_DIR="$APP_ROOT/releases"
+            CURRENT_LINK="$APP_ROOT/current"
+            SHARED_DIR="$APP_ROOT/shared"
+            RELEASE_NAME=$(date +%Y%m%d%H%M%S)
+            RELEASE_DIR="$RELEASES_DIR/$RELEASE_NAME"
+
+            mkdir -p "$RELEASES_DIR" "$RELEASE_DIR"
+
+            cd "$REPO_DIR"
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+
+            # Copy the clean checkout into an isolated release folder.
+            # Building here — not in the live "current" folder — means the
+            # site being served never sits in a half-built state.
+            rsync -a --exclude='.git' "$REPO_DIR/" "$RELEASE_DIR/"
+
+            cd "$RELEASE_DIR"
+
+            # Link in the things that must persist across releases and are
+            # NOT in git: your .env.local and any user-uploaded files.
+            ln -sfn "$SHARED_DIR/.env.local" "$RELEASE_DIR/.env.local"
+            mkdir -p "$SHARED_DIR/uploads"
+            rm -rf "$RELEASE_DIR/public/uploads"
+            ln -sfn "$SHARED_DIR/uploads" "$RELEASE_DIR/public/uploads"
+
+            npm ci
+            npm run build
+
+            # Atomic swap: "current" now points at the new, fully-built release.
+            # This single operation is instant — no window where the app is
+            # half-updated.
+            ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
+
+            
+            # First deploy ever: starts the app. Every deploy after that:
+            # reloads it one instance at a time with zero dropped requests.
+            pm2 startOrReload "$APP_ROOT/current/ecosystem.config.js" --update-env
+
+            # Keep the last 5 releases on disk for instant rollback,
+            # prune anything older.
+            cd "$RELEASES_DIR"
+            ls -t | tail -n +6 | xargs -r rm -rf
