@@ -1090,7 +1090,7 @@ const currentImage =
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { icon: <Truck className="w-5 h-5" />, title: "Free Delivery", sub: "Orders ₹449+" },
+                { icon: <Truck className="w-5 h-5" />, title: "Free Delivery", sub: "Orders ₹1399+" },
                 { icon: <RotateCcw className="w-5 h-5" />, title: "Easy Return", sub: "7 Day Policy" },
                 { icon: <Package className="w-5 h-5" />, title: "Bulk Purchase", sub: "Get Special Offers" },
               ].map((b) => (

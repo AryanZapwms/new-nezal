@@ -207,7 +207,7 @@ export default function Footer() {
               style={{ color: "var(--color-text-footer)" }}
             >
               Nezal Herbocare Pvt. Ltd.<br />
-              S-28, Whispering Plams<br />
+              S-28, Whispering Palms<br />
               Shopping Complex,<br />
               Lokhandwala Township, Akurli Road.<br />
               Kandivali (E), Mumbai<br />

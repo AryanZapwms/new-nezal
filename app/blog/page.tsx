@@ -86,7 +86,7 @@ export default function BlogPage() {
             From Our Journal
           </span>
           <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: "#1a3a2a", letterSpacing: "-0.02em" }}>
-            Nezal Blog
+            Nezal Blogs
           </h1>
          
         </div>
