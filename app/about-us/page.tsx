@@ -172,7 +172,7 @@ export default function AboutUs() {
               </motion.h2>
               <motion.div variants={stagger} className="space-y-5 text-base leading-relaxed" style={{ color: "#3d5c45" }}>
                 <motion.p variants={fadeUp}>
-                  {BRAND.name}&nbsp is a modern skincare, hair care, bath &amp; body care, and wellness brand
+                  {BRAND.name} &nbsp; is a modern skincare, hair care, bath &amp; body care, and wellness brand
                   inspired by natural active ingredients and formulation science, spanning signature handmade soap, advanced
                   face serums, nourishing herbal shampoo and conditioner, body lotion, Aloe Vera gel, bath salts,
                   and wellness essentials — each one designed to turn an ordinary moment into a considered one.
