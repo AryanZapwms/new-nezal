@@ -47,6 +47,10 @@ export default function EditCollectionPage() {
   const [sortOrder, setSortOrder] = useState(0)
   const [isActive, setIsActive] = useState(true)
 
+  const [salePercentage, setSalePercentage] = useState<number | "">("")
+  const [saleAppliedAt, setSaleAppliedAt] = useState<string | null>(null)
+  const [productCount, setProductCount] = useState<number | null>(null)
+
   const [heroImage, setHeroImage] = useState("")
   const [heroHeadline, setHeroHeadline] = useState("")
   const [heroSubheadline, setHeroSubheadline] = useState("")
@@ -98,6 +102,13 @@ export default function EditCollectionPage() {
       setSubCategory(c.subCategory || "face-care")
       setSortOrder(c.sortOrder ?? 0)
       setIsActive(c.isActive ?? true)
+      setSalePercentage(typeof c.salePercentage === "number" ? c.salePercentage : "")
+      setSaleAppliedAt(c.saleAppliedAt || null)
+
+      fetch(`/api/admin/collections/${originalSlug}/products`)
+        .then((res) => res.json())
+        .then((data) => setProductCount((data.products || []).length))
+        .catch(() => setProductCount(null))
 
       setHeroImage(c.heroImage || "")
       setHeroHeadline(c.heroHeadline || "")
@@ -188,6 +199,7 @@ export default function EditCollectionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name, slug, tagline, navCategory, subCategory, sortOrder, isActive,
+          salePercentage: salePercentage === "" ? 0 : Number(salePercentage),
           heroImage, heroHeadline, heroSubheadline, storyText,
           keyIngredients,
           concerns: concerns.split("\n").map((s) => s.trim()).filter(Boolean),
@@ -246,6 +258,38 @@ export default function EditCollectionPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Tagline</label>
                 <Input value={tagline} onChange={(e) => setTagline(e.target.value)} />
+              </div>
+
+              <div className="border rounded-xl overflow-hidden">
+                <div className="bg-muted/60 px-4 py-3 border-b"><h2 className="text-sm font-semibold">Collection Sale</h2></div>
+                <div className="p-4 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Sale %</label>
+                      <Input
+                        type="number" min={0} max={100}
+                        value={salePercentage}
+                        onChange={(e) => setSalePercentage(e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground flex flex-col justify-end pb-1">
+                      {productCount === null ? (
+                        "Loading affected products..."
+                      ) : (
+                        <span>Applies to <strong className="text-foreground">{productCount}</strong> product{productCount === 1 ? "" : "s"} currently in this collection.</span>
+                      )}
+                      {saleAppliedAt && (
+                        <span className="text-xs mt-1">Last applied {new Date(saleAppliedAt).toLocaleString()}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Saving re-applies this % to every current product in the collection. Between a product's direct sale and its
+                    collection sale, whichever was set most recently wins — an active flash sale on a product always wins over both.
+                    Set to 0 to remove the collection sale (affected products revert to their direct sale if they have one, else no sale).
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

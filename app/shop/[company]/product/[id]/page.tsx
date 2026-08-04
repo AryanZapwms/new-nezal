@@ -175,6 +175,7 @@ interface Product {
   expectedResults?: string
   keyIngredients?: { name: string; benefit: string }[]
   amazonUrl?: string
+  isBestSeller?: boolean
   flashSale?: {
     saleId: string
     saleName: string
@@ -190,6 +191,7 @@ interface SuggestedProduct {
   discountPrice?: number
   image: string
   company: { name: string; slug: string }
+  isBestSeller?: boolean
   flashSale?: {
     saleId: string
     saleName: string
@@ -593,9 +595,22 @@ router.push("/checkout")
 
   // ── Derived ────────────────────────────────────────────
       const currentPrice = selectedSize ? selectedSize.price : (product?.price ?? 0)
+      // product.discountPrice already reflects whichever sale (flash, direct,
+      // or collection — see lib/sale.ts) is currently in effect on the base
+      // price. Sizes carry their own legacy per-size discountPrice
+      // independently, so a product-level sale would otherwise never show up
+      // once a size is selected — derive the sale's percentage-off here and
+      // apply it to the selected size's own price instead.
+      const basePrice = product?.price ?? 0
+      const percentOff =
+        product?.discountPrice != null && product.discountPrice < basePrice && basePrice > 0
+          ? (basePrice - product.discountPrice) / basePrice
+          : 0
       const currentDiscountPrice = product?.flashSale
         ? getFlashPrice(currentPrice, product.flashSale)
-        : (selectedSize ? selectedSize.discountPrice : product?.discountPrice)
+        : selectedSize
+        ? selectedSize.discountPrice ?? (percentOff > 0 ? Math.round(selectedSize.price * (1 - percentOff)) : undefined)
+        : product?.discountPrice
       const displayPrice = currentDiscountPrice || currentPrice
       const discount = currentDiscountPrice ? Math.round(((currentPrice - currentDiscountPrice) / currentPrice) * 100) : 0
       const hasSizes = product?.sizes && product.sizes.length > 0
@@ -701,6 +716,18 @@ const currentImage =
       style={{ backgroundColor: "#1e3a28", color: "#ffffff" }}
     >
       {discount}% OFF
+    </div>
+  )}
+
+  {product.isBestSeller && (
+    <div className="absolute -right-11 top-5 z-10 w-40 rotate-45 overflow-hidden">
+      <div
+        className="flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold uppercase tracking-wider shadow-md"
+        style={{ backgroundColor: "#1a3a2a", color: "#e8cf9e" }}
+      >
+        <Star className="h-3.5 w-3.5 fill-current" />
+        Best Seller
+      </div>
     </div>
   )}
 
@@ -929,8 +956,8 @@ const currentImage =
     )}
     {discount > 0 && (
       <span
-        className="text-sm font-semibold px-2.5 py-1 rounded-full"
-        style={{ backgroundColor: "#fff7e6", color: "#b45309", border: "1px solid #fcd9a0" }}
+        className="text-sm font-semibold px-2.5 py-1 rounded-full border border-none bg-yellow-400 text-black"
+       
       >
         {discount}% off
       </span>
@@ -973,7 +1000,11 @@ const currentImage =
                        {displaySize}
                         {product.flashSale
                           ? ` – ₹${getFlashPrice(size.price, product.flashSale)}`
-                          : size.discountPrice ? ` – ₹${size.discountPrice}` : ` – ₹${size.price}`}
+                          : size.discountPrice
+                          ? ` – ₹${size.discountPrice}`
+                          : percentOff > 0
+                          ? ` – ₹${Math.round(size.price * (1 - percentOff))}`
+                          : ` – ₹${size.price}`}
                       </button>
                     )
                   })}
@@ -1373,6 +1404,7 @@ const currentImage =
         image={p.image}
         company={p.company}
         flashSale={p.flashSale}
+        isBestSeller={p.isBestSeller}
       />
       ))}
     </div>

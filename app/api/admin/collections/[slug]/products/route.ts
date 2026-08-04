@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Product } from "@/lib/models/product"
 import { Collection } from "@/lib/models/collection"
+import { inheritCollectionSaleOnAdd, removeCollectionSaleOnRemove } from "@/lib/sale"
 
 // GET /api/admin/collections/[slug]/products — all products currently in this collection (any status)
 export async function GET(
@@ -55,6 +56,10 @@ export async function POST(
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
+    // If this collection already has an active sale, the newly-added product
+    // inherits it immediately rather than waiting for the next re-apply.
+    await inheritCollectionSaleOnAdd(productId, slug)
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[admin/collections/slug/products] POST error:", error)
@@ -76,6 +81,8 @@ export async function DELETE(
       return NextResponse.json({ error: "productId is required" }, { status: 400 })
     }
 
+    const collection = await Collection.findOne({ slug }, { _id: 1 }).lean()
+
     // only unset if it actually belongs to THIS collection — avoids accidentally
     // clearing a product that another admin just moved elsewhere
     const product = await Product.findOneAndUpdate(
@@ -86,6 +93,12 @@ export async function DELETE(
 
     if (!product) {
       return NextResponse.json({ error: "Product not found in this collection" }, { status: 404 })
+    }
+
+    // If the product's sale currently came from this collection, it's cleared
+    // (falls back to a direct sale if one still exists, else no sale).
+    if (collection) {
+      await removeCollectionSaleOnRemove(productId, (collection as any)._id)
     }
 
     return NextResponse.json({ success: true })

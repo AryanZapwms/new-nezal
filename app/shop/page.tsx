@@ -47,6 +47,7 @@ interface Product {
   concerns?: string[];
   skinTypes?: string[];
   category?: { slug: string };
+  isBestSeller?: boolean;
   flashSale?: {
     saleId: string;
     saleName: string;
@@ -392,6 +393,7 @@ function ShopContent() {
                         ingredients={product.ingredients}
                         sizes={product.sizes}
                         stock={product.stock}
+                        isBestSeller={product.isBestSeller}
                       />
                       </motion.div>
                     ))}

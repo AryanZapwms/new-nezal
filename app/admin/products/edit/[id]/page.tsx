@@ -72,9 +72,17 @@ function SectionCard({ icon: Icon, title, subtitle, children }: { icon: any; tit
   )
 }
 
+interface SaleInfo {
+  saleSource: "none" | "direct" | "collection"
+  salePercentage: number | null
+  discountPrice?: number
+  collectionName?: string
+  flashSale?: { saleName: string; discountPercent: number; endsAt: string } | null
+}
+
 interface FormData {
   _id: string; name: string; slug: string; description: string
-  price: number; discountPrice?: number; image: string; images: string[]
+  price: number; salePercentage: number | ""; image: string; images: string[]
   category: string; mainCategory: string; company: string
   stock: number; sku: string
   weight: number
@@ -87,7 +95,7 @@ height: number
   gstPercent: number | ""
   hsn: string
   ingredients: string[]; benefits: string[]; usage: string; suitableFor: string[]
-  results: Result[]; isActive: boolean
+  results: Result[]; isActive: boolean; isBestSeller: boolean
   whyYoullLoveIt: string[]
   fragranceExp: string[]
   whoIsItFor: string
@@ -111,9 +119,10 @@ export default function EditProductPage() {
   const [message, setMessage] = useState("")
   const [imageUrls, setImageUrls] = useState<string[]>([])
   const [imageUrlInput, setImageUrlInput] = useState("")
+  const [saleInfo, setSaleInfo] = useState<SaleInfo>({ saleSource: "none", salePercentage: null })
   const [formData, setFormData] = useState<FormData>({
     _id: "", name: "", slug: "", description: "",
-    price: 0, discountPrice: 0, image: "", images: [],
+    price: 0, salePercentage: "", image: "", images: [],
     category: "", mainCategory: "", company: "",
     stock: 0, sku: "",
     weight: 0.3,
@@ -126,7 +135,7 @@ export default function EditProductPage() {
     gstPercent: "",
     hsn: "",
     ingredients: [], benefits: [], usage: "", suitableFor: [],
-    results: [], isActive: true,
+    results: [], isActive: true, isBestSeller: false,
     whyYoullLoveIt: [], fragranceExp: [],
     whoIsItFor: "", skinHairConcern: "", expectedResults: "",
     keyIngredients: [],
@@ -184,7 +193,7 @@ export default function EditProductPage() {
         slug: productData.slug || "",
         description: productData.description || "",
         price: productData.price || 0,
-        discountPrice: productData.discountPrice || 0,
+        salePercentage: typeof productData.directSalePercentage === "number" ? productData.directSalePercentage : "",
         image: productData.image || "",
         images: productData.images || [],
         category: resolvedCategory,
@@ -207,6 +216,7 @@ export default function EditProductPage() {
         suitableFor: normalizeStringArray(productData.suitableFor),
         results: productData.results || [],
         isActive: productData.isActive ?? true,
+        isBestSeller: productData.isBestSeller ?? false,
         whyYoullLoveIt: normalizeStringArray(productData.whyYoullLoveIt),
         fragranceExp: normalizeStringArray(productData.fragranceExp),
         whoIsItFor: productData.whoIsItFor || "",
@@ -215,6 +225,13 @@ export default function EditProductPage() {
         keyIngredients: Array.isArray(productData.keyIngredients)
           ? productData.keyIngredients.map((k: any) => ({ name: k.name || "", benefit: k.benefit || "" }))
           : [],
+      })
+      setSaleInfo({
+        saleSource: productData.saleSource || "none",
+        salePercentage: productData.salePercentage ?? null,
+        discountPrice: productData.discountPrice,
+        collectionName: productData.collectionSaleId?.name,
+        flashSale: productData.flashSale || null,
       })
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -249,7 +266,13 @@ export default function EditProductPage() {
       ...(parsed.name !== undefined && { name: parsed.name }),
       ...(parsed.slug !== undefined && { slug: parsed.slug }),
       ...(parsed.price !== undefined && { price: Number(parsed.price) }),
-      ...(parsed.discountPrice !== undefined && { discountPrice: Number(parsed.discountPrice) }),
+      ...(parsed.discountPrice !== undefined && Number(parsed.price ?? prev.price) > 0 && {
+        // Quick-paste gives a ₹ discount price; direct sale is stored as a
+        // percentage, so convert against whichever price is in effect.
+        salePercentage: Math.round(
+          ((Number(parsed.price ?? prev.price) - Number(parsed.discountPrice)) / Number(parsed.price ?? prev.price)) * 100
+        ),
+      }),
       ...(parsed.stock !== undefined && { stock: Number(parsed.stock) }),
       ...(parsed.sku !== undefined && { sku: parsed.sku }),
       ...(parsed.description !== undefined && { description: parsed.description }),
@@ -331,7 +354,7 @@ export default function EditProductPage() {
       const bodyData = {
         name: formData.name, slug: formData.slug, description: formData.description,
         price: Number(formData.price),
-        discountPrice: formData.discountPrice ? Number(formData.discountPrice) : undefined,
+        salePercentage: formData.salePercentage !== "" ? Number(formData.salePercentage) : undefined,
         image: imageUrls[0], images: imageUrls,
         category: formData.category || undefined,
         mainCategory: formData.mainCategory || undefined,
@@ -342,7 +365,7 @@ export default function EditProductPage() {
         ingredients: normalizeStringArray(formData.ingredients),
         benefits: normalizeStringArray(formData.benefits),
         suitableFor: normalizeByNewlineOnly(formData.suitableFor),
-        usage: formData.usage, isActive: formData.isActive, results,
+        usage: formData.usage, isActive: formData.isActive, isBestSeller: formData.isBestSeller, results,
         weight: Number(formData.weight) || 0.3,
         length: Number(formData.length) || 10,
         breadth: Number(formData.breadth) || 10,
@@ -485,9 +508,47 @@ export default function EditProductPage() {
 
           {/* Pricing & stock */}
           <SectionCard icon={Tag} title="Pricing & stock">
+            {(() => {
+              const price = Number(formData.price) || 0
+              if (saleInfo.flashSale) {
+                return (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <strong>Flash sale active</strong> — {saleInfo.flashSale.discountPercent}% off ({saleInfo.flashSale.saleName}), ends{" "}
+                    {new Date(saleInfo.flashSale.endsAt).toLocaleString()}. This overrides direct/collection sale until it ends.
+                  </div>
+                )
+              }
+              if (saleInfo.saleSource === "collection") {
+                return (
+                  <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+                    <strong>Sale applied via Collection: {saleInfo.collectionName || "—"}</strong> — {saleInfo.salePercentage}% off
+                    {price > 0 && <> (₹{price} → ₹{saleInfo.discountPrice})</>}
+                  </div>
+                )
+              }
+              if (saleInfo.saleSource === "direct") {
+                return (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <strong>Direct sale</strong> — {saleInfo.salePercentage}% off
+                    {price > 0 && <> (₹{price} → ₹{saleInfo.discountPrice})</>}
+                  </div>
+                )
+              }
+              return (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">No active sale</div>
+              )
+            })()}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
   <div><label className={labelCls}>Price (₹) *</label><Input type="number" name="price" value={formData.price} onChange={handleChange} required placeholder="0" className={inputCls} /></div>
-  <div><label className={labelCls}>Discount Price (₹)</label><Input type="number" name="discountPrice" value={formData.discountPrice} onChange={handleChange} placeholder="0" className={inputCls} /></div>
+  <div>
+    <label className={labelCls}>Direct Sale %</label>
+    <Input type="number" min={0} max={100} name="salePercentage" value={formData.salePercentage} onChange={handleChange} placeholder="0" className={inputCls} />
+    <p className="text-xs text-gray-400 mt-1">
+      {formData.salePercentage !== "" && Number(formData.price) > 0
+        ? `→ ₹${Math.round(Number(formData.price) - (Number(formData.price) * Number(formData.salePercentage)) / 100)}`
+        : "Most recently set of direct/collection sale wins (flash sale always wins over both)."}
+    </p>
+  </div>
   <div><label className={labelCls}>Stock *</label><Input type="number" name="stock" value={formData.stock} onChange={handleChange} required placeholder="0" className={inputCls} /></div>
   <div>
     <label className={labelCls}>Weight (kg) *</label>
@@ -740,9 +801,15 @@ export default function EditProductPage() {
 
           {/* Active + submit */}
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 accent-emerald-700" />
-              <label className="text-sm font-medium text-gray-900">Active</label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 accent-emerald-700" />
+                <label className="text-sm font-medium text-gray-900">Active</label>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <input type="checkbox" name="isBestSeller" checked={formData.isBestSeller} onChange={handleChange} className="w-4 h-4 accent-emerald-700" />
+                <label className="text-sm font-medium text-gray-900">Best Seller</label>
+              </div>
             </div>
             {message && (
               <div className={`px-3 py-2 rounded-lg text-sm ${message.includes("successfully") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>

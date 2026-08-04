@@ -253,22 +253,24 @@ export function HeroProducts() {
                         className="relative overflow-hidden"
                         style={{ height: "clamp(180px, 20vw, 230px)", background: "#f2ede0" }}
                       >
-                        {/* Best Seller badge — top-left */}
+                        {/* Best Seller ribbon — top-left corner */}
                         {p.productId.isBestSeller && (
-                          <div
-                            className="absolute top-3 left-3 z-10 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full shadow-sm"
-                            style={{ background: "#1a3a2a", color: "#e8cf9e" }}
-                          >
-                            <Flame className="w-2.5 h-2.5" />
-                            Best Seller
+                          <div className="absolute -left-9 top-3 z-10 w-32 -rotate-45 overflow-hidden">
+                            <div
+                              className="flex items-center justify-center gap-1 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm"
+                              style={{ background: "#1a3a2a", color: "#e8cf9e" }}
+                            >
+                              <Flame className="w-2.5 h-2.5 fill-current" />
+                              Best Seller
+                            </div>
                           </div>
                         )}
 
                         {/* Discount badge — top-right */}
                         {disc && (
                           <div
-                            className="absolute top-3 right-3 z-10 text-white text-[10px] font-bold px-2 py-1 rounded-full"
-                            style={{ background: "#c8a96e" }}
+                            className="absolute top-3 right-3 z-10 bg-yellow-400 text-black text-[10px] font-bold px-2 py-1 rounded-full"
+
                           >
                             -{disc}%
                           </div>

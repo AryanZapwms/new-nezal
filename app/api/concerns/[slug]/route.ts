@@ -29,7 +29,7 @@ export async function GET(
     const concern = await Concern.findOne(filter)
       .populate({
         path: "products",
-        select: "name slug price discountPrice image images variantLabel skinTypes concerns keyIngredients sizes stock company",
+        select: "name slug price discountPrice image images variantLabel skinTypes concerns keyIngredients sizes stock company isBestSeller",
         populate: { path: "company", select: "name slug" },
       })
       .lean()

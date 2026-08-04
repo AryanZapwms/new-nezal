@@ -40,6 +40,7 @@ export async function GET(
         sizes: 1,
         stock: 1,
         company: 1,
+        isBestSeller: 1,
       }
     )
       .populate("company", "name slug")

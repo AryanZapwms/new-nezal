@@ -56,6 +56,7 @@ interface Product {
   skinTypes?: string[]
   concerns?: string[]
   keyIngredients?: KeyIngredient[]
+  isBestSeller?: boolean
   sizes?: {
     size: string
     unit: string
@@ -394,6 +395,7 @@ function VariantGrid({ products }: { products: Product[] }) {
       sizes={product.sizes as any}
       stock={product.stock}
       flashSale={product.flashSale}
+      isBestSeller={product.isBestSeller}
     />
   </div>
 ))}

@@ -5,7 +5,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import "@/lib/models/category";
+import "@/lib/models/collection";
 import { getActiveFlashSaleMap, applyFlashSale } from "@/lib/flashSale";
+import { setDirectSale, clearDirectSale } from "@/lib/sale";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,8 @@ export async function GET(
 
     const product = await Product.findById(id)
       .populate("company", "name slug")
-      .populate("category", "name slug");
+      .populate("category", "name slug")
+      .populate("collectionSaleId", "name slug");
 
     if (!product) {
       console.warn("⚠️ Product not found:", id);
@@ -144,7 +147,7 @@ export async function PUT(
   slug,
   description,
   price,
-  discountPrice,
+  salePercentage,
   image,
   images,
   category,
@@ -174,6 +177,7 @@ export async function PUT(
   keyIngredients,
   gstPercent,
   hsn,
+  isBestSeller,
 } = body;
 
     // ── FIX: resolve category — prefer subcategory, fall back to mainCategory ──
@@ -189,7 +193,6 @@ export async function PUT(
   slug,
   description,
   price,
-  discountPrice,
   image: image || (images && images.length > 0 ? images[0] : undefined),
   images: images || (image ? [image] : []),
   company,
@@ -209,6 +212,7 @@ export async function PUT(
       results,
       sizes,
       isActive,
+      isBestSeller: !!isBestSeller,
         whyYoullLoveIt:  normalizeStringArray(whyYoullLoveIt),
   fragranceExp:    normalizeStringArray(fragranceExp),
   whoIsItFor:      whoIsItFor      ?? "",
@@ -225,19 +229,28 @@ export async function PUT(
       updateData.category = resolvedCategory;
     }
 
-    const product = await Product.findByIdAndUpdate(
+    let product = await Product.findByIdAndUpdate(
       id,
       { $set: updateData },
       { new: true, runValidators: true }
-    )
-      .populate("company", "name slug")
-      .populate("category", "name slug");
+    );
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const updatedProduct = product.toObject ? product.toObject() : product;
+    // Direct sale is set/cleared as its own step (rather than folded into
+    // updateData above) so that recomputing the effective sale — and
+    // deciding whether this counts as a fresh "most recent" action — always
+    // happens against the just-saved price.
+    const pct = salePercentage !== undefined && salePercentage !== "" ? Number(salePercentage) : 0;
+    product = pct > 0 ? await setDirectSale(id, pct) : await clearDirectSale(id);
+
+    await product!.populate("company", "name slug");
+    await product!.populate("category", "name slug");
+    await product!.populate("collectionSaleId", "name slug");
+
+    const updatedProduct = product!.toObject ? product!.toObject() : product;
 
     console.log("✅ Product updated successfully:", id);
     return NextResponse.json(updatedProduct, {

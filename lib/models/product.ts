@@ -201,6 +201,42 @@ gstPercent: {
   index: true,
 },
 
+    // Admin-set flag — shows a "Best Seller" ribbon on cards and the product
+    // detail page. Independent of HeroProduct.isBestSeller (which only
+    // controls the homepage Hero Products carousel badge).
+    isBestSeller: {
+      type: Boolean,
+      default: false,
+    },
+
+    // ─── Sale mechanisms ─────────────────────────────────────────────────
+    // Three sale sources exist: direct (this product), collection (parent
+    // collection's sale), and flash (lib/models/flashsale.ts — time-boxed,
+    // checked live and always wins while active; never persisted here).
+    //
+    // Direct and collection sale are each recorded independently below so
+    // that clearing one can fall back to the other. `saleSource`/
+    // `salePercentage`/`saleSourceId`/`saleAppliedAt` are the denormalized
+    // "whichever of direct/collection is most recently set" snapshot used
+    // for display and `discountPrice` — see lib/sale.ts, the single place
+    // that writes these. Never set them by hand elsewhere.
+
+    directSalePercentage: { type: Number, default: null, min: 0, max: 100 },
+    directSaleAppliedAt: { type: Date, default: null },
+
+    collectionSalePercentage: { type: Number, default: null, min: 0, max: 100 },
+    collectionSaleAppliedAt: { type: Date, default: null },
+    collectionSaleId: { type: mongoose.Schema.Types.ObjectId, ref: "Collection", default: null },
+
+    saleSource: {
+      type: String,
+      enum: ["none", "direct", "collection"],
+      default: "none",
+    },
+    salePercentage: { type: Number, default: null, min: 0, max: 100 },
+    saleSourceId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    saleAppliedAt: { type: Date, default: null },
+
   },
   {
     timestamps: true,
@@ -215,9 +251,10 @@ gstPercent: {
       { collectionSlug: 1 },
       { concerns: 1 },
       { isActive: 1, collectionSlug: 1 },
+      { collectionSaleId: 1 },
     ],
   },
-  
+
 )
 
 export const Product =

@@ -101,6 +101,12 @@ const collectionSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // ─── Collection-level sale ───────────────────────────────────────────
+    // Applying this stamps every product currently in the collection — see
+    // lib/sale.ts applyCollectionSale(). Null/0 means no active collection sale.
+    salePercentage: { type: Number, default: null, min: 0, max: 100 },
+    saleAppliedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

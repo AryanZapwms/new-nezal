@@ -32,6 +32,7 @@ interface Product {
   discountPrice?: number
   image: string
   company: { name: string; slug: string }
+  isBestSeller?: boolean
   flashSale?: {
     saleId: string
     saleName: string
@@ -473,6 +474,7 @@ export default function CompanyShopPage() {
                       image={product.image}
                       company={product.company}
                       flashSale={product.flashSale}
+                      isBestSeller={product.isBestSeller}
                     />
                   ))}
                 </div>

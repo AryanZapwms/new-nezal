@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Collection } from "@/lib/models/collection"
+import { applyCollectionSale, clearCollectionSale } from "@/lib/sale"
 
 // GET /api/admin/collections/[slug] — fetch regardless of isActive, for editing
 export async function GET(
@@ -44,7 +45,7 @@ export async function PUT(
       }
     }
 
-    const updated = await Collection.findOneAndUpdate(
+    let updated = await Collection.findOneAndUpdate(
       { slug: originalSlug },
       {
         name: body.name.trim(),
@@ -74,6 +75,14 @@ export async function PUT(
       return NextResponse.json({ error: "Collection not found" }, { status: 404 })
     }
 
+    // Collection sale is applied/cleared as its own step since it bulk-writes
+    // every product in the collection, not just the collection document.
+    if (body.salePercentage !== undefined) {
+      const pct = body.salePercentage === "" ? 0 : Number(body.salePercentage)
+      const result = pct > 0 ? await applyCollectionSale(newSlug, pct) : await clearCollectionSale(newSlug)
+      updated = result.collection
+    }
+
     return NextResponse.json({ collection: updated })
   } catch (error: any) {
     console.error("[admin/collections/slug] PUT error:", error)
@@ -93,6 +102,12 @@ export async function PATCH(
     await connectDB()
     const { slug } = await params
     const body = await req.json()
+
+    // Sale changes must go through applyCollectionSale/clearCollectionSale
+    // (PUT above) so every product in the collection gets bulk-updated too —
+    // never let a raw partial $set silently desync collection vs. products.
+    delete body.salePercentage
+    delete body.saleAppliedAt
 
     const updated = await Collection.findOneAndUpdate(
       { slug },

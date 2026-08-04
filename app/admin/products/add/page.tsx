@@ -71,7 +71,7 @@ export default function AddProductPage() {
   const [imageUrlInput, setImageUrlInput] = useState("")
   const [formData, setFormData] = useState({
     name: "", slug: "", description: "",
-    price: "", discountPrice: "",
+    price: "", salePercentage: "",
     category: "", mainCategory: "", company: "",
     stock: "", sku: "",
     weight: "0.3",
@@ -83,6 +83,7 @@ export default function AddProductPage() {
     skinTypes: "",           
     ingredients: "", benefits: "", usage: "", suitableFor: "",
     isActive: true,
+    isBestSeller: false,
     whyYoullLoveIt: "",
     fragranceExp: "",
     whoIsItFor: "",
@@ -134,7 +135,10 @@ const [sizeInput, setSizeInput] = useState<Size>(emptySize())
       ...(parsed.name !== undefined && { name: parsed.name }),
       ...(parsed.slug !== undefined && { slug: parsed.slug }),
       ...(parsed.price !== undefined && { price: parsed.price }),
-      ...(parsed.discountPrice !== undefined && { discountPrice: parsed.discountPrice }),
+      ...(parsed.discountPrice !== undefined && Number(parsed.price) > 0 && {
+        // Quick-paste gives a ₹ discount price; direct sale is stored as a percentage.
+        salePercentage: String(Math.round(((Number(parsed.price) - Number(parsed.discountPrice)) / Number(parsed.price)) * 100)),
+      }),
       ...(parsed.stock !== undefined && { stock: parsed.stock }),
       ...(parsed.sku !== undefined && { sku: parsed.sku }),
       ...(parsed.description !== undefined && { description: parsed.description }),
@@ -211,7 +215,7 @@ const [sizeInput, setSizeInput] = useState<Size>(emptySize())
       const bodyData = {
         name: formData.name, slug: formData.slug, description: formData.description,
         price: Number(formData.price),
-        discountPrice: formData.discountPrice ? Number(formData.discountPrice) : undefined,
+        salePercentage: formData.salePercentage ? Number(formData.salePercentage) : undefined,
         image: imageUrls[0], images: imageUrls,
         category: formData.category || undefined,
         mainCategory: formData.mainCategory || undefined,
@@ -222,7 +226,7 @@ const [sizeInput, setSizeInput] = useState<Size>(emptySize())
         ingredients: normalizeTextarea(formData.ingredients),
         benefits: normalizeTextarea(formData.benefits),
         suitableFor: normalizeByNewlineOnly(formData.suitableFor),
-        usage: formData.usage, isActive: formData.isActive, results,
+        usage: formData.usage, isActive: formData.isActive, isBestSeller: formData.isBestSeller, results,
         weight: formData.weight ? Number(formData.weight) : 0.3,
         length: formData.length ? Number(formData.length) : 10,
         breadth: formData.breadth ? Number(formData.breadth) : 10,
@@ -357,7 +361,11 @@ const [sizeInput, setSizeInput] = useState<Size>(emptySize())
           <SectionCard icon={Tag} title="Pricing & stock">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
   <div><label className={labelCls}>Price (₹) *</label><Input type="number" name="price" value={formData.price} onChange={handleChange} required placeholder="0" className={inputCls} /></div>
-  <div><label className={labelCls}>Discount Price (₹)</label><Input type="number" name="discountPrice" value={formData.discountPrice} onChange={handleChange} placeholder="0" className={inputCls} /></div>
+  <div>
+    <label className={labelCls}>Direct Sale %</label>
+    <Input type="number" min={0} max={100} name="salePercentage" value={formData.salePercentage} onChange={handleChange} placeholder="0" className={inputCls} />
+    <p className="text-xs text-gray-400 mt-1">Optional. A later collection sale can still override this if applied more recently.</p>
+  </div>
   <div><label className={labelCls}>Stock *</label><Input type="number" name="stock" value={formData.stock} onChange={handleChange} required placeholder="0" className={inputCls} /></div>
   <div>
     <label className={labelCls}>Weight (kg) *</label>
@@ -564,9 +572,15 @@ const [sizeInput, setSizeInput] = useState<Size>(emptySize())
 
           {/* Active + submit */}
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 accent-emerald-700" />
-              <label className="text-sm font-medium text-gray-900">Active</label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 accent-emerald-700" />
+                <label className="text-sm font-medium text-gray-900">Active</label>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <input type="checkbox" name="isBestSeller" checked={formData.isBestSeller} onChange={handleChange} className="w-4 h-4 accent-emerald-700" />
+                <label className="text-sm font-medium text-gray-900">Best Seller</label>
+              </div>
             </div>
             {message && (
               <div className={`px-3 py-2 rounded-lg text-sm ${message.includes("successfully") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{message}</div>

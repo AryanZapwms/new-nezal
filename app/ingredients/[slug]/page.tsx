@@ -26,6 +26,7 @@ interface Product {
   skinTypes?: string[]
   concerns?: string[]
   keyIngredients?: KeyIngredient[]
+  isBestSeller?: boolean
   sizes?: { size: string; unit: string; quantity: number; price: number; discountPrice?: number; stock: number }[]
   stock?: number
   company: { name: string; slug: string }
@@ -762,6 +763,7 @@ export default function IngredientPage() {
                 hasMultipleSizes={!!product.sizes?.length}
                 sizes={product.sizes as any}
                 stock={product.stock}
+                isBestSeller={product.isBestSeller}
               />
             ))}
           </div>

@@ -27,6 +27,7 @@ interface Product {
   concerns?: string[]
   keyIngredients?: KeyIngredient[]
   collectionSlug?: string
+  isBestSeller?: boolean
   sizes?: {
     size: string
     unit: string
@@ -721,6 +722,7 @@ export default function ConcernPage() {
   sizes={product.sizes as any}
   stock={product.stock}
   flashSale={product.flashSale}
+  isBestSeller={product.isBestSeller}
 />
                 </div>
               ))}

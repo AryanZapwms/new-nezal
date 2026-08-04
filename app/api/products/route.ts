@@ -8,6 +8,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale";
+import { computeEffectiveSale } from "@/lib/sale";
 import Fuse from "fuse.js";
 
 // Simple in-memory cache for API responses
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
       const products = await Product.find({ _id: { $in: idList } })
         .populate("company", "name slug")
         .populate("category", "name slug")
-      .select("name slug image images sizes company category stock price discountPrice gstPercent")
+      .select("name slug image images sizes company category stock price discountPrice gstPercent isBestSeller")
         .lean();
 
       // Flash-sale pricing shows up in the wishlist too, not just the shop grid
@@ -172,7 +173,7 @@ if (exclude) {
   const candidates = await Product.find(query)
     .populate("company", "name slug")
     .populate("category", "name slug")
-    .select("name slug price discountPrice image images stock company category isActive createdAt")
+    .select("name slug price discountPrice image images stock company category isActive createdAt isBestSeller")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -204,7 +205,7 @@ if (exclude) {
     Product.find(query)
       .populate("company", "name slug")
       .populate("category", "name slug")
-      .select("name slug price discountPrice image images stock company category isActive createdAt")
+      .select("name slug price discountPrice image images stock company category isActive createdAt isBestSeller")
       .skip(skip)
       .limit(limit)
        .sort(getSortStage(sort))
@@ -260,11 +261,22 @@ export async function POST(request: Request) {
     const body = await request.json();
 
   const {
-  name, slug, description, price, discountPrice, image, images,
+  name, slug, description, price, salePercentage, image, images,
   category, mainCategory, company, stock, sku, weight, length, breadth, height, amazonUrl,
   ingredients, benefits, usage, suitableFor, results, sizes,
-  isActive, gstPercent, hsn, variantLabel, skinTypes,
+  isActive, gstPercent, hsn, variantLabel, skinTypes, isBestSeller,
 } = body;
+
+    // A direct sale set at creation time counts as the first "most recent"
+    // action on this product, same as setting one later via the edit page.
+    const pct = salePercentage !== undefined && salePercentage !== "" ? Number(salePercentage) : 0;
+    const directSalePercentage = pct > 0 ? pct : null;
+    const directSaleAppliedAt = pct > 0 ? new Date() : null;
+    const effectiveSale = computeEffectiveSale({
+      price: Number(price),
+      directSalePercentage,
+      directSaleAppliedAt,
+    });
 
     // ── FIX: resolve category — prefer subcategory, fall back to mainCategory ──
     const resolvedCategory =
@@ -282,7 +294,12 @@ export async function POST(request: Request) {
       slug: slug || name.toLowerCase().replace(/\s+/g, "-"),
       description,
       price,
-      discountPrice,
+      directSalePercentage,
+      directSaleAppliedAt,
+      saleSource: effectiveSale.saleSource,
+      salePercentage: effectiveSale.salePercentage,
+      saleAppliedAt: effectiveSale.saleAppliedAt,
+      discountPrice: effectiveSale.discountPrice,
       image: image || (images && images.length > 0 ? images[0] : undefined),
       images: images || (image ? [image] : []),
       category: resolvedCategory,               // ← fixed: never empty when mainCategory is set
@@ -304,6 +321,7 @@ export async function POST(request: Request) {
       results,
       sizes,
       isActive: isActive ?? true,
+      isBestSeller: !!isBestSeller,
       gstPercent: gstPercent !== undefined && gstPercent !== "" ? Number(gstPercent) : null,
       hsn: typeof hsn === "string" ? hsn.trim() : "",
     });
