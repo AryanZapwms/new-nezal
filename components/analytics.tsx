@@ -7,7 +7,8 @@ const GA_IDS = [
   process.env.NEXT_PUBLIC_GA_ID,        
   process.env.NEXT_PUBLIC_GT_ID_1,      
   process.env.NEXT_PUBLIC_ADS_ID,       
-  process.env.NEXT_PUBLIC_GT_ID_2,      
+  process.env.NEXT_PUBLIC_GT_ID_2, 
+  process.env.NEXT_PUBLIC_GT_ID_3,     
 ].filter(Boolean)
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID 
