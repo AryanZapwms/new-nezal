@@ -71,7 +71,7 @@ export async function GET(
     return NextResponse.json({
       slug,
       searchTerm,
-      products,
+      products: productsWithSales,
       total: products.length,
     })
   } catch (error) {
