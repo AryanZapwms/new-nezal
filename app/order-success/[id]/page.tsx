@@ -69,7 +69,8 @@ export default function OrderSuccessPage() {
           const data = await res.json()
           setOrderData(data)
 
-          if (data?.items && data?.totalAmount) {
+          const trackedKey = `fb_purchase_tracked_${orderId}`
+          if (data?.items && data?.totalAmount && !sessionStorage.getItem(trackedKey)) {
             const productIds = data.items.map((item: any) => item.product?._id || item.product)
             trackPurchase(
               orderId,
@@ -78,6 +79,7 @@ export default function OrderSuccessPage() {
               productIds,
               session?.user?.email
             )
+            sessionStorage.setItem(trackedKey, "1")
           }
         }
       } catch (error) {

@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation"
 import ProductDescription from "@/components/ProductDescription"
 import ProductSections from "@/components/ProductSections"
 import { useLoading } from "@/hooks/use-loading"
+import { WishlistButton } from "@/components/wishlist-button"
 
 
 
@@ -1102,18 +1103,12 @@ const currentImage =
                 </a>
               )}
 
-              <button
-                onClick={() => setWishlist(!wishlist)}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-medium border-2 transition-all duration-150"
-                style={{
-                  backgroundColor: wishlist ? "#fff0f0" : "#ffffff",
-                  borderColor: wishlist ? "#f4a0a0" : "#c8dac9",
-                  color: wishlist ? "#c0392b" : "#1e3a28",
-                }}
-              >
-                <Heart className={`w-4 h-4 ${wishlist ? "fill-red-400 text-red-400" : ""}`} />
-                {wishlist ? "Saved to Wishlist" : "Add to Wishlist"}
-              </button>
+              <WishlistButton
+                productId={product._id}
+                productName={product.name}
+                productPrice={displayPrice}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-medium border-2"
+              />
             </div>
 
                 

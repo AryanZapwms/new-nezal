@@ -108,6 +108,51 @@ export function trackAddToCart(
 }
 
 /**
+ * Track AddToWishlist event
+ * Fired when user adds an item to their wishlist
+ * @param productId - Product ID
+ * @param productName - Product name
+ * @param price - Product price in INR
+ */
+export function trackAddToWishlist(
+  productId: string,
+  productName: string,
+  price?: number
+) {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    content_name: productName,
+    content_ids: [productId],
+    content_type: 'product',
+    ...(price !== undefined && { value: price.toFixed(2), currency: 'INR' }),
+  }
+
+    ; (window as any).fbq('track', 'AddToWishlist', data)
+}
+
+/**
+ * Track AddPaymentInfo event
+ * Fired when user submits payment details during checkout
+ * @param cartValue - Total cart value in INR
+ * @param productIds - Array of product IDs in the order
+ */
+export function trackAddPaymentInfo(
+  cartValue?: number,
+  productIds?: string[]
+) {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    ...(cartValue !== undefined && { value: cartValue.toFixed(2), currency: 'INR' }),
+    ...(productIds && { content_ids: productIds }),
+    content_type: 'product',
+  }
+
+    ; (window as any).fbq('track', 'AddPaymentInfo', data)
+}
+
+/**
  * Track CompleteRegistration event
  * Fired when user successfully registers
  * @param email - User email (for data matching)
@@ -122,6 +167,57 @@ export function trackCompleteRegistration(email?: string, status?: string) {
   }
 
     ; (window as any).fbq('track', 'CompleteRegistration', data)
+}
+
+/**
+ * Track CustomizeProduct event
+ * Fired when user customises/configures a product
+ * @param productId - Product ID
+ * @param productName - Product name
+ */
+export function trackCustomizeProduct(productId?: string, productName?: string) {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    ...(productId && { content_ids: [productId] }),
+    ...(productName && { content_name: productName }),
+    content_type: 'product',
+  }
+
+    ; (window as any).fbq('track', 'CustomizeProduct', data)
+}
+
+/**
+ * Track Contact event
+ * Fired when user contacts the business (e.g. submits contact form)
+ */
+export function trackContact() {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+    ; (window as any).fbq('track', 'Contact')
+}
+
+/**
+ * Track Donate event
+ * Fired when user donates funds
+ * @param value - Donation amount in INR
+ */
+export function trackDonate(value?: number) {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    ...(value !== undefined && { value: value.toFixed(2), currency: 'INR' }),
+  }
+
+    ; (window as any).fbq('track', 'Donate', data)
+}
+
+/**
+ * Track FindLocation event
+ * Fired when user searches for a business location
+ */
+export function trackFindLocation() {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+    ; (window as any).fbq('track', 'FindLocation')
 }
 
 /**
@@ -146,6 +242,21 @@ export function trackInitiateCheckout(
   }
 
     ; (window as any).fbq('track', 'InitiateCheckout', data)
+}
+
+/**
+ * Track Lead event
+ * Fired when user submits info as a lead (e.g. newsletter signup, enquiry form)
+ * @param value - Optional estimated lead value in INR
+ */
+export function trackLead(value?: number) {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    ...(value !== undefined && { value: value.toFixed(2), currency: 'INR' }),
+  }
+
+    ; (window as any).fbq('track', 'Lead', data)
 }
 
 /**
@@ -177,6 +288,75 @@ export function trackPurchase(
   }
 
     ; (window as any).fbq('track', 'Purchase', data)
+}
+
+/**
+ * Track Schedule event
+ * Fired when user books an appointment
+ */
+export function trackSchedule() {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+    ; (window as any).fbq('track', 'Schedule')
+}
+
+/**
+ * Track Search event
+ * Fired when user performs a search on the site
+ * @param searchString - The search query
+ */
+export function trackSearch(searchString?: string) {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    ...(searchString && { search_string: searchString }),
+  }
+
+    ; (window as any).fbq('track', 'Search', data)
+}
+
+/**
+ * Track StartTrial event
+ * Fired when user starts a free trial
+ * @param value - Trial value in USD (per Meta's default event spec)
+ * @param predictedLtv - Predicted lifetime value
+ */
+export function trackStartTrial(value: string = '0.00', predictedLtv: string = '0.00') {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    value,
+    currency: 'USD',
+    predicted_ltv: predictedLtv,
+  }
+
+    ; (window as any).fbq('track', 'StartTrial', data)
+}
+
+/**
+ * Track SubmitApplication event
+ * Fired when user submits an application (e.g. job, credit, program)
+ */
+export function trackSubmitApplication() {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+    ; (window as any).fbq('track', 'SubmitApplication')
+}
+
+/**
+ * Track Subscribe event
+ * Fired when user starts a paid subscription
+ * @param value - Subscription value in USD (per Meta's default event spec)
+ * @param predictedLtv - Predicted lifetime value
+ */
+export function trackSubscribe(value: string = '0.00', predictedLtv: string = '0.00') {
+  if (typeof window === 'undefined' || !(window as any).fbq) return
+
+  const data: FacebookPixelEventData = {
+    value,
+    currency: 'USD',
+    predicted_ltv: predictedLtv,
+  }
+
+    ; (window as any).fbq('track', 'Subscribe', data)
 }
 
 /**

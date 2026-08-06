@@ -1,13 +1,25 @@
-// wishlist-button.tsx
 "use client";
 
 import { Heart } from "lucide-react";
 import { useWishlistStore } from "@/lib/store/wishlist-store";
-import { useSession } from "next-auth/react"; 
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { trackAddToWishlist } from "@/lib/facebook-pixel";
 
-export function WishlistButton({ productId, className = "" }: { productId: string; className?: string }) {
+interface WishlistButtonProps {
+  productId: string;
+  productName?: string;
+  productPrice?: number;
+  className?: string;
+}
+
+export function WishlistButton({
+  productId,
+  productName,
+  productPrice,
+  className = "",
+}: WishlistButtonProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const { has, toggle } = useWishlistStore();
@@ -15,9 +27,19 @@ export function WishlistButton({ productId, className = "" }: { productId: strin
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
-    if (!session?.user) { router.push("/auth/login"); return; }
+    if (!session?.user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const wasLiked = liked;
     setLoading(true);
     toggle(productId); // optimistic
+
+    if (!wasLiked) {
+      trackAddToWishlist(productId, productName || productId, productPrice);
+    }
+
     try {
       await fetch("/api/wishlist", {
         method: "POST",

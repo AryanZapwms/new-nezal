@@ -133,9 +133,7 @@ export function RegisterForm() {
         return;
       }
 
-      try {
-        trackCompleteRegistration(email, "completed");
-      } catch (_) {}
+      
 
       setShowOtp(true);
       return;
@@ -161,6 +159,7 @@ export function RegisterForm() {
             <OtpForm
               email={email}
               onSuccess={() => {
+                trackCompleteRegistration(email, "completed");
                 router.push("/auth/login?registered=true&verified=true");
               }}
             />

@@ -2,7 +2,7 @@
 import type React from "react";
 import type { Metadata } from "next";
 import { Playfair_Display, Poppins } from "next/font/google";
-import { Analytics } from "@/components/analytics";   // New analytics component
+import { Analytics, GTMNoScript } from "@/components/analytics";   // New analytics component
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { Header } from "@/components/header";
 import { PromoBar } from "@/components/promo-bar";
@@ -96,7 +96,7 @@ export default function RootLayout({
       // The actual font-family is applied via the CSS variables we defined\
     >
       <head>
-        {/* All analytics scripts are now inside <Analytics /> */}
+        {/* All analytics scripts (GTM, gtag.js, Meta Pixel) are inside <Analytics /> */}
         <Analytics />
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -125,6 +125,8 @@ export default function RootLayout({
         />
       </head>
      <body className="font-sans antialiased min-h-screen flex flex-col">
+       {/* Google Tag Manager (noscript) — must be immediately after <body> */}
+       <GTMNoScript />
        <NextTopLoader
     color="var(--color-brand-primary)"
     height={3}

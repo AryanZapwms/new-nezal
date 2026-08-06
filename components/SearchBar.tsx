@@ -16,6 +16,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Search, X, Loader2, Sparkles, FlaskConical, Zap } from "lucide-react"
+import { trackSearch } from "@/lib/facebook-pixel"
 
 interface SearchResultProduct {
   _id: string
@@ -136,6 +137,7 @@ export function SearchBar() {
   const submitFullSearch = useCallback(() => {
     const trimmed = query.trim()
     if (!trimmed) return
+    trackSearch(trimmed)
     setOpen(false)
     router.push(`/shop?search=${encodeURIComponent(trimmed)}`)
     setQuery("")

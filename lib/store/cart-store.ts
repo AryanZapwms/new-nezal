@@ -1,6 +1,7 @@
 //  lib/store/cart-store.ts
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { trackAddToCart } from "@/lib/facebook-pixel"
 
 export interface Size {
   size: string
@@ -95,6 +96,8 @@ export const useCartStore = create<CartStore>()(
 
     return { items: [...state.items, { ...item, selectedSize: cloneSize(item.selectedSize) }] }
   })
+
+  trackAddToCart(item.productId, item.name, item.discountPrice || item.price, item.quantity)
 },
 
       removeItem: (productId: string, selectedSize?: Size) => {

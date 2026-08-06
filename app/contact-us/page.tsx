@@ -4,6 +4,7 @@
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, Clock, ArrowRight, Leaf } from "lucide-react";
 import { BRAND } from "@/lib/config";
+import { trackContact } from "@/lib/facebook-pixel";
 
 export default function ContactUs() {
   const containerVariants = {
@@ -69,11 +70,12 @@ export default function ContactUs() {
                     <div>
                       <p className="text-sm text-[#6b7c70]">Office</p>
                       <a
-                        href={`tel:${BRAND.whatsapp.primary}`}
-                        className="text-lg font-medium text-[#1e3a28] transition-colors hover:text-emerald-600"
-                      >
-                        +91 {BRAND.whatsapp.primary}
-                      </a>
+                       href={`mailto:${BRAND.supportEmail}`}
+                    onClick={() => trackContact()}
+                    className="mt-2 inline-block text-lg font-medium text-[#1e3a28] transition-colors hover:text-emerald-600"
+                  >
+                    {BRAND.supportEmail}
+                  </a>
                     </div>
                   </div>
                 </div>

@@ -12,6 +12,7 @@ import { Zap } from "lucide-react"
 import Image from "next/image"
 import { Tag, Truck, ShoppingBag } from "lucide-react"
 import { useCheckoutStore } from "@/lib/store/checkout-store"
+import { trackInitiateCheckout, trackAddPaymentInfo } from "@/lib/facebook-pixel"
 
 declare global {
   interface Window {
@@ -368,7 +369,7 @@ const amountLeftForFreeShipping =
   const handleCheckout = async (shippingAddress: any, paymentMethod: string) => {
     setIsLoading(true)
     setCheckoutError(null)
-
+     trackAddPaymentInfo(finalTotal, items.map((item) => item.productId))
     try {
       
       if (paymentMethod === "cod") {

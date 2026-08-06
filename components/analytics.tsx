@@ -4,19 +4,33 @@
 import Script from 'next/script';
 
 const GA_IDS = [
-  process.env.NEXT_PUBLIC_GA_ID,        
-  process.env.NEXT_PUBLIC_GT_ID_1,      
-  process.env.NEXT_PUBLIC_ADS_ID,       
-  process.env.NEXT_PUBLIC_GT_ID_2, 
-  process.env.NEXT_PUBLIC_GT_ID_3,     
+  process.env.NEXT_PUBLIC_GA_ID,
+  process.env.NEXT_PUBLIC_GT_ID_1,
+  process.env.NEXT_PUBLIC_ADS_ID,
+  process.env.NEXT_PUBLIC_GT_ID_2,
+  process.env.NEXT_PUBLIC_GT_ID_3,
 ].filter(Boolean)
 
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID 
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
+
+// Google Tag Manager container ID
+export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || 'GTM-KGB6D4D'
 
 export function Analytics() {
   return (
     <>
-      {/* Google tag (gtag.js) — loaded once, registers all 4 IDs */}
+      {/* Google Tag Manager */}
+      <Script id="gtm-script" strategy="afterInteractive">
+        {`
+          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','${GTM_ID}');
+        `}
+      </Script>
+
+      {/* Google tag (gtag.js) — loaded once, registers all IDs */}
       <Script
         async
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_IDS[0]}`}
@@ -54,5 +68,23 @@ export function Analytics() {
         />
       </noscript>
     </>
+  );
+}
+
+/**
+ * GTM's <noscript><iframe> fallback MUST be the first thing after the
+ * opening <body> tag (not inside <head>), so it's exported separately
+ * and rendered directly in app/layout.tsx.
+ */
+export function GTMNoScript() {
+  return (
+    <noscript>
+      <iframe
+        src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+        height="0"
+        width="0"
+        style={{ display: 'none', visibility: 'hidden' }}
+      />
+    </noscript>
   );
 }
