@@ -98,7 +98,11 @@ jobs:
             # Atomic swap — instant, no half-updated window.
             ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
-            "$PM2" startOrReload "$APP_ROOT/current/ecosystem.config.js" --update-env
+            # Delete + fresh start instead of startOrReload — PM2 can cache
+            # a stale script path (e.g. next start vs server.js) across
+            # reloads and ignore an updated ecosystem.config.js entry point.
+            "$PM2" delete nezal 2>/dev/null || true
+            "$PM2" start "$APP_ROOT/current/ecosystem.config.js"
 
             # Keep last 5 releases, prune older.
             cd "$RELEASES_DIR"
