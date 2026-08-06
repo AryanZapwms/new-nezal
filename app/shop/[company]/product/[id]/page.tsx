@@ -156,6 +156,7 @@ interface Product {
   description: string
   price: number
   discountPrice?: number
+  salePercentage?: number | null
   mrp?: string | number
   image: string
   images: string[]
@@ -190,6 +191,7 @@ interface SuggestedProduct {
   name: string
   price: number
   discountPrice?: number
+  salePercentage?: number | null
   image: string
   company: { name: string; slug: string }
   isBestSeller?: boolean
@@ -604,16 +606,25 @@ router.push("/checkout")
       // apply it to the selected size's own price instead.
       const basePrice = product?.price ?? 0
       const percentOff =
-        product?.discountPrice != null && product.discountPrice < basePrice && basePrice > 0
-          ? (basePrice - product.discountPrice) / basePrice
-          : 0
+  product?.salePercentage != null && product.salePercentage > 0
+    ? product.salePercentage / 100
+    : product?.discountPrice != null && product.discountPrice < basePrice && basePrice > 0
+    ? (basePrice - product.discountPrice) / basePrice
+    : 0
+
       const currentDiscountPrice = product?.flashSale
         ? getFlashPrice(currentPrice, product.flashSale)
         : selectedSize
         ? selectedSize.discountPrice ?? (percentOff > 0 ? Math.round(selectedSize.price * (1 - percentOff)) : undefined)
         : product?.discountPrice
       const displayPrice = currentDiscountPrice || currentPrice
-      const discount = currentDiscountPrice ? Math.round(((currentPrice - currentDiscountPrice) / currentPrice) * 100) : 0
+      const discount = product?.flashSale
+  ? Math.round(product.flashSale.discountPercent)
+  : product?.salePercentage != null && product.salePercentage > 0
+  ? Math.round(product.salePercentage)
+  : currentDiscountPrice
+  ? Math.round(((currentPrice - currentDiscountPrice) / currentPrice) * 100)
+  : 0
       const hasSizes = product?.sizes && product.sizes.length > 0
       const isOutOfStock = hasSizes ? !selectedSize || selectedSize.stock <= 0 : (product?.stock ?? 0) <= 0
 
