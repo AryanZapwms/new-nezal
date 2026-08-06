@@ -64,6 +64,7 @@ interface ProductCardProps {
   name: string;
   price: number;
   discountPrice?: number;
+  salePercentage?: number | null;
   image?: string;
   company: {
     name: string;
@@ -138,6 +139,7 @@ export default function ProductCard({
   name,
   price,
   discountPrice,
+  salePercentage = null,
   image,
   company,
   sizes: rawSizes = [],
@@ -198,9 +200,12 @@ export default function ProductCard({
   // size already has a more specific manual discount) makes the sale
   // actually apply to every variant, not just size-less products.
   const percentOff =
-    discountPrice != null && discountPrice < price && price > 0
+  salePercentage != null && salePercentage > 0
+    ? salePercentage / 100
+    : discountPrice != null && discountPrice < price && price > 0
       ? (price - discountPrice) / price
       : 0;
+
   const sizeSalePrice = (s: Size) =>
     s.discountPrice ?? (percentOff > 0 ? Math.round(s.price * (1 - percentOff)) : undefined);
 
@@ -220,9 +225,13 @@ const effectivePrice = activeSize
   ? sizeSalePrice(activeSize) ?? activeSize.price
   : discountPrice ?? price;
 const hasDiscount = effectivePrice < originalPrice;
+
 const discount = hasDiscount
-  ? Math.round(((originalPrice - effectivePrice) / originalPrice) * 100)
+  ? salePercentage != null && salePercentage > 0
+    ? Math.round(salePercentage)
+    : Math.round(((originalPrice - effectivePrice) / originalPrice) * 100)
   : 0;
+  
 const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0;
 
   // ── Stock ──

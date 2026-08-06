@@ -389,6 +389,7 @@ function VariantGrid({ products }: { products: Product[] }) {
       name={product.name}
       price={product.price}
       discountPrice={product.discountPrice}
+      salePercentage={product.flashSale?.discountPercent ?? product.salePercentage}
       image={product.image}
       company={product.company}
       hasMultipleSizes={!!product.sizes?.length}
@@ -396,6 +397,7 @@ function VariantGrid({ products }: { products: Product[] }) {
       stock={product.stock}
       flashSale={product.flashSale}
       isBestSeller={product.isBestSeller}
+      
     />
   </div>
 ))}

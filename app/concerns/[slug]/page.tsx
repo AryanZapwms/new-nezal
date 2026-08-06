@@ -711,6 +711,7 @@ export default function ConcernPage() {
   slug={product.slug}
   price={product.price}
   discountPrice={product.discountPrice}
+  salePercentage={product.flashSale?.discountPercent ?? product.salePercentage}
   image={product.image}
   images={product.images}
   variantLabel={product.variantLabel}

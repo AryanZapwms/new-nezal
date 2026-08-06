@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Product } from "@/lib/models/product"
+import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale"
 
 // Convert a URL slug like "tea-tree" back into a search-friendly phrase
 function slugToSearchTerm(slug: string): string {
@@ -45,6 +46,7 @@ export async function GET(
         slug: 1,
         price: 1,
         discountPrice: 1,
+        salePercentage: 1,
         image: 1,
         images: 1,
         variantLabel: 1,
@@ -62,6 +64,9 @@ export async function GET(
     )
       .populate("company", "name slug")
       .lean()
+
+      const flashSaleMap = await getActiveFlashSaleMap()
+      const productsWithSales = applyFlashSaleToList(products, flashSaleMap)
 
     return NextResponse.json({
       slug,

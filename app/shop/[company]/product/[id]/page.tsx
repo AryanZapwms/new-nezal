@@ -1396,6 +1396,7 @@ const currentImage =
         name={p.name}
         price={p.price}
         discountPrice={p.discountPrice}
+        salePercentage={p.flashSale?.discountPercent ?? p.salePercentage}
         image={p.image}
         company={p.company}
         flashSale={p.flashSale}

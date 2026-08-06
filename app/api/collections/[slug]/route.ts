@@ -25,23 +25,24 @@ export async function GET(
     const products = await Product.find(
       { collectionSlug: slug, isActive: true },
       {
-        _id: 1,
-        name: 1,
-        slug: 1,
-        price: 1,
-        discountPrice: 1,
-        image: 1,
-        images: 1,
-        variantLabel: 1,
-        skinTypes: 1,
-        concerns: 1,
-        keyIngredients: 1,
-        ritualStep: 1,
-        sizes: 1,
-        stock: 1,
-        company: 1,
-        isBestSeller: 1,
-      }
+  _id: 1,
+  name: 1,
+  slug: 1,
+  price: 1,
+  discountPrice: 1,
+  salePercentage: 1,
+  image: 1,
+  images: 1,
+  variantLabel: 1,
+  skinTypes: 1,
+  concerns: 1,
+  keyIngredients: 1,
+  ritualStep: 1,
+  sizes: 1,
+  stock: 1,
+  company: 1,
+  isBestSeller: 1,
+}
     )
       .populate("company", "name slug")
       .lean()

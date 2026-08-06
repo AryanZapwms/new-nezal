@@ -471,6 +471,7 @@ export default function CompanyShopPage() {
                       name={product.name}
                       price={product.price}
                       discountPrice={product.discountPrice}
+                      salePercentage={product.flashSale?.discountPercent ?? product.salePercentage}
                       image={product.image}
                       company={product.company}
                       flashSale={product.flashSale}
