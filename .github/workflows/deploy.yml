@@ -12,6 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+        - name: Write .env.local
+        run: echo "${{ secrets.ENV_LOCAL_CONTENTS }}" > .env.local
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -35,6 +38,7 @@ jobs:
           mkdir -p deploy_package/.next
           cp -r .next/static deploy_package/.next/static
           cp -r public deploy_package/public
+          rm -f deploy_package/.env.local
 
       - name: Set up SSH
         run: |
