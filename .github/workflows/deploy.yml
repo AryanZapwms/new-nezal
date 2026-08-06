@@ -80,6 +80,38 @@ jobs:
           envs: RELEASE_NAME
           script: |
             set -e
+            PM2="/root/.nvm/versions/node/v20.19.0/bin/pm2"
+
+            APP_ROOT="/home/nezalherbocare.com"
+            RELEASES_DIR="$APP_ROOT/releases"
+            CURRENT_LINK="$APP_ROOT/current"
+            SHARED_DIR="$APP_ROOT/shared"
+            RELEASE_DIR="$RELEASES_DIR/$RELEASE_NAME"
+
+            # Link in things that must persist and aren't part of the build:
+            # env vars and user-uploaded files.
+            ln -sfn "$SHARED_DIR/.env.local" "$RELEASE_DIR/.env.local"
+            mkdir -p "$SHARED_DIR/uploads"
+            rm -rf "$RELEASE_DIR/public/uploads"
+            ln -sfn "$SHARED_DIR/uploads" "$RELEASE_DIR/public/uploads"
+
+            # Atomic swap — instant, no half-updated window.
+            ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
+
+            "$PM2" startOrReload "$APP_ROOT/current/ecosystem.config.js" --update-env
+
+            # Keep last 5 releases, prune older.
+            cd "$RELEASES_DIR"
+            ls -t | tail -n +6 | xargs -r rm -rf
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: RELEASE_NAME
+          script: |
+            set -e
             APP_ROOT="/home/nezalherbocare.com"
             RELEASES_DIR="$APP_ROOT/releases"
             CURRENT_LINK="$APP_ROOT/current"
