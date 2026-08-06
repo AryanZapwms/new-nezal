@@ -173,7 +173,7 @@ if (exclude) {
   const candidates = await Product.find(query)
     .populate("company", "name slug")
     .populate("category", "name slug")
-    .select("name slug price discountPrice image images stock company category isActive createdAt isBestSeller")
+    .select("name slug price discountPrice image images stock sizes company category isActive createdAt isBestSeller")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -205,7 +205,7 @@ if (exclude) {
     Product.find(query)
       .populate("company", "name slug")
       .populate("category", "name slug")
-      .select("name slug price discountPrice image images stock company category isActive createdAt isBestSeller")
+      .select("name slug price discountPrice image images stock sizes company category isActive createdAt isBestSeller")
       .skip(skip)
       .limit(limit)
        .sort(getSortStage(sort))

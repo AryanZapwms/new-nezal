@@ -4,15 +4,16 @@
  * RitualProductCard
  *
  * Display-only variant of ProductCard used exclusively on ritual pages.
- * Shows image, name, and price but deliberately has NO "Shop Now" or
- * "Add to Cart" buttons — on a ritual page, "Add Full Ritual to Cart"
- * is meant to be the single, unambiguous call-to-action. Individual
- * per-product buttons here would compete with it and confuse the
- * "buy the whole set" intent behind rituals.
+ * Shows image, name, price, and (if applicable) a size selector — but
+ * deliberately has NO "Shop Now" or "Add to Cart" buttons. On a ritual
+ * page, "Add Full Ritual to Cart" is meant to be the single, unambiguous
+ * call-to-action. Individual per-product buttons here would compete with
+ * it and confuse the "buy the whole set" intent behind rituals.
  *
- * Clicking the card still navigates to the product detail page, so
- * users who want to inspect or buy just one item aren't blocked —
- * they just don't get a redundant button pushing them to do that.
+ * Selecting a size only updates the displayed price/stock on the card —
+ * it does not add anything to the cart. Users who want to inspect or buy
+ * just one item aren't blocked; clicking the card still navigates to the
+ * product detail page.
  */
 
 import Image from "next/image"
@@ -40,6 +41,12 @@ interface RitualProductCardProps {
   stock?: number
 }
 
+// A product's `size` field sometimes already includes the unit (e.g. "250ml"),
+// sometimes doesn't (e.g. "250" with unit "ml" separately). Avoid "250mlml".
+function formatSize(s: Size): string {
+  return s.size.toLowerCase().includes(s.unit.toLowerCase()) ? s.size : `${s.size}${s.unit}`
+}
+
 export default function RitualProductCard({
   id,
   name,
@@ -54,19 +61,48 @@ export default function RitualProductCard({
   const router = useRouter()
   const [imgLoaded, setImgLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [selectedSize, setSelectedSize] = useState<Size | null>(null)
 
-  const discount = discountPrice
-    ? Math.round(((price - discountPrice) / price) * 100)
-    : 0
+  // Derives a per-size sale price from the product-level sale when the size
+  // itself has no explicit discountPrice — mirrors sizeSalePrice() in
+  // components/product-card.tsx, so a product-level sale actually shows up
+  // per-variant instead of only on size-less products.
+  const percentOff =
+    discountPrice != null && discountPrice < price && price > 0
+      ? (price - discountPrice) / price
+      : 0
+  const sizeSalePrice = (s: Size) =>
+    s.discountPrice ?? (percentOff > 0 ? Math.round(s.price * (1 - percentOff)) : s.price)
 
-  const displayPrice =
+  const cheapestSize =
     hasMultipleSizes && sizes.length > 0
-      ? Math.min(...sizes.map((s) => s.discountPrice || s.price))
-      : discountPrice || price
+      ? sizes.reduce((min, s) => (sizeSalePrice(s) < sizeSalePrice(min) ? s : min), sizes[0])
+      : null
+
+  // Price shown reflects the user's size pick once they've made one,
+  // otherwise defaults to the cheapest available size (or the base price
+  // for size-less products).
+  const activeSize = selectedSize ?? cheapestSize
+  const displayPrice = activeSize ? sizeSalePrice(activeSize) : discountPrice || price
+  const originalPrice = activeSize ? activeSize.price : price
+
+  const discount =
+    originalPrice > displayPrice
+      ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
+      : 0
 
   const isOutOfStock = hasMultipleSizes
     ? sizes.every((s) => s.stock < 1)
     : stock < 1
+
+  const selectedIsOutOfStock = activeSize ? activeSize.stock < 1 : isOutOfStock
+
+  function handleSelectSize(e: React.MouseEvent<HTMLButtonElement>, s: Size) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (s.stock < 1) return
+    setSelectedSize(s)
+  }
 
   return (
     <div
@@ -87,7 +123,7 @@ export default function RitualProductCard({
           </div>
         )}
 
-        {isOutOfStock && (
+        {selectedIsOutOfStock && (
           <div className="absolute left-3 top-3 z-20 rounded-full bg-neutral-800/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
             Out of Stock
           </div>
@@ -119,7 +155,7 @@ export default function RitualProductCard({
         )}
       </div>
 
-      {/* CONTENT — no buttons, no size selector, just facts */}
+      {/* CONTENT */}
       <div className="flex flex-col gap-1.5 p-3 sm:p-4">
         <h3 className="line-clamp-2 min-h-[36px] sm:min-h-[40px] text-xs sm:text-sm font-medium text-[var(--color-text-heading)] transition-colors group-hover:text-[var(--color-brand-primary)]">
           {name}
@@ -129,17 +165,45 @@ export default function RitualProductCard({
           <span className="text-base sm:text-lg font-bold text-[var(--color-text-heading)]">
             ₹{Math.round(displayPrice).toLocaleString()}
           </span>
-          {(discountPrice || hasMultipleSizes) && (
+          {discount > 0 && (
             <span className="text-xs sm:text-sm text-neutral-400 line-through">
-              ₹{price.toLocaleString()}
+              ₹{originalPrice.toLocaleString()}
             </span>
           )}
         </div>
 
+        {/* SIZE SELECTOR — pill buttons, selection-only (no cart action) */}
         {hasMultipleSizes && sizes.length > 0 && (
-          <p className="text-[11px] text-[var(--color-text-muted)]">
-            {sizes.length} size{sizes.length > 1 ? "s" : ""} available
-          </p>
+          <div
+            className="flex flex-wrap gap-1.5 pt-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {sizes.map((s, idx) => {
+              const isSelected = activeSize
+                ? activeSize.size === s.size &&
+                  activeSize.unit === s.unit &&
+                  activeSize.quantity === s.quantity
+                : false
+              const oos = s.stock < 1
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={oos}
+                  onClick={(e) => handleSelectSize(e, s)}
+                  className="rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 sm:text-[11px]"
+                  style={{
+                    backgroundColor: isSelected ? "var(--color-brand-primary)" : "#ffffff",
+                    borderColor: isSelected ? "var(--color-brand-primary)" : "var(--color-border)",
+                    color: isSelected ? "#ffffff" : "var(--color-text-heading)",
+                    textDecoration: oos ? "line-through" : "none",
+                  }}
+                >
+                  {formatSize(s)} — ₹{sizeSalePrice(s)}
+                </button>
+              )
+            })}
+          </div>
         )}
       </div>
     </div>

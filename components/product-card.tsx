@@ -93,10 +93,7 @@ interface ProductCardProps {
 
 /* ───────────────────────────────────── */
 
-const BADGE_CONFIG: Record<
-  ProductBadge,
-  { label: string; icon: typeof Flame; bg: string; color: string }
-> = {
+const BADGE_CONFIG: Record<ProductBadge, { label: string; icon: typeof Flame; bg: string; color: string }> = {
   bestseller: { label: "Bestseller", icon: Flame, bg: "#fef3c7", color: "#b45309" },
   new: { label: "New", icon: Sparkles, bg: "#e0f0e4", color: "#1e6636" },
   organic: { label: "Organic", icon: Leaf, bg: "#e0f0e4", color: "#1e6636" },
@@ -208,23 +205,25 @@ export default function ProductCard({
     s.discountPrice ?? (percentOff > 0 ? Math.round(s.price * (1 - percentOff)) : undefined);
 
   const cheapestSize =
-    sizes.length > 0
-      ? sizes.reduce((min, s) => {
-          const eff = sizeSalePrice(s) ?? s.price;
-          const minEff = sizeSalePrice(min) ?? min.price;
-          return eff < minEff ? s : min;
-        }, sizes[0])
-      : null;
+  sizes.length > 0
+    ? sizes.reduce((min, s) => {
+        const eff = sizeSalePrice(s) ?? s.price;
+        const minEff = sizeSalePrice(min) ?? min.price;
+        return eff < minEff ? s : min;
+      }, sizes[0])
+    : null;
 
-  const originalPrice = cheapestSize ? cheapestSize.price : price;
-  const effectivePrice = cheapestSize
-    ? sizeSalePrice(cheapestSize) ?? cheapestSize.price
-    : discountPrice ?? price;
-  const hasDiscount = effectivePrice < originalPrice;
-  const discount = hasDiscount
-    ? Math.round(((originalPrice - effectivePrice) / originalPrice) * 100)
-    : 0;
-  const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0;
+  const activeSize = selectedSize ?? cheapestSize;
+
+const originalPrice = activeSize ? activeSize.price : price;
+const effectivePrice = activeSize
+  ? sizeSalePrice(activeSize) ?? activeSize.price
+  : discountPrice ?? price;
+const hasDiscount = effectivePrice < originalPrice;
+const discount = hasDiscount
+  ? Math.round(((originalPrice - effectivePrice) / originalPrice) * 100)
+  : 0;
+const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0;
 
   // ── Stock ──
   const effectiveStock =
@@ -474,45 +473,6 @@ export default function ProductCard({
             </div>
           )}
 
-          {/* Size / weight — pill buttons instead of a dropdown */}
-          {showSizeSelector ? (
-            <div className="flex flex-wrap gap-1.5">
-              {sizes.map((s, idx) => {
-                const isSelected =
-                  selectedSize?.size === s.size &&
-                  selectedSize?.unit === s.unit &&
-                  selectedSize?.quantity === s.quantity;
-                const oos = s.stock < 1;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    disabled={oos}
-                    onClick={(e) => handleSelectSize(e, s)}
-                    className="rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all duration-150 sm:text-[11px] disabled:cursor-not-allowed disabled:opacity-40"
-                    style={{
-                      backgroundColor: isSelected ? "var(--color-brand-primary)" : "#ffffff",
-                      borderColor: isSelected ? "var(--color-brand-primary)" : "var(--color-border)",
-                      color: isSelected ? "#ffffff" : "var(--color-text-heading)",
-                      textDecoration: oos ? "line-through" : "none",
-                      boxShadow: isSelected ? "0 2px 8px -2px rgba(30,58,40,0.4)" : "none",
-                    }}
-                  >
-                    {formatSize(s)} — ₹{sizeSalePrice(s) ?? s.price}
-                  </button>
-                );
-              })}
-            </div>
-          ) : singleSize ? (
-            <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
-              {formatSize(singleSize)}
-            </span>
-          ) : weightLabel ? (
-            <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
-              {weightLabel}
-            </span>
-          ) : null}
-
           {/* Price */}
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-0.5">
             <span className="text-lg font-extrabold tracking-tight text-[var(--color-text-heading)] sm:text-xl">
@@ -550,8 +510,47 @@ export default function ProductCard({
             )}
           </div>
 
-          {/* CTA — Add to Cart only appears once a size is resolved */}
-          <div className="mt-auto flex flex-col gap-1 pt-2" onClick={(e) => e.stopPropagation()}>
+          {/* CTA — size selector sits directly above Add to Cart */}
+          <div className="mt-auto flex flex-col gap-1.5 pt-2" onClick={(e) => e.stopPropagation()}>
+            {/* Size / weight — pill buttons instead of a dropdown */}
+            {showSizeSelector ? (
+  <div className="flex flex-wrap gap-1.5 pb-0.5">
+    {sizes.map((s, idx) => {
+      const isSelected =
+        selectedSize?.size === s.size &&
+        selectedSize?.unit === s.unit &&
+        selectedSize?.quantity === s.quantity;
+      const oos = s.stock < 1;
+      return (
+        <button
+          key={idx}
+          type="button"
+          disabled={oos}
+          onClick={(e) => handleSelectSize(e, s)}
+          className="rounded-full border px-3 py-1 text-[10px] font-semibold transition-all duration-150 sm:text-[11px] disabled:cursor-not-allowed disabled:opacity-40"
+          style={{
+            backgroundColor: isSelected ? "var(--color-brand-primary)" : "#ffffff",
+            borderColor: isSelected ? "var(--color-brand-primary)" : "var(--color-border)",
+            color: isSelected ? "#ffffff" : "var(--color-text-heading)",
+            textDecoration: oos ? "line-through" : "none",
+            boxShadow: isSelected ? "0 2px 8px -2px rgba(30,58,40,0.4)" : "none",
+          }}
+        >
+          {formatSize(s)}
+        </button>
+      );
+    })}
+  </div>
+) : singleSize ? (
+  <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
+    {formatSize(singleSize)}
+  </span>
+) : weightLabel ? (
+  <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
+    {weightLabel}
+  </span>
+) : null}
+
             {canAddToCart && (
               <button
                 type="button"
