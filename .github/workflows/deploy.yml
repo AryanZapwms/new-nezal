@@ -40,6 +40,17 @@ jobs:
           cp -r public deploy_package/public
           rm -f deploy_package/.env.local
 
+      - name: Debug bundle size
+        run: |
+          echo "Total size:"
+          du -sh deploy_package/
+          echo ""
+          echo "Top 20 largest items:"
+          du -sh deploy_package/* deploy_package/.next/* 2>/dev/null | sort -rh | head -20
+          echo ""
+          echo "node_modules breakdown (if present):"
+          du -sh deploy_package/node_modules/* 2>/dev/null | sort -rh | head -15
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
@@ -56,7 +67,7 @@ jobs:
 
       - name: Upload build to VPS
         run: |
-          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+          rsync -avz --progress --delete -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             deploy_package/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/nezalherbocare.com/releases/${{ env.RELEASE_NAME }}/
 
       - name: Finalize release on VPS
