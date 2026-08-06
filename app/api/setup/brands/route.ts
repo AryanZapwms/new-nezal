@@ -1,8 +1,12 @@
 import { connectDB } from "@/lib/db";
 import { Company } from "@/lib/models/company";
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin-check";
 
 export async function POST() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     await connectDB();
 
@@ -53,7 +57,6 @@ export async function POST() {
 
     for (const brandData of brands) {
       try {
-        // Check if brand already exists
         const existingBrand = await Company.findOne({ slug: brandData.slug });
         if (existingBrand) {
           errors.push(`Brand ${brandData.name} already exists`);

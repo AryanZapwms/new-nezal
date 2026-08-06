@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Collection } from "@/lib/models/collection"
+import { isAdmin } from "@/lib/admin-check"
 
 // PATCH /api/admin/collections/reorder
 // body: { items: [{ slug: string, sortOrder: number }, ...] }
 export async function PATCH(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const { items } = await req.json()

@@ -6,8 +6,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Coupon } from "@/lib/models/coupon"
+import { isAdmin } from "@/lib/admin-check"
 
 export async function GET() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const coupons = await Coupon.find({}).sort({ createdAt: -1 }).lean()
@@ -19,6 +23,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const body = await req.json()

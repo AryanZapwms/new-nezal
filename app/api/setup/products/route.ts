@@ -3,12 +3,15 @@ import { Product } from "@/lib/models/product";
 import { Company } from "@/lib/models/company";
 import { Category } from "@/lib/models/category";
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin-check";
 
 export async function POST() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     await connectDB();
 
-    // Get all companies and categories
     const companies = await Company.find({ isActive: true });
     const categories = await Category.find({ isActive: true }).populate(
       "company"
@@ -22,7 +25,6 @@ export async function POST() {
     }
 
     const products = [
-      // Nezal Products
       {
         name: "m-beta-Acne",
         slug: "m-beta-acne",
@@ -128,8 +130,6 @@ export async function POST() {
         )?._id,
         isActive: true,
       },
-
-      // DermaFlay Products
       {
         name: "Gentle Hydrating Cleanser",
         slug: "gentle-hydrating-cleanser",
@@ -196,8 +196,6 @@ export async function POST() {
         )?._id,
         isActive: true,
       },
-
-      // Vibrissa Products
       {
         name: "Natural Rosehip Oil",
         slug: "natural-rosehip-oil",
@@ -273,7 +271,6 @@ export async function POST() {
 
     for (const productData of products) {
       try {
-        // Skip if company or category not found
         if (!productData.company || !productData.category) {
           errors.push(
             `Company or category not found for product: ${productData.name}`
@@ -281,7 +278,6 @@ export async function POST() {
           continue;
         }
 
-        // Check if product already exists
         const existingProduct = await Product.findOne({
           slug: productData.slug,
           company: productData.company,

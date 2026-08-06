@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/db"
 import { Product } from "@/lib/models/product"
 import { Blog } from "@/lib/models/blog"
 import { Company } from "@/lib/models/company"
+import { isAdmin } from "@/lib/admin-check"
 
 const PUBLIC_DIR = path.join(process.cwd(), "public")
 const LOCAL_FOLDERS = ["arrivals", "blogs", "carousel", "shop-by-concern", "uploads"]
@@ -162,6 +163,9 @@ async function checkLocalImageUsage(images: ImageFile[]): Promise<void> {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function GET(_request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
 

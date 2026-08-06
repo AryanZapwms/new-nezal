@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Collection } from "@/lib/models/collection"
+import { isAdmin } from "@/lib/admin-check"
 
 // GET /api/admin/collections — full list (active + inactive) for admin table
 export async function GET() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const collections = await Collection.find({})
@@ -18,22 +22,22 @@ export async function GET() {
 
 // POST /api/admin/collections — create a new collection
 export async function POST(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const body = await req.json()
-
     if (!body.name?.trim() || !body.slug?.trim()) {
       return NextResponse.json({ error: "Name and slug are required" }, { status: 400 })
     }
     if (!body.navCategory || !body.subCategory) {
       return NextResponse.json({ error: "navCategory and subCategory are required" }, { status: 400 })
     }
-
     const existing = await Collection.findOne({ slug: body.slug.trim().toLowerCase() })
     if (existing) {
       return NextResponse.json({ error: "A collection with this slug already exists" }, { status: 409 })
     }
-
     const collection = await Collection.create({
       name: body.name.trim(),
       slug: body.slug.trim().toLowerCase(),
@@ -55,7 +59,6 @@ export async function POST(req: NextRequest) {
       sortOrder: body.sortOrder ?? 0,
       isActive: body.isActive ?? true,
     })
-
     return NextResponse.json({ collection }, { status: 201 })
   } catch (error: any) {
     console.error("[admin/collections] POST error:", error)

@@ -21,7 +21,17 @@ const DEFAULT_SETTINGS = {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectDB();
+    const user = await User.findOne({ email: session.user.email });
+    if (!user || user.role !== "admin") {
+      return NextResponse.json({ error: "Access denied. Admin privileges required." }, { status: 403 });
+    }
+
     const settings = await PaymentSettings.findOneAndUpdate(
       {},
       { $setOnInsert: DEFAULT_SETTINGS },

@@ -2,8 +2,12 @@ import { connectDB } from "@/lib/db";
 import { Category } from "@/lib/models/category";
 import { Company } from "@/lib/models/company";
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin-check";
 
 export async function POST() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     await connectDB();
 
@@ -190,13 +194,11 @@ export async function POST() {
 
     for (const categoryData of categories) {
       try {
-        // Skip if company not found
         if (!categoryData.company) {
           errors.push(`Company not found for category: ${categoryData.name}`);
           continue;
         }
 
-        // Check if category already exists
         const existingCategory = await Category.findOne({
           slug: categoryData.slug,
           company: categoryData.company,

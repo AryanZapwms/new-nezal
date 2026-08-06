@@ -3,12 +3,16 @@ import { connectDB } from "@/lib/db"
 import { Product } from "@/lib/models/product"
 import { Collection } from "@/lib/models/collection"
 import { inheritCollectionSaleOnAdd, removeCollectionSaleOnRemove } from "@/lib/sale"
+import { isAdmin } from "@/lib/admin-check"
 
 // GET /api/admin/collections/[slug]/products — all products currently in this collection (any status)
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const { slug } = await params
@@ -32,6 +36,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const { slug } = await params
@@ -72,6 +79,9 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await connectDB()
     const { slug } = await params
