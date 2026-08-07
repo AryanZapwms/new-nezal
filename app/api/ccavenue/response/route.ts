@@ -20,6 +20,7 @@ import { Order } from "@/lib/models/order";
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail, getPaymentFailedEmail } from "@/lib/email";
 import "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
+import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 
 export async function POST(req: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -94,6 +95,31 @@ export async function POST(req: NextRequest) {
               "en-IN",
               { year: "numeric", month: "long", day: "numeric" }
             );
+
+            const shippingAddr = (populatedOrder as any).shippingAddress ?? {};
+            const { clientIp, userAgent, fbp, fbc, eventSourceUrl } = getRequestMeta(req);
+            sendCapiPurchaseEvent({
+              eventId: (populatedOrder as any)._id.toString(),
+              value: (populatedOrder as any).totalAmount,
+              contentIds: (populatedOrder as any).items.map((item: any) =>
+                (item.product?._id ?? item.product).toString()
+              ),
+              numItems: (populatedOrder as any).items.length,
+              eventSourceUrl,
+              user: {
+                email: recipientEmail || undefined,
+                phone: shippingAddr.phone,
+                fullName: recipientName,
+                city: shippingAddr.city,
+                state: shippingAddr.state,
+                zip: shippingAddr.zipCode,
+                country: shippingAddr.country,
+                clientIp,
+                userAgent,
+                fbp,
+                fbc,
+              },
+            }).catch((err) => console.error("[meta-capi] CCAvenue purchase event failed:", err));
 
             const confirmationEmailHtml = getOrderConfirmationEmail({
               orderId: (populatedOrder as any).orderNumber,

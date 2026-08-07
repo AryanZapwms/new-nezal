@@ -4,6 +4,7 @@ import { HomeBanner } from "@/lib/models/homeBanner"
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { revalidatePath } from "next/cache"
 
 // body: { order: [{ id: string, order: number }, ...] }
 export async function POST(request: Request) {
@@ -25,6 +26,8 @@ export async function POST(request: Request) {
         HomeBanner.findByIdAndUpdate(item.id, { order: item.order })
       )
     )
+
+    revalidatePath("/")
 
     return NextResponse.json({ success: true })
   } catch (error) {

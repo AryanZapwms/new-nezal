@@ -2,6 +2,8 @@
 'use client';
 
 import Script from 'next/script';
+import { Suspense, useEffect, useRef } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 const GA_IDS = [
   process.env.NEXT_PUBLIC_GA_ID,
@@ -68,6 +70,51 @@ export function Analytics() {
         />
       </noscript>
     </>
+  );
+}
+
+function RouteChangeTracker() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    // The base scripts in <Analytics /> already fire the initial PageView/page_view
+    // on hard load. Next.js App Router navigations are client-side and don't
+    // re-run those scripts, so subsequent route changes are tracked here.
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+
+    const query = searchParams.toString();
+    const url = query ? `${pathname}?${query}` : pathname;
+
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'page_view', {
+        page_path: url,
+        page_location: window.location.href,
+        page_title: document.title,
+      });
+    }
+
+    if (typeof window.fbq === 'function') {
+      window.fbq('track', 'PageView');
+    }
+  }, [pathname, searchParams]);
+
+  return null;
+}
+
+/**
+ * Fires page_view / PageView on client-side route changes.
+ * Wrapped in Suspense because useSearchParams() requires it in the App Router.
+ */
+export function PageViewTracker() {
+  return (
+    <Suspense fallback={null}>
+      <RouteChangeTracker />
+    </Suspense>
   );
 }
 

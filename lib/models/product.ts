@@ -201,6 +201,24 @@ gstPercent: {
   index: true,
 },
 
+    // ─── Ratings ─────────────────────────────────────────────────────────
+    // Average star rating (0-5) and how many reviews it's based on. Shown
+    // as a star row on product cards — see components/product-card.tsx.
+    // Populated externally (e.g. synced from a reviews platform or
+    // computed from a reviews collection); this schema just stores the
+    // resulting snapshot so it survives normal .save() calls.
+    rating: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 5,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     // Admin-set flag — shows a "Best Seller" ribbon on cards and the product
     // detail page. Independent of HeroProduct.isBestSeller (which only
     // controls the homepage Hero Products carousel badge).

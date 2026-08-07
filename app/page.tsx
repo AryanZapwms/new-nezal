@@ -18,7 +18,11 @@ import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale"
 import { TrustBar } from "@/components/TrustBar"
 import { HeroProducts } from "@/components/hero-products"
 
-
+// This page reads straight from MongoDB (not via Next's fetch cache), so
+// without this it gets statically rendered once at build/deploy time and
+// never picks up admin changes (banners, products, etc.) on its own —
+// only revalidatePath() calls from the admin routes, or this timer, refresh it.
+export const revalidate = 60
 
 // ── Server-side data fetching ─────────────────────────────────────────────────
 // All fetches run in PARALLEL on the server. The page HTML arrives
@@ -180,6 +184,9 @@ const testimonials = reviews.slice(0, 8).map((r: any) => ({
         </div>
       </div>
 
+     {/* Flash Deal — products pre-rendered, no skeleton */}
+      {activeSale && <FlashDeal sale={activeSale} />}
+
       {/* Hero Products */}
           <HeroProducts />
 
@@ -200,8 +207,7 @@ const testimonials = reviews.slice(0, 8).map((r: any) => ({
 
       
 
-               {/* Flash Deal — products pre-rendered, no skeleton */}
-      {activeSale && <FlashDeal sale={activeSale} />}
+    
 
       {/* Promo Banner Grid */}
       <PromoBannerGrid />

@@ -1,6 +1,6 @@
 /**
  * Facebook Pixel Tracking Utility
- * Pixel ID: 997663834042843
+ * Pixel ID: read from NEXT_PUBLIC_META_PIXEL_ID (see components/analytics.tsx)
  * Currency: INR
  * Production Ready
  */
@@ -10,7 +10,8 @@ export interface FacebookPixelEventData {
 
 /**
  * Initialize Facebook Pixel base code
- * Should be called once on app load
+ * NOTE: the base pixel is already loaded by <Analytics /> in components/analytics.tsx
+ * on every page. This is only a fallback for contexts where that component isn't mounted.
  */
 export function initializeFacebookPixel() {
   if (typeof window === 'undefined') return
@@ -18,7 +19,10 @@ export function initializeFacebookPixel() {
   // Check if fbq already exists
   if ((window as any).fbq) return
 
-  ;(function (f: any, b: any, e: any, v: any, n: any, t: any, s: any) {
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+  if (!pixelId) return
+
+  ;(function (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) {
     if (f.fbq) return
     n = f.fbq = function () {
       n.callMethod
@@ -33,7 +37,7 @@ export function initializeFacebookPixel() {
     t = b.createElement(e)
     t.async = !0
     t.src = v
-    s = b.getElementsByTagName(e)[0]!  
+    s = b.getElementsByTagName(e)[0]!
     s.parentNode!.insertBefore(t, s)
   })(
     window,
@@ -42,7 +46,7 @@ export function initializeFacebookPixel() {
     'https://connect.facebook.net/en_US/fbevents.js'
   )
 
-  ;(window as any).fbq('init', '997663834042843')
+  ;(window as any).fbq('init', pixelId)
   ;(window as any).fbq('track', 'PageView')
 }
 
@@ -287,7 +291,9 @@ export function trackPurchase(
     ...(email && { em: hashEmail(email) }),
   }
 
-    ; (window as any).fbq('track', 'Purchase', data)
+  // eventID must match the event_id sent server-side via the Conversions API
+  // (lib/meta-capi.ts, keyed off the same orderId) so Meta dedupes the two.
+  ; (window as any).fbq('track', 'Purchase', data, { eventID: orderId })
 }
 
 /**

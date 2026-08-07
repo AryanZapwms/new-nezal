@@ -205,7 +205,9 @@ async function onSubmit(e: React.FormEvent) {
                   Sign In
                 </CardTitle>
                 <CardDescription className="text-[--color-text-body] text-base">
-                  Enter your credentials to access your account
+                  {redirectTo === "/checkout"
+                    ? "Please log in to continue to checkout"
+                    : "Enter your credentials to access your account"}
                 </CardDescription>
               </CardHeader>
 
@@ -377,7 +379,13 @@ async function onSubmit(e: React.FormEvent) {
                     Don't have an account?{" "}
                     <button
                       type="button"
-                      onClick={() => router.push("/auth/register")}
+                      onClick={() =>
+                        router.push(
+                          redirectTo !== "/"
+                            ? `/auth/register?redirect=${encodeURIComponent(redirectTo)}`
+                            : "/auth/register"
+                        )
+                      }
                       className="text-[--color-brand-primary] hover:text-[--color-brand-primary-dark] font-bold hover:underline transition-colors inline-flex items-center gap-1"
                       disabled={isLoading}
                     >

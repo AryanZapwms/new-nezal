@@ -9,6 +9,7 @@ import "@/lib/models/product"
 import "@/lib/models/user"
 import { Product } from "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
+import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 
 export async function POST(request: NextRequest) {
   try {
@@ -156,6 +157,29 @@ const realShippingBreakdown = shippingBreakdown ?? {
     // emails once payment is verified, in their respective callback routes.
     if (paymentMethod === "cod") {
        await autoCreateShiprocketOrder(order._id.toString());
+
+      const { clientIp, userAgent, fbp, fbc, eventSourceUrl } = getRequestMeta(request);
+      sendCapiPurchaseEvent({
+        eventId: order._id.toString(),
+        value: order.totalAmount,
+        contentIds: verifiedItems.map((item) => item.product.toString()),
+        numItems: verifiedItems.length,
+        eventSourceUrl,
+        user: {
+          email: recipientEmail,
+          phone: mappedAddress.phone,
+          fullName: recipientName,
+          city: mappedAddress.city,
+          state: mappedAddress.state,
+          zip: mappedAddress.zipCode,
+          country: mappedAddress.country,
+          clientIp,
+          userAgent,
+          fbp,
+          fbc,
+        },
+      }).catch((err) => console.error("[meta-capi] COD purchase event failed:", err));
+
       try {
         const populatedOrder = await Order.findById(order._id)
           .populate("items.product")

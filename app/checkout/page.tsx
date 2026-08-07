@@ -288,10 +288,12 @@ useEffect(() => {
 
   const totalPrice = getTotalPrice()
 
-  const flashSavings = items.reduce((sum, item) => {
-    if (!item.flashSale || !item.discountPrice) return sum
+  const totalSavings = items.reduce((sum, item) => {
+    if (!item.discountPrice) return sum
     return sum + (item.price - item.discountPrice) * item.quantity
   }, 0)
+
+  const hasFlashSaleItem = items.some((item) => !!item.flashSale)
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase()
@@ -823,14 +825,14 @@ const amountLeftForFreeShipping =
     )
   })()}
 
-  {flashSavings > 0 && (
+  {totalSavings > 0 && (
     <div className="flex justify-between text-sm">
-      <span className="flex items-center gap-1" style={{ color: "#E4432B" }}>
+      <span className="flex items-center gap-1" style={{ color: hasFlashSaleItem ? "#E4432B" : "#2d8116" }}>
         <Zap className="w-3.5 h-3.5 fill-current" />
-        Flash Sale Savings
+        {hasFlashSaleItem ? "Flash Sale Savings" : "Sale Savings"}
       </span>
-      <span className="font-medium" style={{ color: "#E4432B" }}>
-        − ₹{flashSavings.toFixed(2)}
+      <span className="font-medium" style={{ color: hasFlashSaleItem ? "#E4432B" : "#2d8116" }}>
+        − ₹{totalSavings.toFixed(2)}
       </span>
     </div>
   )}

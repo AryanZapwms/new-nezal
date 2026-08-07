@@ -8,7 +8,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } from "@/lib/email"
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket"
-import Razorpay from "razorpay" 
+import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi"
+import Razorpay from "razorpay"
 
 
 const razorpay = new Razorpay({
@@ -149,6 +150,28 @@ if (razorpayOrder.amount !== expectedAmountPaise) {
 
     const recipientEmail = user?.email || shippingAddress.email
     const recipientName = user?.name || shippingAddress.name
+
+    const { clientIp, userAgent, fbp, fbc, eventSourceUrl } = getRequestMeta(request)
+    sendCapiPurchaseEvent({
+      eventId: order._id.toString(),
+      value: order.totalAmount,
+      contentIds: verifiedItems.map((item) => item.product.toString()),
+      numItems: verifiedItems.length,
+      eventSourceUrl,
+      user: {
+        email: recipientEmail,
+        phone: mappedAddress.phone,
+        fullName: recipientName,
+        city: mappedAddress.city,
+        state: mappedAddress.state,
+        zip: mappedAddress.zipCode,
+        country: mappedAddress.country,
+        clientIp,
+        userAgent,
+        fbp,
+        fbc,
+      },
+    }).catch((err) => console.error("[meta-capi] Razorpay purchase event failed:", err))
 
     try {
       const populatedOrder = await Order.findById(order._id)

@@ -4,6 +4,7 @@ import { HomeBanner } from "@/lib/models/homeBanner"
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { revalidatePath } from "next/cache"
 import fs from "fs/promises"
 import path from "path"
 
@@ -31,6 +32,8 @@ export async function PATCH(
     if (!banner) {
       return NextResponse.json({ error: "Banner not found" }, { status: 404 })
     }
+
+    revalidatePath("/")
 
     return NextResponse.json(banner)
   } catch (error) {
@@ -70,6 +73,9 @@ export async function DELETE(
     }
 
     await HomeBanner.findByIdAndDelete(id)
+
+    revalidatePath("/")
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting home banner:", error)

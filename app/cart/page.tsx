@@ -81,45 +81,9 @@ const totalGST = items.reduce((sum, item) => {
         return sum + (item.price - item.discountPrice) * item.quantity
     }, 0)
 
+  const hasFlashSaleItem = items.some((item) => !!item.flashSale)
 
 
-
-
-// ===== Not logged in state =====
-  if (status === "unauthenticated") {
-    return (
-      <main className="min-h-screen bg-background">
-        <div className="container-nezal py-10">
-          <h1 className="text-4xl font-bold text-foreground mb-8">Shopping Cart</h1>
-
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <svg className="w-24 h-24 text-muted-foreground mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
-            </svg>
-            <p className="text-lg text-muted-foreground mb-4">Please log in to view your cart</p>
-            <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              onClick={() => router.push("/auth/login?redirect=/cart")}
-            >
-              Log In
-            </Button>
-          </div>
-        </div>
-      </main>
-    )
-  }
-
-  // ===== Loading session state =====
-  if (status === "loading") {
-    return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-lg text-muted-foreground flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-muted-foreground border-t-primary rounded-full animate-spin" />
-          Loading cart...
-        </div>
-      </main>
-    )
-  }
 
   // ===== Empty cart state =====
   if (items.length === 0) {
@@ -170,7 +134,9 @@ const totalGST = items.reduce((sum, item) => {
     return (
       <>
         {/* Individually-added items */}
-        {nonRitualItems.map((item) => (
+        {nonRitualItems.map((item) => {
+          const hasItemDiscount = item.discountPrice != null && item.discountPrice < item.price
+          return (
           <Card
             key={`${item.productId}-${item.selectedSize ? `${item.selectedSize.size}-${item.selectedSize.quantity}${item.selectedSize.unit}` : "default"}`}
             className="border border-border rounded-2xl shadow-none bg-card overflow-hidden"
@@ -233,12 +199,17 @@ const totalGST = items.reduce((sum, item) => {
                     </div>
 
                     <div className="text-right">
-                      <p className="font-bold text-foreground">
-                        ₹{((item.discountPrice || item.price) * item.quantity).toFixed(2)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        ₹{item.discountPrice || item.price} each
-                      </p>
+                      <div className="flex items-center justify-end gap-2">
+                        {hasItemDiscount && (
+                          <span className="text-sm text-muted-foreground line-through text-red-400">
+                            ₹{(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        )}
+                        <p className="font-bold text-foreground text-green-700 text-lg">
+                          ₹{((item.discountPrice || item.price) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                     
                     </div>
                   </div>
                 </div>
@@ -253,7 +224,8 @@ const totalGST = items.reduce((sum, item) => {
               </div>
             </CardContent>
           </Card>
-        ))}
+          )
+        })}
 
         {/* Ritual bundles — grouped, single delete for the whole set */}
         {Object.values(ritualGroups).map((group) => (
@@ -282,7 +254,9 @@ const totalGST = items.reduce((sum, item) => {
                 </button>
               </div>
 
-              {group.items.map((item) => (
+              {group.items.map((item) => {
+                const hasItemDiscount = item.discountPrice != null && item.discountPrice < item.price
+                return (
                 <div
                   key={`${item.productId}-${item.selectedSize ? `${item.selectedSize.size}-${item.selectedSize.quantity}${item.selectedSize.unit}` : "default"}`}
                   className="flex gap-4"
@@ -333,17 +307,23 @@ const totalGST = items.reduce((sum, item) => {
                       </div>
 
                       <div className="text-right">
-                        <p className="font-bold text-foreground">
-                          ₹{((item.discountPrice || item.price) * item.quantity).toFixed(2)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          ₹{item.discountPrice || item.price} each
-                        </p>
+                        <div className="flex items-center justify-end gap-2">
+                          {hasItemDiscount && (
+                            <span className="text-sm text-muted-foreground line-through text-red-400">
+                              ₹{(item.price * item.quantity).toFixed(2)}
+                            </span>
+                          )}
+                          <p className="font-bold text-foreground text-green-800 text-lg">
+                            ₹{((item.discountPrice || item.price) * item.quantity).toFixed(2)}
+                          </p>
+                        </div>
+                        
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </CardContent>
           </Card>
         ))}
@@ -400,17 +380,28 @@ const totalGST = items.reduce((sum, item) => {
     )
   })()}
 
+ 
+
   {totalSavings > 0 && (
-    <div className="flex justify-between text-sm border p-2 rounded-lg border-[#E4432B]">
-      <span className="flex items-center gap-1" style={{ color: "#E4432B" }}>
-        <Zap className="w-3.5 h-3.5 fill-current" />
-        Flash Sale Savings
-      </span>
-      <span className="font-semibold" style={{ color: "#E4432B" }}>
-        − ₹{totalSavings.toFixed(2)}
-      </span>
-    </div>
-  )}
+  <div
+    className="flex justify-between text-sm border p-2 rounded-lg"
+    style={{ borderColor: hasFlashSaleItem ? "#E4432B" : "#2d8116" }}
+  >
+    <span
+      className="flex items-center gap-1"
+      style={{ color: hasFlashSaleItem ? "#E4432B" : "#2d8116" }}
+    >
+      <Zap className="w-3.5 h-3.5 fill-current" />
+      {hasFlashSaleItem ? "Flash Sale Savings" : "Sale Savings"}
+    </span>
+    <span
+      className="font-semibold"
+      style={{ color: hasFlashSaleItem ? "#E4432B" : "#2d8116" }}
+    >
+      − ₹{totalSavings.toFixed(2)}
+    </span>
+  </div>
+)}
 
   <div className="flex justify-between text-sm pt-2">
     <span className="text-muted-foreground">Shipping Cost</span>
@@ -445,7 +436,13 @@ const totalGST = items.reduce((sum, item) => {
 
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-5 rounded-xl text-base"
-                  onClick={() => router.push("/checkout")}
+                  onClick={() => {
+                    if (status === "authenticated") {
+                      router.push("/checkout")
+                    } else {
+                      router.push("/auth/login?redirect=/checkout")
+                    }
+                  }}
                 >
                   Proceed to Checkout
                 </Button>

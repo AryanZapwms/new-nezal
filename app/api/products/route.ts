@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       const products = await Product.find({ _id: { $in: idList } })
         .populate("company", "name slug")
         .populate("category", "name slug")
-      .select("name slug image images sizes company category stock price discountPrice salePercentage gstPercent isBestSeller")
+      .select("name slug image images sizes company category stock price discountPrice salePercentage gstPercent isBestSeller rating reviewCount")
         .lean();
 
       // Flash-sale pricing shows up in the wishlist too, not just the shop grid
@@ -173,7 +173,7 @@ if (exclude) {
   const candidates = await Product.find(query)
     .populate("company", "name slug")
     .populate("category", "name slug")
-    .select("name slug price discountPrice salePercentage image images stock sizes company category isActive createdAt isBestSeller")
+    .select("name slug price discountPrice salePercentage image images stock sizes company category isActive createdAt isBestSeller rating reviewCount")
     .sort({ createdAt: -1 })
     .lean();  
 
@@ -205,7 +205,7 @@ if (exclude) {
     Product.find(query)
       .populate("company", "name slug")
       .populate("category", "name slug")
-      .select("name slug price discountPrice salePercentage image images stock sizes company category isActive createdAt isBestSeller")
+      .select("name slug price discountPrice salePercentage image images stock sizes company category isActive createdAt isBestSeller rating reviewCount")
       .skip(skip)
       .limit(limit)
        .sort(getSortStage(sort))

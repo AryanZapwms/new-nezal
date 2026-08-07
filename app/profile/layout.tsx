@@ -1,41 +1,15 @@
-"use client"
-
+// app/profile/layout.tsx
+//
+// Server wrapper so this segment can export noindex metadata — the actual
+// session-gated layout logic lives in profile-layout-client.tsx since it
+// needs useSession/useRouter (Client Component only).
+import type { Metadata } from "next"
 import type React from "react"
-import { useSession } from "next-auth/react"
-import { useRouter, usePathname } from "next/navigation"
-import { useEffect } from "react"
+import { NOINDEX_METADATA } from "@/lib/seo"
+import ProfileLayoutClient from "./profile-layout-client"
 
+export const metadata: Metadata = NOINDEX_METADATA
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const pathname = usePathname()
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/auth/login")
-    }
-  }, [status, router])
-
-  if (status === "loading") {
-    return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </main>
-    )
-  }
-
-  if (status === "unauthenticated") {
-    return null
-  }
-
-  const isProfilePage = pathname === "/profile"
-  const isOrdersPage = pathname?.startsWith("/profile/orders")
-
-  return (
-    <div className="flex min-h-screen bg-background">
-      {/* Main Content */}
-      <main className="flex-1">{children}</main>
-    </div>
-  )
+  return <ProfileLayoutClient>{children}</ProfileLayoutClient>
 }

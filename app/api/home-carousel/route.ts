@@ -4,6 +4,7 @@ import { HomeBanner } from "@/lib/models/homeBanner"
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { revalidatePath } from "next/cache"
 
 // Public — used by the homepage to render the carousel
 export async function GET() {
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
       order: typeof body.order === "number" ? body.order : count,
       isActive: body.isActive ?? true,
     })
+
+    revalidatePath("/")
 
     return NextResponse.json(banner)
   } catch (error) {

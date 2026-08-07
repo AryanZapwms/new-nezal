@@ -28,7 +28,6 @@ import {
   Hand,
   Droplet,
   ShoppingCart,
-  CheckCircle2,
   AlertCircle,
   XCircle,
 } from "lucide-react";
@@ -42,6 +41,7 @@ interface Size {
   price: number;
   discountPrice?: number;
   stock: number;
+  sku?: string;
 }
 
 interface FlashSaleInfo {
@@ -160,6 +160,7 @@ export default function ProductCard({
   const getTotalItems = useCartStore((state) => state.getTotalItems);
 
   const [selectedSize, setSelectedSize] = useState<Size | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [showBulkOrderModal, setShowBulkOrderModal] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -189,6 +190,12 @@ export default function ProductCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [singleSize?.sku, singleSize?.size, singleSize?.quantity]);
 
+  // A size switch can change the available stock — reset the picked quantity
+  // rather than silently carrying over a value that may now exceed it.
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedSize?.sku, selectedSize?.size, selectedSize?.quantity]);
+
   // ── Pricing — based on real size data whenever sizes exist at all ──
   //
   // `discountPrice` already reflects whichever sale (flash, direct, or
@@ -200,39 +207,39 @@ export default function ProductCard({
   // size already has a more specific manual discount) makes the sale
   // actually apply to every variant, not just size-less products.
   const percentOff =
-  salePercentage != null && salePercentage > 0
-    ? salePercentage / 100
-    : discountPrice != null && discountPrice < price && price > 0
-      ? (price - discountPrice) / price
-      : 0;
+    salePercentage != null && salePercentage > 0
+      ? salePercentage / 100
+      : discountPrice != null && discountPrice < price && price > 0
+        ? (price - discountPrice) / price
+        : 0;
 
   const sizeSalePrice = (s: Size) =>
     s.discountPrice ?? (percentOff > 0 ? Math.round(s.price * (1 - percentOff)) : undefined);
 
   const cheapestSize =
-  sizes.length > 0
-    ? sizes.reduce((min, s) => {
-        const eff = sizeSalePrice(s) ?? s.price;
-        const minEff = sizeSalePrice(min) ?? min.price;
-        return eff < minEff ? s : min;
-      }, sizes[0])
-    : null;
+    sizes.length > 0
+      ? sizes.reduce((min, s) => {
+          const eff = sizeSalePrice(s) ?? s.price;
+          const minEff = sizeSalePrice(min) ?? min.price;
+          return eff < minEff ? s : min;
+        }, sizes[0])
+      : null;
 
   const activeSize = selectedSize ?? cheapestSize;
 
-const originalPrice = activeSize ? activeSize.price : price;
-const effectivePrice = activeSize
-  ? sizeSalePrice(activeSize) ?? activeSize.price
-  : discountPrice ?? price;
-const hasDiscount = effectivePrice < originalPrice;
+  const originalPrice = activeSize ? activeSize.price : price;
+  const effectivePrice = activeSize
+    ? sizeSalePrice(activeSize) ?? activeSize.price
+    : discountPrice ?? price;
+  const hasDiscount = effectivePrice < originalPrice;
 
-const discount = hasDiscount
-  ? salePercentage != null && salePercentage > 0
-    ? Math.round(salePercentage)
-    : Math.round(((originalPrice - effectivePrice) / originalPrice) * 100)
-  : 0;
-  
-const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0;
+  const discount = hasDiscount
+    ? salePercentage != null && salePercentage > 0
+      ? Math.round(salePercentage)
+      : Math.round(((originalPrice - effectivePrice) / originalPrice) * 100)
+    : 0;
+
+  const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0;
 
   // ── Stock ──
   const effectiveStock =
@@ -271,13 +278,25 @@ const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0
     setSelectedSize(s);
   }
 
+  function handleDecrementQuantity(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setQuantity((q) => Math.max(1, q - 1));
+  }
+
+  function handleIncrementQuantity(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setQuantity((q) => Math.min(effectiveStock || 1, q + 1));
+  }
+
   function handleAddToCart(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     e.stopPropagation();
 
     const totalItems = getTotalItems();
 
-    if (totalItems >= BULK_ORDER_LIMIT) {
+    if (totalItems + quantity > BULK_ORDER_LIMIT) {
       setShowBulkOrderModal(true);
       return;
     }
@@ -299,13 +318,14 @@ const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0
         price: selectedSize.price,
         discountPrice: selectedSizeSalePrice,
         image,
-        quantity: 1,
+        quantity,
         company,
         selectedSize: { ...selectedSize, discountPrice: selectedSizeSalePrice },
         flashSale,
       });
 
-      toast({ title: "Added to cart", description: `${name} added.` });
+      toast({ title: "Added to cart", description: `${quantity} × ${name} added.` });
+      setQuantity(1);
       return;
     }
 
@@ -315,12 +335,13 @@ const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0
       price,
       discountPrice,
       image,
-      quantity: 1,
+      quantity,
       company,
       flashSale,
     });
 
-    toast({ title: "Added to cart", description: `${name} added.` });
+    toast({ title: "Added to cart", description: `${quantity} × ${name} added.` });
+    setQuantity(1);
   }
 
   return (
@@ -523,59 +544,99 @@ const savedAmount = hasDiscount ? Math.round(originalPrice - effectivePrice) : 0
           <div className="mt-auto flex flex-col gap-1.5 pt-2" onClick={(e) => e.stopPropagation()}>
             {/* Size / weight — pill buttons instead of a dropdown */}
             {showSizeSelector ? (
-  <div className="flex flex-wrap gap-1.5 pb-0.5">
-    {sizes.map((s, idx) => {
-      const isSelected =
-        selectedSize?.size === s.size &&
-        selectedSize?.unit === s.unit &&
-        selectedSize?.quantity === s.quantity;
-      const oos = s.stock < 1;
-      return (
-        <button
-          key={idx}
-          type="button"
-          disabled={oos}
-          onClick={(e) => handleSelectSize(e, s)}
-          className="rounded-full border px-3 py-1 text-[10px] font-semibold transition-all duration-150 sm:text-[11px] disabled:cursor-not-allowed disabled:opacity-40"
-          style={{
-            backgroundColor: isSelected ? "var(--color-brand-primary)" : "#ffffff",
-            borderColor: isSelected ? "var(--color-brand-primary)" : "var(--color-border)",
-            color: isSelected ? "#ffffff" : "var(--color-text-heading)",
-            textDecoration: oos ? "line-through" : "none",
-            boxShadow: isSelected ? "0 2px 8px -2px rgba(30,58,40,0.4)" : "none",
-          }}
-        >
-          {formatSize(s)}
-        </button>
-      );
-    })}
-  </div>
-) : singleSize ? (
-  <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
-    {formatSize(singleSize)}
-  </span>
-) : weightLabel ? (
-  <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
-    {weightLabel}
-  </span>
-) : null}
+              <div className="flex flex-wrap gap-1.5 pb-0.5">
+                {sizes.map((s, idx) => {
+                  const isSelected =
+                    selectedSize?.size === s.size &&
+                    selectedSize?.unit === s.unit &&
+                    selectedSize?.quantity === s.quantity;
+                  const oos = s.stock < 1;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={oos}
+                      onClick={(e) => handleSelectSize(e, s)}
+                      className="rounded-full border px-3 py-1 text-[10px] font-semibold transition-all duration-150 sm:text-[11px] disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{
+                        backgroundColor: isSelected ? "var(--color-brand-primary)" : "#83BF56",
+                        color: "white",
+                        textDecoration: oos ? "line-through" : "none",
+                        boxShadow: isSelected ? "0 2px 8px -2px rgba(30,58,40,0.4)" : "none",
+                      }}
+                    >
+                      {formatSize(s)}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : singleSize ? (
+              <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
+                {formatSize(singleSize)}
+              </span>
+            ) : weightLabel ? (
+              <span className="w-fit rounded-md bg-[var(--color-bg-cream)] px-2 py-0.5 text-[11px] font-medium text-neutral-600 sm:text-xs">
+                {weightLabel}
+              </span>
+            ) : null}
 
-            {canAddToCart && (
+            {canAddToCart && !isOutOfStock && (
+              <div className="flex items-center gap-1.5">
+                {/* Quantity stepper — kept compact so the button beside it has room */}
+                <div className="flex h-8 flex-shrink-0 items-center rounded-full border border-gray-300 sm:h-11">
+                  <button
+                    type="button"
+                    onClick={handleDecrementQuantity}
+                    disabled={quantity <= 1}
+                    aria-label="Decrease quantity"
+                    className="flex h-full w-5 items-center justify-center text-sm font-bold text-[var(--color-text-heading)] transition-colors hover:text-[var(--color-brand-primary)] disabled:cursor-not-allowed disabled:opacity-30 sm:w-6 sm:text-base"
+                  >
+                    −
+                  </button>
+                  <span className="w-3.5 flex-shrink-0 text-center text-[11px] font-bold text-[var(--color-text-heading)] sm:w-4 sm:text-sm">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleIncrementQuantity}
+                    disabled={quantity >= effectiveStock}
+                    aria-label="Increase quantity"
+                    className="flex h-full w-5 items-center justify-center text-sm font-bold text-[var(--color-text-heading)] transition-colors hover:text-[var(--color-brand-primary)] disabled:cursor-not-allowed disabled:opacity-30 sm:w-6 sm:text-base"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Add to Cart — these cards run 4-up even on desktop, so there's
+                    never enough width for the full phrase next to a stepper.
+                    Short label + icon fits cleanly at every grid density. */}
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  aria-label="Add to Cart"
+                  className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full bg-[var(--color-brand-primary)] px-2 text-[11px] font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110 active:scale-[0.98] sm:h-11 sm:text-sm animate-in fade-in"
+                >
+                  <ShoppingCart className="h-3.5 w-3.5 flex-shrink-0" />
+                  Add
+                </button>
+              </div>
+            )}
+
+            {canAddToCart && isOutOfStock && (
               <button
                 type="button"
-                onClick={handleAddToCart}
-                disabled={isOutOfStock}
-                className="flex h-8 items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-primary)] text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none sm:h-11 sm:text-sm animate-in fade-in"
+                disabled
+                className="flex h-8 items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-primary)] text-xs font-semibold text-white shadow-sm sm:h-11 sm:text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ShoppingCart className="h-3.5 w-3.5" />
-                {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                Out of Stock
               </button>
             )}
 
             <button
               type="button"
               onClick={handleViewDetails}
-              className="h-8 text-center text-[11px] font-medium text-neutral-400 underline-offset-2 transition-colors duration-200 hover:text-[var(--color-brand-primary)] hover:underline sm:text-xs"
+              className="h-8 text-center text-[11px] font-medium border-2 rounded-xl  text-neutral-400 underline-offset-2 transition-colors duration-200 hover:text-[var(--color-brand-primary)] hover:underline sm:text-xs"
             >
               {canAddToCart ? "View Details" : "Select a size to continue"}
             </button>

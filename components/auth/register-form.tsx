@@ -4,7 +4,7 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,14 +36,17 @@ export function RegisterForm() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/";
+  const loginHref = redirectTo !== "/" ? `/auth/login?redirect=${encodeURIComponent(redirectTo)}` : "/auth/login";
   const { data: session } = useSession();
-   const { withLoading } = useLoading()   
+   const { withLoading } = useLoading()
 
   useEffect(() => {
     if (session?.user) {
-      router.push("/");
+      router.push(redirectTo);
     }
-  }, [session, router]);
+  }, [session, router, redirectTo]);
 
   const validateName = (value: string) => {
     if (!value.trim()) {
@@ -160,14 +163,16 @@ export function RegisterForm() {
               email={email}
               onSuccess={() => {
                 trackCompleteRegistration(email, "completed");
-                router.push("/auth/login?registered=true&verified=true");
+                const params = new URLSearchParams({ registered: "true", verified: "true" });
+                if (redirectTo !== "/") params.set("redirect", redirectTo);
+                router.push(`/auth/login?${params.toString()}`);
               }}
             />
             <div className="mt-6 text-center text-sm text-[--color-text-body]">
               Already verified?{" "}
               <button
                 type="button"
-                onClick={() => router.push("/auth/login")}
+                onClick={() => router.push(loginHref)}
                 className="text-[--color-brand-primary] hover:text-[--color-brand-primary-dark] font-semibold hover:underline"
                 disabled={isLoading}
               >
@@ -267,7 +272,9 @@ export function RegisterForm() {
                   Create Account
                 </CardTitle>
                 <CardDescription className="text-[--color-text-body] text-base">
-                  Fill in your details to start your {BRAND.name} journey
+                  {redirectTo === "/checkout"
+                    ? "Create an account to continue to checkout"
+                    : `Fill in your details to start your ${BRAND.name} journey`}
                 </CardDescription>
               </CardHeader>
 
@@ -500,7 +507,7 @@ export function RegisterForm() {
   <Button
     type="button"
     variant="outline"
-    onClick={() => signIn("google", { callbackUrl: "/" })}
+    onClick={() => signIn("google", { callbackUrl: redirectTo })}
     disabled={isLoading}
     className="w-full h-12 mt-5 text-base font-semibold border border-[#c3c3c3] hover:bg-[--color-bg-cream] transition-all duration-200 rounded-lg flex items-center justify-center gap-3"
   >
@@ -529,7 +536,7 @@ export function RegisterForm() {
                     Already have an account?{" "}
                     <button
                       type="button"
-                      onClick={() => router.push("/auth/login")}
+                      onClick={() => router.push(loginHref)}
                       className="text-[--color-brand-primary] hover:text-[--color-brand-primary-dark] font-bold hover:underline transition-colors inline-flex items-center gap-1"
                       disabled={isLoading}
                     >

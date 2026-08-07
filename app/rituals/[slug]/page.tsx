@@ -90,6 +90,21 @@ export default function RitualPage() {
     const [showBulkOrderModal, setShowBulkOrderModal] = useState(false)
     const [addingRitual, setAddingRitual] = useState(false)
 
+  // A size's own `discountPrice` is a legacy, per-size override. Most sales
+  // (like a ritual product's 8% off) are set at the product level via
+  // product.price / product.discountPrice and never get copied onto each
+  // size row individually. So: trust the size's own discountPrice if it has
+  // one, otherwise derive the product's sale percentage and apply it to
+  // that size's price. Mirrors the same logic in components/product-card.tsx
+  // so a product's sale shows up consistently everywhere it's added to cart.
+  function sizeSalePrice(product: RitualProduct, size: { price: number; discountPrice?: number }) {
+    if (size.discountPrice != null) return size.discountPrice
+    if (product.discountPrice != null && product.discountPrice < product.price && product.price > 0) {
+      const percentOff = (product.price - product.discountPrice) / product.price
+      return Math.round(size.price * (1 - percentOff))
+    }
+    return undefined
+  }
 
   function handleAddRitualToCart() {
   if (!ritual || ritual.products.length === 0) return
@@ -105,20 +120,28 @@ export default function RitualPage() {
   ritual.products.forEach((product) => {
     const hasSizes = !!product.sizes?.length
     const cheapestSize = hasSizes
-      ? [...product.sizes!].sort(
-          (a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price)
-        )[0]
+      ? [...product.sizes!].sort((a, b) => {
+          const effA = sizeSalePrice(product, a) ?? a.price
+          const effB = sizeSalePrice(product, b) ?? b.price
+          return effA - effB
+        })[0]
       : undefined
+
+    const resolvedDiscountPrice = hasSizes
+      ? sizeSalePrice(product, cheapestSize!)
+      : product.discountPrice
 
     addItem({
       productId: product._id,
       name: product.name,
       price: hasSizes ? cheapestSize!.price : product.price,
-      discountPrice: hasSizes ? cheapestSize!.discountPrice : product.discountPrice,
+      discountPrice: resolvedDiscountPrice,
       image: product.image || "",
       quantity: 1,
       company: product.company,
-      selectedSize: cheapestSize as any,
+      selectedSize: hasSizes
+        ? ({ ...cheapestSize, discountPrice: resolvedDiscountPrice } as any)
+        : undefined,
       ritual: { slug: ritual.slug, name: ritual.name },
     })
   })

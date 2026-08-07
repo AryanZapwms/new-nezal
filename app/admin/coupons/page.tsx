@@ -529,7 +529,7 @@ export default function AdminCouponsPage() {
             <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+            <Button variant="destructive" className="bg-red-400 border hover:bg-red-600" onClick={handleDelete} disabled={deleting}>
               {deleting ? "Deleting..." : "Delete"}
             </Button>
           </div>

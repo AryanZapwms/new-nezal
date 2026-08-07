@@ -2,7 +2,7 @@
 import type React from "react";
 import type { Metadata } from "next";
 import { Playfair_Display, Poppins } from "next/font/google";
-import { Analytics, GTMNoScript } from "@/components/analytics";   // New analytics component
+import { Analytics, GTMNoScript, PageViewTracker } from "@/components/analytics";   // New analytics component
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { Header } from "@/components/header";
 import { PromoBar } from "@/components/promo-bar";
@@ -83,7 +83,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: BRAND.domain,
   },
-  generator: "Varun Singh - github.com/VarunSingh19",
+  generator: "Aryan Gupta - github.com/AryanGuptaGithub",
 };
 
 export default function RootLayout({
@@ -127,6 +127,8 @@ export default function RootLayout({
      <body className="font-sans antialiased min-h-screen flex flex-col">
        {/* Google Tag Manager (noscript) — must be immediately after <body> */}
        <GTMNoScript />
+       {/* Fires page_view / PageView on client-side route changes */}
+       <PageViewTracker />
        <NextTopLoader
     color="var(--color-brand-primary)"
     height={3}
