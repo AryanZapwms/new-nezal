@@ -17,7 +17,7 @@ function sha256(value: string): string {
 function normalizePhone(phone: string): string {
   // Meta expects digits only (with country code), no +/spaces/dashes
   return phone.replace(/[^\d]/g, "")
-}
+} 
 
 export interface CapiUserData {
   email?: string
