@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Write .env.local
         run: echo "${{ secrets.ENV_LOCAL_CONTENTS }}" > .env.local
 
@@ -51,6 +51,9 @@ jobs:
           echo "node_modules breakdown (if present):"
           du -sh deploy_package/node_modules/* 2>/dev/null | sort -rh | head -15
 
+      - name: Package bundle
+        run: tar -czf deploy_package.tar.gz -C deploy_package .
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
@@ -58,17 +61,28 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Create remote release directory
-        run: |
-          RELEASE_NAME=$(date +%Y%m%d%H%M%S)
-          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "mkdir -p /home/nezalherbocare.com/releases/$RELEASE_NAME"
+      - name: Set release name
+        run: echo "RELEASE_NAME=$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
 
       - name: Upload build to VPS
         run: |
-          rsync -avz --progress --delete -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
-            deploy_package/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/nezalherbocare.com/releases/${{ env.RELEASE_NAME }}/
+          scp -i ~/.ssh/deploy_key -P ${{ secrets.SSH_PORT }} \
+            deploy_package.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/nezalherbocare.com/releases/${{ env.RELEASE_NAME }}.tar.gz
+
+      - name: Extract bundle on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: RELEASE_NAME
+          script: |
+            set -e
+            RELEASES_DIR="/home/nezalherbocare.com/releases"
+            mkdir -p "$RELEASES_DIR/$RELEASE_NAME"
+            tar -xzf "$RELEASES_DIR/$RELEASE_NAME.tar.gz" -C "$RELEASES_DIR/$RELEASE_NAME"
+            rm "$RELEASES_DIR/$RELEASE_NAME.tar.gz"
 
       - name: Finalize release on VPS
         uses: appleboy/ssh-action@v1.0.3
