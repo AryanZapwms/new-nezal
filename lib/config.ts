@@ -8,8 +8,8 @@ export const BRAND = {
     primary: '7710076400',
   },
   social: {
-    instagram: 'https://instagram.com/nezal',
-    facebook: 'https://facebook.com/nezal',
+    instagram: 'https://instagram.com/nezalherbocare',
+    facebook: 'https://www.facebook.com/nezalherbocare',
   },
   // Add any other brand constants you need
 } as const;
