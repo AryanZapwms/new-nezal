@@ -16,6 +16,7 @@ interface Product {
   discountPrice?: number
   image: string
   company: { _id: string; name: string; slug: string }
+  stock?: number
   // Present when the product is currently part of an active flash sale —
   // see lib/flashSale.ts. Passed through to ProductCard for the ribbon.
   flashSale?: { saleId: string; saleName: string; discountPercent: number; endsAt: string } | null
@@ -81,6 +82,7 @@ export default function HomeClient({ products, showFloatingButtons = false, comp
                 image={product.image}
                 company={product.company}
                 flashSale={product.flashSale}
+                stock={product.stock}
                 size="sm"
               />
             ))

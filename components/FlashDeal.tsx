@@ -12,6 +12,7 @@ interface FlashSaleProduct {
   discountPrice?: number
   image: string
   company: { _id: string; name: string; slug: string }
+  stock?: number
 }
 
 interface FlashSale {
@@ -159,6 +160,7 @@ export default function FlashDeal({ sale }: { sale: FlashSale }) {
                 discountPrice={product.discountPrice}
                 image={product.image}
                 company={product.company}
+                stock={product.stock}
                 size="sm"
               />
             </div>

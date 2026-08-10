@@ -128,7 +128,7 @@ export function HeroProducts() {
 
   const handleAddToCart = (e: React.MouseEvent, p: HeroProductEntry) => {
     e.stopPropagation()
-    if (p.productId.stock !== undefined && p.productId.stock < 1) return
+    if (p.productId.stock === undefined || p.productId.stock < 1) return
 
     setAddingId(p._id)
     addItem({
@@ -218,7 +218,7 @@ export function HeroProducts() {
                 const disc = discount(p)
                 const price = p.productId.price
                 const finalPrice = p.productId.discountPrice ?? price
-                const isOutOfStock = p.productId.stock !== undefined && p.productId.stock < 1
+                const isOutOfStock = p.productId.stock === undefined || p.productId.stock < 1
                 const ingredients = (p.productId.keyIngredients ?? []).slice(0, 2)
 
                 return (

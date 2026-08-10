@@ -127,7 +127,7 @@ export default function SizeForm({ value, onChange, onSubmit, onCancel, isEditin
       <div className="border-t border-gray-100 p-4 space-y-3">
         <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Inventory</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label className={labelCls}>Stock *</label><Input type="number" placeholder="0" value={value.stock || ""} onChange={(e) => set({ stock: Number(e.target.value) })} className={inputCls} /></div>
+          <div><label className={labelCls}>Stock *</label><Input type="number" placeholder="0" value={value.stock ?? ""} onChange={(e) => set({ stock: Number(e.target.value) })} className={inputCls} /></div>
           <div><label className={labelCls}>Size SKU (optional)</label><Input type="text" placeholder="SKU-50ML" value={value.sku || ""} onChange={(e) => set({ sku: e.target.value })} className={inputCls} /></div>
         </div>
       </div>

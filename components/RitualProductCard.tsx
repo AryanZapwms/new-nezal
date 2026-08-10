@@ -56,7 +56,7 @@ export default function RitualProductCard({
   company,
   hasMultipleSizes = false,
   sizes = [],
-  stock = 999,
+  stock = 0,
 }: RitualProductCardProps) {
   const router = useRouter()
   const [imgLoaded, setImgLoaded] = useState(false)

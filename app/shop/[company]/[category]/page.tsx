@@ -20,6 +20,8 @@ interface Product {
   image: string
   company: { name: string; slug: string }
   isBestSeller?: boolean
+  stock?: number
+  sizes?: { label: string; stock: number }[]
   flashSale?: {
     saleId: string
     saleName: string
@@ -344,6 +346,8 @@ export default function CategoryPage() {
                       company={product.company}
                       flashSale={product.flashSale}
                       isBestSeller={product.isBestSeller}
+                      stock={product.stock}
+                      sizes={product.sizes}
                     />
                   ))}
                 </div>

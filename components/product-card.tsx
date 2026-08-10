@@ -143,7 +143,7 @@ export default function ProductCard({
   image,
   company,
   sizes: rawSizes = [],
-  stock = 999,
+  stock = 0,
   flashSale = null,
   isBestSeller = false,
   badges = [],

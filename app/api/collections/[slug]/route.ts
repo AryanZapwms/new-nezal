@@ -5,6 +5,8 @@ import { Collection } from "@/lib/models/collection"
 import { Product } from "@/lib/models/product"
 import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
