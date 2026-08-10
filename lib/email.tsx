@@ -15,16 +15,17 @@ function getTransporter() {
   }
 
   transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: email,
-      pass: appPassword, // Use App Password, not regular password
-    },
-    tls: {
-    rejectUnauthorized: false, 
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // must be false for port 587 (STARTTLS upgrades the connection)
+  auth: {
+    user: email,
+    pass: appPassword,
   },
-  })
-
+  tls: {
+    rejectUnauthorized: false,
+  },
+})
   return transporter
 }
 
