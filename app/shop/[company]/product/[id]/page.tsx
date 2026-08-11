@@ -195,6 +195,8 @@ interface SuggestedProduct {
   image: string
   company: { name: string; slug: string }
   isBestSeller?: boolean
+  stock?: number
+  sizes?: Size[]
   flashSale?: {
     saleId: string
     saleName: string
@@ -1410,6 +1412,8 @@ const currentImage =
         salePercentage={p.flashSale?.discountPercent ?? p.salePercentage}
         image={p.image}
         company={p.company}
+        stock={p.stock}
+        sizes={p.sizes}
         flashSale={p.flashSale}
         isBestSeller={p.isBestSeller}
       />
