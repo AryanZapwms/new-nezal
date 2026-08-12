@@ -89,6 +89,11 @@ ccavenueBankRefNo: { type: String, default: null },
     awbCode:             { type: String, default: null },
     courierName:         { type: String, default: null },
     trackingUrl:         { type: String, default: null },
+    // Set when Shiprocket order creation fails outright (bad phone, API
+    // error, etc.) so failures are visible/queryable in admin instead of
+    // only living in server logs. Cleared back to null on a successful
+    // (re)attempt.
+    shiprocketError: { type: String, default: null },
     shippingStatus: {
       type: String,
       enum: [
@@ -100,6 +105,7 @@ ccavenueBankRefNo: { type: String, default: null },
         "rto_initiated",
         "rto_delivered",
         "cancelled",
+        "needs_attention",
       ],
       default: "not_shipped",
     },
