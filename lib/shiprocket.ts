@@ -9,6 +9,20 @@
 import { Order } from "@/lib/models/order";
 import "@/lib/models/product";  
 
+// Strips spaces/dashes/parens/country-code prefixes and returns a clean
+// 10-digit Indian mobile number, or "" if it can't be normalized to one.
+// Kept here too (not just in app/api/orders/route.ts) as a defensive
+// second layer — this function is a shared module that other callers
+// (admin retry actions, migrations, cron jobs) may invoke directly, and
+// it shouldn't assume every caller already sanitized the phone before
+// saving it to the order.
+function sanitizePhone(raw: string | undefined | null): string {
+  if (!raw) return "";
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+  return digits.length === 10 ? digits : "";
+}
 
 export async function autoCreateShiprocketOrder(orderId: string) {
   const order = await Order.findById(orderId).populate("items.product");
@@ -45,9 +59,26 @@ export async function autoCreateShiprocketOrder(orderId: string) {
   // ── DEBUG: exactly what per-item dimensions/weight we pulled from products ─
   console.log("[Shiprocket:autoCreateOrder] Order items with dimensions:", JSON.stringify(items, null, 2));
 
+  const cleanPhone = sanitizePhone(addr?.phone ?? order.guestPhone);
+
+  if (!cleanPhone) {
+    // Don't even attempt the Shiprocket call with a phone we know will be
+    // rejected — mark the order so it surfaces in admin instead of failing
+    // silently (or, if something upstream ever retries this function,
+    // failing identically on every retry forever).
+    console.error(
+      `Auto Shiprocket: order ${order._id} has an invalid phone ("${addr?.phone ?? order.guestPhone}"), skipping creation`
+    );
+    await Order.findByIdAndUpdate(order._id, {
+      shippingStatus: "needs_attention",
+      shiprocketError: "Invalid phone number — could not create shipment. Please correct the phone number and retry from admin.",
+    });
+    return;
+  }
+
   const shippingAddress = {
     name: addr?.name ?? order.guestName ?? "Customer",
-    phone: addr?.phone ?? order.guestPhone ?? "",
+    phone: cleanPhone,
     email: order.guestEmail ?? addr?.email ?? "",
     address: addr?.address ?? addr?.street ?? "",
     city: addr?.city ?? "",
@@ -80,12 +111,22 @@ export async function autoCreateShiprocketOrder(orderId: string) {
       awbCode: result.awbCode ?? null,
       courierName: result.courierName ?? null,
       shippingStatus: "processing",
+      shiprocketError: null,
       ...(result.awbCode && {
         trackingUrl: `https://shiprocket.co/tracking/${result.awbCode}`,
       }),
     });
   } catch (err) {
     console.error(`Auto Shiprocket creation failed for order ${order._id}:`, err);
+    // Record the failure on the order itself so it's visible in admin
+    // rather than only living in the server logs — makes stuck orders
+    // (like the recurring billing_phone 422s) easy to find and fix.
+    await Order.findByIdAndUpdate(order._id, {
+      shippingStatus: "needs_attention",
+      shiprocketError: err instanceof Error ? err.message : String(err),
+    }).catch((updateErr) =>
+      console.error(`Failed to record Shiprocket error on order ${order._id}:`, updateErr)
+    );
   }
 }
 
