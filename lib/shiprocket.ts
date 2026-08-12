@@ -103,6 +103,12 @@ export async function autoCreateShiprocketOrder(orderId: string) {
       subTotal: goodsTotal,
       shippingCharges: order.shippingAmount ?? 0,
       totalDiscount: order.discountAmount ?? 0,
+      // Our own COD handling fee, charged to the customer at checkout but
+      // previously never forwarded to Shiprocket — Shiprocket's order
+      // value (and therefore the COD amount collected on delivery) is
+      // sub_total + shipping_charges, so without this the ₹50 fee was
+      // silently dropped and never actually collected from the customer.
+      codCharge: order.codCharge ?? 0,
     });
 
     await Order.findByIdAndUpdate(order._id, {
@@ -223,6 +229,11 @@ export interface CreateShiprocketOrderParams {
   subTotal: number;
   totalDiscount?: number;
   shippingCharges?: number;
+  // Our internal COD handling fee. Shiprocket has no dedicated field for
+  // this, so it's folded into shipping_charges below — Shiprocket derives
+  // the collectable COD amount from sub_total + shipping_charges, and this
+  // must match what was actually charged to the customer at checkout.
+  codCharge?: number;
 }
 
 export interface ShiprocketOrderResult {
@@ -298,7 +309,10 @@ export async function createShiprocketOrder(
     })),
 
     payment_method: params.paymentMethod,
-    shipping_charges: params.shippingCharges ?? 0,
+    // COD handling fee folded in here (see codCharge on the params type) so
+    // the COD amount Shiprocket prints on the label / collects on delivery
+    // matches the customer's actual order total, not just goods + shipping.
+    shipping_charges: (params.shippingCharges ?? 0) + (params.codCharge ?? 0),
     giftwrap_charges: 0,
     transaction_charges: 0,
     total_discount: params.totalDiscount ?? 0,
