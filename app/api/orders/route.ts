@@ -11,6 +11,19 @@ import { Product } from "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 
+// Strips spaces/dashes/parens/country-code prefixes and returns a clean
+// 10-digit Indian mobile number, or "" if it can't be normalized to one.
+// This is what caused the recurring Shiprocket 422 "billing_phone must be
+// 10 digits" errors — the raw input (e.g. "96228 40139") was being saved
+// and forwarded to Shiprocket verbatim, space and all.
+function sanitizePhone(raw: string | undefined | null): string {
+  if (!raw) return "";
+  let digits = String(raw).replace(/\D/g, ""); // strip spaces, +, -, (), etc.
+  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+  return digits.length === 10 ? digits : "";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
@@ -42,6 +55,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Reject bad phone numbers at checkout instead of letting them silently
+    // fail later at Shiprocket (or worse, retry forever in the abandoned
+    // payments cron). Do this before any DB writes.
+    const cleanPhone = sanitizePhone(shippingAddress?.phone);
+    if (!cleanPhone) {
+      return NextResponse.json(
+        { error: "Please enter a valid 10-digit phone number." },
+        { status: 400 }
+      );
+    }
 
     let computedTotal = 0;
     let totalTaxableValue = 0;
@@ -120,7 +143,7 @@ const realShippingBreakdown = shippingBreakdown ?? {
 
     const mappedAddress = {
       name: shippingAddress.name,
-      phone: shippingAddress.phone,
+      phone: cleanPhone,
       street: shippingAddress.street,
       address: shippingAddress.street,
       city: shippingAddress.city,
@@ -135,7 +158,7 @@ const realShippingBreakdown = shippingBreakdown ?? {
       user: user?._id,
       guestEmail: user ? undefined : shippingAddress.email,
       guestName: user ? undefined : shippingAddress.name,
-      guestPhone: user ? undefined : shippingAddress.phone,
+      guestPhone: user ? undefined : cleanPhone,
       items: verifiedItems,
       totalAmount: realTotal,
       shippingAmount: realShipping,
@@ -212,7 +235,7 @@ const realShippingBreakdown = shippingBreakdown ?? {
           const adminEmailHtml = getAdminOrderNotificationEmail({
             customerName: recipientName,
             customerEmail: recipientEmail,
-            customerPhone: user?.phone || shippingAddress.phone || "N/A",
+            customerPhone: user?.phone || cleanPhone || "N/A",
             orderId: order.orderNumber,
             items: itemsData,
             totalAmount: order.totalAmount,
