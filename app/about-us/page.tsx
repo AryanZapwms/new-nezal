@@ -218,7 +218,7 @@ export default function AboutUs() {
               />
               <div className="relative z-10 rounded-3xl overflow-hidden aspect-[4/5]">
                 <img
-                  src="https://res.cloudinary.com/douyptcm1/image/upload/v1783582774/nezal-product-showcase_ebo16u.png"
+                  src="https://nezal-cdn.b-cdn.net/misc/about-us/nezal-product-showcase_ebo16u.png"
                   alt={`${BRAND.name} facility`}
                   className="w-full h-full object-cover"
                 />

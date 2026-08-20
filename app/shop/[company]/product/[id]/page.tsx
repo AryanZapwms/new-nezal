@@ -1115,7 +1115,7 @@ const currentImage =
                   Buy this product on Amazon
                 </a>
               )}
-
+            
               <WishlistButton
                 productId={product._id}
                 productName={product.name}

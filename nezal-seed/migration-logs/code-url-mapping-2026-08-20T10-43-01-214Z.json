@@ -1,0 +1,94 @@
+[
+  {
+    "files": [
+      "components/home-carousel.tsx",
+      "nezal-seed/seed-home-carousel.js"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1782990599/image9_a1avzr.png",
+    "newUrl": "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a156/image9_a1avzr.png",
+    "status": "success"
+  },
+  {
+    "files": [
+      "components/home-carousel.tsx",
+      "nezal-seed/seed-home-carousel.js"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1782990599/image7_wfgoej.png",
+    "newUrl": "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a157/image7_wfgoej.png",
+    "status": "success"
+  },
+  {
+    "files": [
+      "components/home-carousel.tsx",
+      "nezal-seed/seed-home-carousel.js"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1782990598/image8_cqm0fb.png",
+    "newUrl": "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a158/image8_cqm0fb.png",
+    "status": "success"
+  },
+  {
+    "files": [
+      "components/home-carousel.tsx",
+      "nezal-seed/seed-home-carousel.js"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1782990692/image10_escelc.png",
+    "newUrl": "https://nezal-cdn.b-cdn.net/misc/carousel-fallback/image10_escelc.png",
+    "status": "success"
+  },
+  {
+    "files": [
+      "app/page.tsx"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1779278431/nezal/uploads/rwzzisquhzzalhdngf9z.jpg",
+    "newUrl": "https://nezal-cdn.b-cdn.net/products/6a0d9d9edf37fac29c20d5ac/rwzzisquhzzalhdngf9z.jpg",
+    "status": "success"
+  },
+  {
+    "files": [
+      "app/page.tsx"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1783319156/hair_serum_i7llmw.jpg",
+    "newUrl": "https://nezal-cdn.b-cdn.net/misc/promo-banners/hair_serum_i7llmw.jpg",
+    "status": "success"
+  },
+  {
+    "files": [
+      "app/page.tsx"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1783319156/lotion_wrjr9l.jpg",
+    "newUrl": "https://nezal-cdn.b-cdn.net/misc/promo-banners/lotion_wrjr9l.jpg",
+    "status": "success"
+  },
+  {
+    "files": [
+      "app/page.tsx"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1779278227/nezal/uploads/db5xjbpwpnmb6uf6yep6.jpg",
+    "newUrl": "https://nezal-cdn.b-cdn.net/products/6a0d7e252f7e0d5d2c727cbf/db5xjbpwpnmb6uf6yep6.jpg",
+    "status": "success"
+  },
+  {
+    "files": [
+      "app/page.tsx"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1779341640/nezal/uploads/klcvgxsephlxhm6n4xib.jpg",
+    "newUrl": "https://nezal-cdn.b-cdn.net/products/6a0d9d9edf37fac29c20d5a6/klcvgxsephlxhm6n4xib.jpg",
+    "status": "success"
+  },
+  {
+    "files": [
+      "app/page.tsx"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1779341557/nezal/uploads/vz9jkgrr5tdccprgfl5a.jpg",
+    "newUrl": "https://nezal-cdn.b-cdn.net/products/6a0d7e252f7e0d5d2c727cd6/vz9jkgrr5tdccprgfl5a.jpg",
+    "status": "success"
+  },
+  {
+    "files": [
+      "app/about-us/page.tsx"
+    ],
+    "oldUrl": "https://res.cloudinary.com/douyptcm1/image/upload/v1783582774/nezal-product-showcase_ebo16u.png",
+    "newUrl": "https://nezal-cdn.b-cdn.net/misc/about-us/nezal-product-showcase_ebo16u.png",
+    "status": "success"
+  }
+]

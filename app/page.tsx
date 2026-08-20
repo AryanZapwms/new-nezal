@@ -98,12 +98,12 @@ async function getHomeData() {
 
 // ── Promo banners (static, no fetch needed) ───────────────────────────────────
 const PROMO_BANNERS = [
-  { image: "https://res.cloudinary.com/douyptcm1/image/upload/v1779278431/nezal/uploads/rwzzisquhzzalhdngf9z.jpg", label: "Face Wash", sub: "From ₹199", href: "/collections/foaming-face-wash" },
-  { image: "https://res.cloudinary.com/douyptcm1/image/upload/v1783319156/hair_serum_i7llmw.jpg", label: "Hair Serum", sub: "Reduce Hair Fall", href: "/collections/hair-serum" },
-  { image: "https://res.cloudinary.com/douyptcm1/image/upload/v1783319156/lotion_wrjr9l.jpg", label: "Body Lotion", sub: "All-Day Hydration", href: "/collections/body-lotion" },
-  { image: "https://res.cloudinary.com/douyptcm1/image/upload/v1779278227/nezal/uploads/db5xjbpwpnmb6uf6yep6.jpg", label: "Massage Oil", sub: "Relax & Restore", href: "/collections/body-massage-oil" },
-  { image: "https://res.cloudinary.com/douyptcm1/image/upload/v1779341640/nezal/uploads/klcvgxsephlxhm6n4xib.jpg", label: "Face Cream", sub: "Deep Nourishment", href: "/collections/face-serum" },
-  { image: "https://res.cloudinary.com/douyptcm1/image/upload/v1779341557/nezal/uploads/vz9jkgrr5tdccprgfl5a.jpg", label: "Bath Salts", sub: "Turn Bath Into Ritual", href: "/collections/bath-salt" },
+  { image: "https://nezal-cdn.b-cdn.net/products/6a0d9d9edf37fac29c20d5ac/rwzzisquhzzalhdngf9z.jpg", label: "Face Wash", sub: "From ₹199", href: "/collections/foaming-face-wash" },
+  { image: "https://nezal-cdn.b-cdn.net/misc/promo-banners/hair_serum_i7llmw.jpg", label: "Hair Serum", sub: "Reduce Hair Fall", href: "/collections/hair-serum" },
+  { image: "https://nezal-cdn.b-cdn.net/misc/promo-banners/lotion_wrjr9l.jpg", label: "Body Lotion", sub: "All-Day Hydration", href: "/collections/body-lotion" },
+  { image: "https://nezal-cdn.b-cdn.net/products/6a0d7e252f7e0d5d2c727cbf/db5xjbpwpnmb6uf6yep6.jpg", label: "Massage Oil", sub: "Relax & Restore", href: "/collections/body-massage-oil" },
+  { image: "https://nezal-cdn.b-cdn.net/products/6a0d9d9edf37fac29c20d5a6/klcvgxsephlxhm6n4xib.jpg", label: "Face Cream", sub: "Deep Nourishment", href: "/collections/face-serum" },
+  { image: "https://nezal-cdn.b-cdn.net/products/6a0d7e252f7e0d5d2c727cd6/vz9jkgrr5tdccprgfl5a.jpg", label: "Bath Salts", sub: "Turn Bath Into Ritual", href: "/collections/bath-salt" },
 ]
 
 const TICKER_ITEMS = ["Own Manufacturing", "Crafted With Care", "Quality Tested Formulations", "Inhouse Saponification", "Modern Botanical Ingredents"]

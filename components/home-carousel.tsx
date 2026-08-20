@@ -21,11 +21,11 @@ interface HomeCarouselProps {
 // Fallback only — used if no banners exist in the DB yet
 const staticImages: CarouselImage[] = [
   { _id: "8", url: "/14.jpeg" },
-  { _id: "2", url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990599/image9_a1avzr.png" },
-  { _id: "3", url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990599/image7_wfgoej.png" },
-  { _id: "1", url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990598/image8_cqm0fb.png" },
+  { _id: "2", url: "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a156/image9_a1avzr.png" },
+  { _id: "3", url: "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a157/image7_wfgoej.png" },
+  { _id: "1", url: "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a158/image8_cqm0fb.png" },
   { _id: "7", url: "/13.jpeg" },
-  { _id: "4", url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990692/image10_escelc.png" },
+  { _id: "4", url: "https://nezal-cdn.b-cdn.net/misc/carousel-fallback/image10_escelc.png" },
   { _id: "6", url: "/12.jpeg" },
   { _id: "5", url: "/11.jpeg" },
 ]

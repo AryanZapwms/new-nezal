@@ -9,7 +9,7 @@ dotenv.config();
 
 import mongoose from "mongoose";
 
-const MONGODB_URI = "mongodb://work_db_user:work_db_user@ac-zh4mzfu-shard-00-00.gdulv8l.mongodb.net:27017,ac-zh4mzfu-shard-00-01.gdulv8l.mongodb.net:27017,ac-zh4mzfu-shard-00-02.gdulv8l.mongodb.net:27017/nezal-db?ssl=true&replicaSet=atlas-x0imd6-shard-0&authSource=admin&retryWrites=true&w=majority" // ← change this if your env var has a different name
+const MONGODB_URI = process.env.MONGODB_URI
 
 if (!MONGODB_URI) {
   console.error("MONGODB_URI is not set. Check your .env.local file.")
@@ -46,17 +46,17 @@ const bannersToSeed = [
     linkLabel: "Shop Nezal",
   },
   {
-    url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990599/image9_a1avzr.png",
+    url: "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a156/image9_a1avzr.png",
     linkType: "custom",
     link: "/shop/dermaflay",
     linkLabel: "Shop Dermaflay",
   },
   {
-    url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990599/image7_wfgoej.png",
+    url: "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a157/image7_wfgoej.png",
     linkType: "none",
   },
   {
-    url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990598/image8_cqm0fb.png",
+    url: "https://nezal-cdn.b-cdn.net/homebanners/6a4e249b830824100f86a158/image8_cqm0fb.png",
     linkType: "none",
   },
   {
@@ -64,7 +64,7 @@ const bannersToSeed = [
     linkType: "none",
   },
   {
-    url: "https://res.cloudinary.com/douyptcm1/image/upload/v1782990692/image10_escelc.png",
+    url: "https://nezal-cdn.b-cdn.net/misc/carousel-fallback/image10_escelc.png",
     linkType: "none",
   },
   {
