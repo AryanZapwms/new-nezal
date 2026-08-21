@@ -8,7 +8,7 @@ Generated: 2026-08-20T11:12:09.987Z
 - ⚪ Broken local path (file missing from /public): 18
 
 ---
-
+    
 ## 🔴 Urgent — Google thumbnail cache (gstatic.com) (4)
 
 ### `collections`

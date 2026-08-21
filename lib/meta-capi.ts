@@ -58,61 +58,76 @@ export function getRequestMeta(request: NextRequest) {
 }
 
 export async function sendCapiPurchaseEvent(params: CapiPurchaseParams): Promise<void> {
+  const { eventId } = params
+
   if (!PIXEL_ID || !ACCESS_TOKEN) {
-    console.warn("[meta-capi] Skipping Purchase event — NEXT_PUBLIC_META_PIXEL_ID or META_CAPI_ACCESS_TOKEN not configured")
+    console.error(
+      `[meta-capi] Skipping Purchase event for order ${eventId} — missing ` +
+      `${!PIXEL_ID ? "NEXT_PUBLIC_META_PIXEL_ID" : "META_CAPI_ACCESS_TOKEN"}`
+    )
     return
   }
 
-  const { eventId, value, currency = "INR", contentIds, numItems, eventSourceUrl, user } = params
-
-  const user_data: Record<string, any> = {}
-  if (user.email) user_data.em = [sha256(user.email)]
-  if (user.phone) user_data.ph = [sha256(normalizePhone(user.phone))]
-  if (user.fullName) {
-    const [firstName, ...rest] = user.fullName.trim().split(/\s+/)
-    if (firstName) user_data.fn = [sha256(firstName)]
-    if (rest.length) user_data.ln = [sha256(rest.join(" "))]
-  }
-  if (user.city) user_data.ct = [sha256(user.city)]
-  if (user.state) user_data.st = [sha256(user.state)]
-  if (user.zip) user_data.zp = [sha256(user.zip)]
-  if (user.country) user_data.country = [sha256(user.country)]
-  if (user.clientIp) user_data.client_ip_address = user.clientIp
-  if (user.userAgent) user_data.client_user_agent = user.userAgent
-  if (user.fbp) user_data.fbp = user.fbp
-  if (user.fbc) user_data.fbc = user.fbc
-
-  const payload = {
-    data: [
-      {
-        event_name: "Purchase",
-        event_time: Math.floor(Date.now() / 1000),
-        event_id: eventId,
-        event_source_url: eventSourceUrl,
-        action_source: "website",
-        user_data,
-        custom_data: {
-          currency,
-          value,
-          content_type: "product",
-          ...(contentIds && { content_ids: contentIds }),
-          ...(numItems !== undefined && { num_items: numItems }),
-        },
-      },
-    ],
-    access_token: ACCESS_TOKEN,
-  }
+  const { value, currency = "INR", contentIds, numItems, eventSourceUrl, user } = params
 
   try {
+    const user_data: Record<string, any> = {}
+    if (user.email) user_data.em = [sha256(user.email)]
+    if (user.phone) user_data.ph = [sha256(normalizePhone(user.phone))]
+    if (user.fullName) {
+      const [firstName, ...rest] = user.fullName.trim().split(/\s+/)
+      if (firstName) user_data.fn = [sha256(firstName)]
+      if (rest.length) user_data.ln = [sha256(rest.join(" "))]
+    }
+    if (user.city) user_data.ct = [sha256(user.city)]
+    if (user.state) user_data.st = [sha256(user.state)]
+    if (user.zip) user_data.zp = [sha256(user.zip)]
+    if (user.country) user_data.country = [sha256(user.country)]
+    if (user.clientIp) user_data.client_ip_address = user.clientIp
+    if (user.userAgent) user_data.client_user_agent = user.userAgent
+    if (user.fbp) user_data.fbp = user.fbp
+    if (user.fbc) user_data.fbc = user.fbc
+
+    const payload = {
+      data: [
+        {
+          event_name: "Purchase",
+          event_time: Math.floor(Date.now() / 1000),
+          event_id: eventId,
+          event_source_url: eventSourceUrl,
+          action_source: "website",
+          user_data,
+          custom_data: {
+            currency,
+            value,
+            content_type: "product",
+            ...(contentIds && { content_ids: contentIds }),
+            ...(numItems !== undefined && { num_items: numItems }),
+          },
+        },
+      ],
+      access_token: ACCESS_TOKEN,
+    }
+
     const res = await fetch(`https://graph.facebook.com/${API_VERSION}/${PIXEL_ID}/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
+    const responseBody = await res.text()
+
     if (!res.ok) {
-      console.error("[meta-capi] Purchase event rejected:", res.status, await res.text())
+      console.error(
+        `[meta-capi] Purchase event REJECTED for order ${eventId} — pixel ${PIXEL_ID}, status ${res.status}:`,
+        responseBody
+      )
+    } else {
+      console.log(
+        `[meta-capi] Purchase event sent for order ${eventId} — pixel ${PIXEL_ID}, value ${value} ${currency}:`,
+        responseBody
+      )
     }
   } catch (err) {
-    console.error("[meta-capi] Purchase event request failed:", err)
+    console.error(`[meta-capi] Purchase event request FAILED for order ${eventId}:`, err)
   }
 }

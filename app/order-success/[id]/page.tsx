@@ -77,7 +77,7 @@ export default function OrderSuccessPage() {
               data.totalAmount,
               data.items.length,
               productIds,
-              session?.user?.email
+              session?.user?.email ?? undefined
             )
             sessionStorage.setItem(trackedKey, "1")
           }
