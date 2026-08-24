@@ -48,7 +48,7 @@ export default function ProductDescription({ description, className = "" }: Prop
         </p>
       )}
       {body && (
-        <p className="text-sm leading-relaxed" style={{ color: "#4a5e50" }}>
+        <p className="hidden md:block text-sm leading-relaxed" style={{ color: "#4a5e50" }}>
           {body}
         </p>
       )}
