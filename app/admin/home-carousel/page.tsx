@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast"
 interface Banner {
   _id: string
   url: string
+  mobileUrl?: string
   title?: string
   description?: string
   linkType: "product" | "collection" | "custom" | "none"
@@ -48,6 +49,7 @@ interface Collection {
 
 const emptyForm = {
   url: "",
+  mobileUrl: "",
   title: "",
   description: "",
   linkType: "none" as Banner["linkType"],
@@ -133,6 +135,7 @@ export default function HomeCarouselAdminPage() {
     setEditingId(banner._id)
     setForm({
       url: banner.url,
+      mobileUrl: banner.mobileUrl || "",
       title: banner.title || "",
       description: banner.description || "",
       linkType: banner.linkType || "none",
@@ -172,6 +175,7 @@ export default function HomeCarouselAdminPage() {
     try {
       const payload = {
         url: form.url,
+        mobileUrl: form.mobileUrl,
         title: form.title,
         description: form.description,
         linkType: form.linkType,
@@ -295,17 +299,30 @@ export default function HomeCarouselAdminPage() {
           </div>
 
           <div className="p-6 space-y-6">
-            <div>
-              <Label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">
-                Banner image
-              </Label>
-              <ImageUploadField
-                label=""
-                value={form.url}
-                onChange={(url) => setForm((f) => ({ ...f, url }))}
-                folder="carousel"
-                required
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">
+                  Desktop banner image
+                </Label>
+                <ImageUploadField
+                  label=""
+                  value={form.url}
+                  onChange={(url) => setForm((f) => ({ ...f, url }))}
+                  folder="carousel"
+                  required
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">
+                  Mobile banner image <span className="font-normal normal-case text-gray-400">(optional — square/portrait, falls back to desktop image)</span>
+                </Label>
+                <ImageUploadField
+                  label=""
+                  value={form.mobileUrl}
+                  onChange={(mobileUrl) => setForm((f) => ({ ...f, mobileUrl }))}
+                  folder="carousel"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -511,13 +528,21 @@ export default function HomeCarouselAdminPage() {
                       <span className="text-[11px] font-semibold text-gray-400 tabular-nums">{idx + 1}</span>
                     </div>
 
-                    {/* Thumbnail */}
-                    <div className="relative shrink-0">
+                    {/* Thumbnail(s) */}
+                    <div className="relative shrink-0 flex items-center gap-1.5">
                       <img
                         src={banner.url}
                         alt=""
                         className={`w-28 h-[70px] object-cover rounded-lg border border-gray-200 ${!banner.isActive ? "grayscale opacity-60" : ""}`}
                       />
+                      {banner.mobileUrl && (
+                        <img
+                          src={banner.mobileUrl}
+                          alt="Mobile banner"
+                          title="Mobile banner image"
+                          className={`w-11 h-[70px] object-cover rounded-lg border border-gray-200 ${!banner.isActive ? "grayscale opacity-60" : ""}`}
+                        />
+                      )}
                       {!banner.isActive && (
                         <span className="absolute -top-1.5 -right-1.5 text-[10px] font-semibold bg-gray-700 text-white px-1.5 py-0.5 rounded-full">
                           Hidden

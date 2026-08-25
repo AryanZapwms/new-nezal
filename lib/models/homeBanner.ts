@@ -4,6 +4,9 @@ import mongoose from "mongoose"
 const homeBannerSchema = new mongoose.Schema(
   {
     url: { type: String, required: true },
+    // Optional square/portrait image shown on mobile viewports instead of `url`.
+    // Falls back to `url` when empty.
+    mobileUrl: { type: String, default: "" },
     title: { type: String, default: "" },
     description: { type: String, default: "" },
 

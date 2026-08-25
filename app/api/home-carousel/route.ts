@@ -41,6 +41,7 @@ export async function POST(request: Request) {
 
     const banner = await HomeBanner.create({
       url: body.url,
+      mobileUrl: body.mobileUrl || "",
       title: body.title || "",
       description: body.description || "",
       linkType: body.linkType || "none",

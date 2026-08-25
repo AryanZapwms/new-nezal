@@ -22,7 +22,7 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    const allowed = ["url", "title", "description", "linkType", "link", "linkLabel", "order", "isActive"]
+    const allowed = ["url", "mobileUrl", "title", "description", "linkType", "link", "linkLabel", "order", "isActive"]
     const update: Record<string, any> = {}
     for (const key of allowed) {
       if (key in body) update[key] = body[key]
@@ -60,11 +60,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Banner not found" }, { status: 404 })
     }
 
-    // Clean up local file if it isn't an external/data URL
-    const isExternal = /^https?:\/\//i.test(banner.url) || banner.url.startsWith("data:")
-    if (!isExternal) {
+    // Clean up local files if they aren't external/data URLs
+    for (const fileUrl of [banner.url, banner.mobileUrl].filter(Boolean)) {
+      const isExternal = /^https?:\/\//i.test(fileUrl) || fileUrl.startsWith("data:")
+      if (isExternal) continue
       try {
-        const normalizedPath = banner.url.replace(/^[\/\\]+/, "")
+        const normalizedPath = fileUrl.replace(/^[\/\\]+/, "")
         const filepath = path.join(process.cwd(), "public", normalizedPath)
         await fs.unlink(filepath)
       } catch (err) {

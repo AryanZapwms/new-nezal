@@ -37,7 +37,7 @@ function Feature({ title, desc, image }: FeatureProps) {
 
   return (
     <div
-      className="flex flex-col items-center text-center p-6 rounded-2xl border transition-shadow hover:shadow-md"
+      className="flex flex-col items-center text-center p-3 md:p-6 rounded-xl md:rounded-2xl border transition-shadow hover:shadow-md"
       style={{
         background: "white",
         borderColor: "var(--color-border)",
@@ -45,7 +45,7 @@ function Feature({ title, desc, image }: FeatureProps) {
     >
       {/* Gold-tinted icon circle — matches Figma */}
       <div
-        className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+        className="w-10 h-10 md:w-16 md:h-16 rounded-full flex items-center justify-center mb-2 md:mb-4"
         style={{ background: "#FFF5E0", border: "1px solid #F5C84230" }}
       >
         <Image
@@ -54,18 +54,18 @@ function Feature({ title, desc, image }: FeatureProps) {
           width={38}
           height={38}
           onLoad={() => setLoaded(true)}
-          className={`object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+          className={`object-contain transition-opacity duration-300 w-6 h-6 md:w-[38px] md:h-[38px] ${loaded ? "opacity-100" : "opacity-0"}`}
         />
       </div>
 
       <h3
-        className="text-[16px] font-semibold mb-2"
+        className="text-[13px] md:text-[16px] font-semibold mb-1 md:mb-2"
         style={{ color: "var(--color-text-heading)" }}
       >
         {title}
       </h3>
       <p
-        className="text-[13px] leading-relaxed"
+        className="text-[12px] md:text-[13px] leading-snug md:leading-relaxed line-clamp-2 md:line-clamp-none"
         style={{ color: "var(--color-text-body)" }}
       >
         {desc}
@@ -150,8 +150,8 @@ export default function WhyChoose() {
             className="rounded-2xl p-6 md:p-8 space-y-5"
             style={{ background: "var(--color-bg-cream)" }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-40" />)}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 md:h-40" />)}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <Skeleton className="h-48" />
@@ -171,7 +171,7 @@ export default function WhyChoose() {
           style={{ background: "var(--color-bg-cream)", border: "1px solid var(--color-border)" }}
         >
           {/* ── 3 Feature cards (Image 6) ── */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
             <Feature
               image={quickOrder}
               title="Quick Order"

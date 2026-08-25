@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, X, Upload, Plus, Package, Image as ImageIcon, Tag, Sparkles, FlaskConical } from "lucide-react"
+import { ArrowLeft, X, Upload, Plus, Package, Image as ImageIcon, Tag, Sparkles, FlaskConical, Star } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { invalidateCache } from "@/lib/cacheClient"
@@ -172,6 +172,14 @@ const [sizeInput, setSizeInput] = useState<Size>(emptySize())
   }
 
   const removeImage = (index: number) => setImageUrls((prev) => prev.filter((_, i) => i !== index))
+
+  const setAsMainImage = (index: number) => setImageUrls((prev) => {
+    if (index === 0) return prev
+    const next = [...prev]
+    const [main] = next.splice(index, 1)
+    next.unshift(main)
+    return next
+  })
 
   const handleAddSize = () => {
   if (!sizeInput.size || sizeInput.quantity <= 0 || sizeInput.price <= 0) { setMessage("Please fill in all size fields."); return }
@@ -449,6 +457,15 @@ const [sizeInput, setSizeInput] = useState<Size>(emptySize())
                       <div className="relative h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                         <Image src={url} alt={`Product ${index + 1}`} fill className="object-cover" />
                         {index === 0 && <div className="absolute top-1 left-1 bg-emerald-700 text-white text-xs px-2 py-0.5 rounded-full">Main</div>}
+                        {index !== 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setAsMainImage(index)}
+                            className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 rounded-md bg-white/95 py-1 text-[10px] font-medium text-gray-800 opacity-0 shadow transition group-hover:opacity-100"
+                          >
+                            <Star className="w-3 h-3" /> Set as Main
+                          </button>
+                        )}
                       </div>
                       <button type="button" onClick={() => removeImage(index)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"><X className="w-3.5 h-3.5" /></button>
                     </div>

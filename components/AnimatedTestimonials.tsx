@@ -178,30 +178,47 @@ export function AnimatedTestimonials({
   const active = testimonials[activeIndex]
 
   return (
-    <section className="py-14 md:py-8 bg-white">
+    <section className="py-8 md:py-8 bg-white">
       <div className="container-nezal">
         {/* Section label */}
-        <div className="text-center mb-12">
-       
-          <h2 className="mt-2 text-[28px] md:text-[32px] font-bold text-[var(--color-text-heading)]">
+        <div className="text-center mb-5 md:mb-12">
+
+          <h2 className="mt-2 text-xl md:text-[32px] font-bold text-[var(--color-text-heading)]">
             What Our Customers Say
           </h2>
         </div>
 
         {/* Main testimonial card */}
         <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 bg-[#FAFAF8] rounded-3xl p-8 md:p-12 border border-[var(--color-border)]">
+          <div className="flex flex-col md:flex-row items-center gap-3 md:gap-16 bg-[#FAFAF8] rounded-2xl md:rounded-3xl p-4 md:p-12 border border-[var(--color-border)]">
 
-            {/* Left — stacked avatars */}
-            <div className="flex-shrink-0 flex flex-col items-center gap-5">
-              <StackedAvatars
-                testimonials={testimonials}
-                activeIndex={activeIndex}
-                onSelect={goTo}
-              />
+            {/* Left — avatar */}
+            <div className="flex-shrink-0 flex flex-row md:flex-col items-center gap-3 md:gap-5">
+              {/* Mobile: single compact avatar, no orbit animation */}
+              <div
+                className="md:hidden w-11 h-11 rounded-full overflow-hidden border-2 flex items-center justify-center shrink-0"
+                style={{ borderColor: "var(--color-brand-primary)", backgroundColor: "#e8f5e8" }}
+              >
+                {active.avatar && !active.avatar.includes("placeholder") ? (
+                  <img src={active.avatar} alt={active.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-bold text-sm" style={{ color: "var(--color-brand-primary)" }}>
+                    {active.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              {/* Desktop: full orbiting stack */}
+              <div className="hidden md:block">
+                <StackedAvatars
+                  testimonials={testimonials}
+                  activeIndex={activeIndex}
+                  onSelect={goTo}
+                />
+              </div>
 
               {/* Dot indicators */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 {testimonials.map((_, i) => (
                   <button
                     key={i}
@@ -221,10 +238,10 @@ export function AnimatedTestimonials({
             </div>
 
             {/* Right — quote content */}
-            <div className="flex-1 flex flex-col gap-5">
+            <div className="flex-1 flex flex-col gap-2 md:gap-5">
               {/* Large quote mark */}
               <span
-                className="text-7xl font-serif leading-none select-none"
+                className="hidden md:block text-7xl font-serif leading-none select-none"
                 style={{ color: "var(--color-brand-primary)", opacity: 0.15, lineHeight: 0.8 }}
               >
                 "
@@ -240,14 +257,14 @@ export function AnimatedTestimonials({
                     : "translateY(0)",
                 }}
               >
-                <p className="text-lg md:text-xl font-medium text-[var(--color-text-heading)] leading-relaxed">
+                <p className="text-sm md:text-xl font-medium text-[var(--color-text-heading)] leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none">
                   {active.quote}
                 </p>
               </div>
 
               {/* Divider */}
               <div
-                className="h-px w-12"
+                className="hidden md:block h-px w-12"
                 style={{ background: "var(--color-brand-primary)" }}
               />
 
@@ -259,9 +276,9 @@ export function AnimatedTestimonials({
                   transform: animating ? "translateY(8px)" : "translateY(0)",
                 }}
               >
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                   <div>
-                    <p className="font-bold text-[var(--color-text-heading)]">
+                    <p className="font-bold text-sm md:text-base text-[var(--color-text-heading)]">
                       {active.name}
                     </p>
                     <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
@@ -273,20 +290,20 @@ export function AnimatedTestimonials({
               </div>
 
               {/* Prev / Next arrows */}
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-2 md:gap-3 mt-1 md:mt-2">
                 <button
                   onClick={() =>
                     goTo((activeIndex - 1 + testimonials.length) % testimonials.length)
                   }
-                  className="w-9 h-9 rounded-full border flex items-center justify-center text-white border-[#056b1b] bg-[#055f0f] hover:bg-[#1bd40a] transition-colors"
+                  className="w-7 h-7 md:w-9 md:h-9 rounded-full border flex items-center justify-center text-white border-[#056b1b] bg-[#055f0f] hover:bg-[#1bd40a] transition-colors text-sm"
                   style={{ borderColor: "var(--color-border)" }}
                 >
                   ←
                 </button>
                 <button
                   onClick={next}
-                  className="w-9 h-9 rounded-full border flex items-center justify-center text-white border-[#056b1b] bg-[#055f0f] hover:bg-[#1bd40a]  transition-colors"
-                 
+                  className="w-7 h-7 md:w-9 md:h-9 rounded-full border flex items-center justify-center text-white border-[#056b1b] bg-[#055f0f] hover:bg-[#1bd40a] transition-colors text-sm"
+
                 >
                   →
                 </button>

@@ -55,7 +55,12 @@ type FlatItem =
   | { kind: "concern"; data: SearchResultConcern }
   | { kind: "ingredient"; data: SearchResultIngredient }
 
-export function SearchBar() {
+interface SearchBarProps {
+  className?: string
+  autoFocus?: boolean
+}
+
+export function SearchBar({ className = "hidden md:block w-full max-w-md", autoFocus = false }: SearchBarProps = {}) {
   const router = useRouter()
   const [query, setQuery] = useState("")
   const [response, setResponse] = useState<SearchResponse>({ products: [], concerns: [], ingredients: [] })
@@ -67,6 +72,10 @@ export function SearchBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus()
+  }, [autoFocus])
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -178,7 +187,7 @@ export function SearchBar() {
   const nextIndex = () => ++runningIndex
 
   return (
-    <div ref={containerRef} className="relative hidden md:block w-full max-w-md">
+    <div ref={containerRef} className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div
           className="flex items-center gap-3 rounded-full border-2 px-4 py-2.5 transition-all duration-200 bg-white"

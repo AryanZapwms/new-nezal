@@ -279,20 +279,6 @@ export function MobileNav({
 
           <div className="px-4 py-3 flex flex-col gap-0.5">
 
-            {/* Regular nav links */}
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={onClose}
-                className="block px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--color-text-heading)] hover:bg-[var(--color-bg-cream)] transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            <div className="my-2 border-t" style={{ borderColor: "var(--color-border)" }} />
-
             {/* Shop All shortcut */}
             <Link
               href="/shop"
@@ -356,6 +342,20 @@ export function MobileNav({
                   </div>
                 )}
               </div>
+            ))}
+
+            <div className="my-2 border-t" style={{ borderColor: "var(--color-border)" }} />
+
+            {/* Regular nav links */}
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={onClose}
+                className="block px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--color-text-heading)] hover:bg-[var(--color-bg-cream)] transition-colors"
+              >
+                {link.label}
+              </Link>
             ))}
 
           </div>

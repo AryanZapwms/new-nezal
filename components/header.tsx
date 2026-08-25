@@ -19,6 +19,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { getCachedSync, fetchWithCache, initCache } from "@/lib/cacheClient";
 import { BRAND } from "@/lib/config";
 import { MobileNav } from "@/components/layout/MobileNav"
+import { MobileSearchOverlay } from "@/components/layout/MobileSearchOverlay"
 import { Button } from "./ui/button";
 import { useCartStore } from "@/lib/store/cart-store"
 import { SearchBar } from "@/components/SearchBar"
@@ -545,6 +546,7 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [shopMenuOpen, setShopMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const hasFetchedRef = useRef(false);
   const prefetchedRef = useRef(new Set<string>());
@@ -866,6 +868,16 @@ const navCategories: MenuCategoryGroup[] = useMemo(() => {
                   </>
                 )}
 
+                {/* MOBILE SEARCH TOGGLE — always visible regardless of admin/user; hidden once the full SearchBar shows at md+ */}
+                <button
+                  type="button"
+                  className="rounded-full p-2 md:hidden"
+                  onClick={() => setMobileSearchOpen(true)}
+                  aria-label="Search"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+
                 {/* MOBILE TOGGLE — always visible regardless of admin/user */}
                 <button
                   type="button"
@@ -889,6 +901,12 @@ const navCategories: MenuCategoryGroup[] = useMemo(() => {
   navCategories={navCategories}
   concerns={menuConcerns}
 />
+
+      {/* MOBILE SEARCH OVERLAY — same SearchBar/endpoint as desktop */}
+      <MobileSearchOverlay
+        open={mobileSearchOpen}
+        onClose={() => setMobileSearchOpen(false)}
+      />
     </>
   );
 }

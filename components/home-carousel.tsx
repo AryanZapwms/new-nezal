@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 interface CarouselImage {
   _id: string
   url: string
+  mobileUrl?: string
   title?: string
   description?: string
   link?: string
@@ -66,6 +67,12 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
   const isDataUrl = currentImage?.url?.startsWith("data:")
   const isClickable = Boolean(currentImage?.link)
 
+  // Mobile falls back to the desktop image (landscape, cropped via object-cover)
+  // when no mobile-specific image has been set for this slide in the admin panel.
+  const mobileSrc = currentImage?.mobileUrl || currentImage?.url
+  const mobileIsDataUrl = mobileSrc?.startsWith("data:")
+  const mobileAspectClass = currentImage?.mobileUrl ? "aspect-[4/5]" : "aspect-[1000/384]"
+
   return (
     <div
       className="relative w-full overflow-hidden"
@@ -81,52 +88,103 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
       aria-roledescription="carousel"
       aria-label="Featured products carousel"
     >
-      <div className="relative w-full" style={{ aspectRatio: "1000 / 384", minHeight: 200 }}>
+      <div className="relative w-full">
         {currentImage && (
-          <div
-            className={`relative w-full h-full ${isClickable ? "cursor-pointer" : ""}`}
-            onClick={handleImageClick}
-          >
-            {isDataUrl ? (
-              <img
-                src={currentImage.url}
-                alt={currentImage.title || "Carousel image"}
-                className="w-full h-full object-cover object-center"
-              />
-            ) : (
-              <Image
-  src={currentImage.url}
-  alt={currentImage.title || "Carousel image"}
-  fill
-  className="object-cover object-center transition-opacity duration-500"
-  sizes="100vw"
-  priority
-  unoptimized={
-    currentImage.url.startsWith("/") || currentImage.url.startsWith("/public")
-  }
-/>
-            )}
+          <>
+            {/* Desktop / tablet — landscape banner (unchanged) */}
+            <div
+              className={`relative w-full hidden md:block aspect-[1000/384] ${isClickable ? "cursor-pointer" : ""}`}
+              style={{ minHeight: 200 }}
+              onClick={handleImageClick}
+            >
+              {isDataUrl ? (
+                <img
+                  src={currentImage.url}
+                  alt={currentImage.title || "Carousel image"}
+                  className="w-full h-full object-cover object-center"
+                />
+              ) : (
+                <Image
+                  src={currentImage.url}
+                  alt={currentImage.title || "Carousel image"}
+                  fill
+                  className="object-cover object-center transition-opacity duration-500"
+                  sizes="100vw"
+                  priority
+                  unoptimized={
+                    currentImage.url.startsWith("/") || currentImage.url.startsWith("/public")
+                  }
+                />
+              )}
 
-            {(currentImage.title || currentImage.description) && (
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end pointer-events-none">
-                <div className="p-6 sm:p-10 text-white">
-                  {currentImage.title && (
-                    <h2
-                      className="font-display text-2xl sm:text-4xl font-bold mb-2 leading-tight"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      {currentImage.title}
-                    </h2>
-                  )}
-                  {currentImage.description && (
-                    <p className="text-sm sm:text-base text-white/85 max-w-lg">
-                      {currentImage.description}
-                    </p>
-                  )}
+              {(currentImage.title || currentImage.description) && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end pointer-events-none">
+                  <div className="p-6 sm:p-10 text-white">
+                    {currentImage.title && (
+                      <h2
+                        className="font-display text-2xl sm:text-4xl font-bold mb-2 leading-tight"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
+                        {currentImage.title}
+                      </h2>
+                    )}
+                    {currentImage.description && (
+                      <p className="text-sm sm:text-base text-white/85 max-w-lg">
+                        {currentImage.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+
+            {/* Mobile — mobileUrl if set in admin (square/portrait), else falls back to the desktop image */}
+            <div
+              className={`relative w-full block md:hidden ${mobileAspectClass} ${isClickable ? "cursor-pointer" : ""}`}
+              style={{ minHeight: 200 }}
+              onClick={handleImageClick}
+            >
+              {mobileIsDataUrl ? (
+                <img
+                  src={mobileSrc}
+                  alt={currentImage.title || "Carousel image"}
+                  className="w-full h-full object-cover object-center"
+                />
+              ) : (
+                <Image
+                  src={mobileSrc}
+                  alt={currentImage.title || "Carousel image"}
+                  fill
+                  className="object-cover object-center transition-opacity duration-500"
+                  sizes="100vw"
+                  priority
+                  unoptimized={
+                    mobileSrc.startsWith("/") || mobileSrc.startsWith("/public")
+                  }
+                />
+              )}
+
+              {(currentImage.title || currentImage.description) && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end pointer-events-none">
+                  <div className="p-5 text-white">
+                    {currentImage.title && (
+                      <h2
+                        className="font-display text-xl font-bold mb-1.5 leading-tight"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
+                        {currentImage.title}
+                      </h2>
+                    )}
+                    {currentImage.description && (
+                      <p className="text-xs text-white/85 max-w-xs">
+                        {currentImage.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {carouselImages.length > 1 && (
