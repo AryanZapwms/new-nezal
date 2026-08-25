@@ -6,18 +6,19 @@ import { Product } from "@/lib/models/product"
 import { Blog } from "@/lib/models/blog"
 import { Company } from "@/lib/models/company"
 import { isAdmin } from "@/lib/admin-check"
+import { isBunnyUrl, bunnyPathFromUrl } from "@/lib/bunny"
 
 const PUBLIC_DIR = path.join(process.cwd(), "public")
 const LOCAL_FOLDERS = ["arrivals", "blogs", "carousel", "shop-by-concern", "uploads"]
 
 interface ImageFile {
-  path: string        // local: "/carousel/banner1.jpg" | cloudinary: "https://res.cloudinary.com/..."
-  folder: string      // local: "carousel" | cloudinary: "cloudinary/arrivals"
+  path: string        // local: "/carousel/banner1.jpg" | bunny: "https://<pull-zone>/products/..."
+  folder: string      // local: "carousel" | bunny: "bunny/products"
   filename: string
   size: number
   isUsed: boolean
   usedBy: string[]
-  storageType: "local" | "cloudinary"
+  storageType: "local" | "bunny"
 }
 
 // ── 1. Collect local disk images ──────────────────────────────────────────────
@@ -48,46 +49,42 @@ function getLocalImageFiles(): ImageFile[] {
   return images
 }
 
-// ── 2. Extract Cloudinary URLs from DB ────────────────────────────────────────
-function isCloudinaryUrl(url: string): boolean {
-  return typeof url === "string" && url.startsWith("https://res.cloudinary.com/")
-}
-
-function cloudinaryFolder(url: string): string {
-  // e.g. .../nezal/arrivals/filename.jpg → "arrivals"
+// ── 2. Extract Bunny.net URLs from DB ────────────────────────────────────────
+function bunnyFolder(url: string): string {
+  // e.g. .../products/64f.../filename.jpg → "products"
   try {
-    const parts = new URL(url).pathname.split("/")
-    const nezalIdx = parts.indexOf("nezal")
-    return nezalIdx !== -1 && parts[nezalIdx + 1] ? parts[nezalIdx + 1] : "uploads"
+    const targetPath = bunnyPathFromUrl(url)
+    return targetPath.split("/")[0] || "uploads"
   } catch {
     return "uploads"
   }
 }
 
-function cloudinaryFilename(url: string): string {
+function bunnyFilename(url: string): string {
   try {
-    return new URL(url).pathname.split("/").pop() || url
+    const targetPath = bunnyPathFromUrl(url)
+    return targetPath.split("/").pop() || url
   } catch {
     return url
   }
 }
 
-async function getCloudinaryImagesFromDB(): Promise<ImageFile[]> {
+async function getBunnyImagesFromDB(): Promise<ImageFile[]> {
   const seen = new Set<string>()
   const images: ImageFile[] = []
 
   const addUrl = (url: string, label: string) => {
-    if (!url || !isCloudinaryUrl(url) || seen.has(url)) return
+    if (!url || !isBunnyUrl(url) || seen.has(url)) return
     seen.add(url)
-    const folder = cloudinaryFolder(url)
+    const folder = bunnyFolder(url)
     images.push({
       path: url,
-      folder: `cloudinary/${folder}`,
-      filename: cloudinaryFilename(url),
-      size: 0, // Cloudinary doesn't expose size without API call
+      folder: `bunny/${folder}`,
+      filename: bunnyFilename(url),
+      size: 0, // Bunny.net doesn't expose size without a separate API call
       isUsed: false,
       usedBy: [],
-      storageType: "cloudinary",
+      storageType: "bunny",
     })
   }
 
@@ -115,7 +112,7 @@ async function getCloudinaryImagesFromDB(): Promise<ImageFile[]> {
     for (const sc of c.shopByConcern || []) addUrl(sc.image, `Company: ${c.name}`)
   }
 
-  // All Cloudinary URLs found in DB are by definition "used"
+  // All Bunny.net URLs found in DB are by definition "used"
   for (const img of images) {
     img.isUsed = true
   }
@@ -169,14 +166,14 @@ export async function GET(_request: NextRequest) {
   try {
     await connectDB()
 
-    const [localImages, cloudinaryImages] = await Promise.all([
+    const [localImages, bunnyImages] = await Promise.all([
       Promise.resolve(getLocalImageFiles()),
-      getCloudinaryImagesFromDB(),
+      getBunnyImagesFromDB(),
     ])
 
     await checkLocalImageUsage(localImages)
 
-    const allImages = [...localImages, ...cloudinaryImages]
+    const allImages = [...localImages, ...bunnyImages]
 
     return NextResponse.json({
       success: true,
@@ -186,7 +183,7 @@ export async function GET(_request: NextRequest) {
       unused: allImages.filter(i => !i.isUsed).length,
       breakdown: {
         local: localImages.length,
-        cloudinary: cloudinaryImages.length,
+        bunny: bunnyImages.length,
       },
     })
   } catch (error) {

@@ -2,13 +2,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { v2 as cloudinary } from "cloudinary"
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+import { randomUUID } from "crypto"
+import { uploadToBunny } from "@/lib/bunny"
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,13 +46,11 @@ const folder = ALLOWED_FOLDERS.has(formData.get('folder') as string)
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
 
-      const base64 = `data:${file.type};base64,${buffer.toString("base64")}`
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"
+      const targetPath = `${folder}/${randomUUID()}.${ext}`
 
-      const result = await cloudinary.uploader.upload(base64, {
-        folder: `nezal/${folder}`,
-      })
-
-      uploadedUrls.push(result.secure_url)
+      const url = await uploadToBunny(targetPath, buffer, file.type)
+      uploadedUrls.push(url)
     }
 
     return NextResponse.json({

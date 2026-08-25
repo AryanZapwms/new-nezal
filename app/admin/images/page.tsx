@@ -30,7 +30,7 @@ interface ImageFile {
   size: number
   isUsed: boolean
   usedBy: string[]
-  storageType: "local" | "cloudinary"
+  storageType: "local" | "bunny"
 }
 
 const FOLDER_COLORS: Record<string, string> = {
@@ -164,11 +164,11 @@ export default function ImagesPage() {
   const getFolderColor = (folder: string) => FOLDER_COLORS[normaliseFolder(folder)] || "bg-gray-100 text-gray-600"
 
   const getFolderLabel = (folder: string) =>
-    folder.replace("cloudinary/", "").replace(/-/g, " ")
+    folder.replace("bunny/", "").replace(/-/g, " ")
       .replace(/\b\w/g, c => c.toUpperCase())
 
-  // Normalise folder for tab grouping: "cloudinary/arrivals" → "arrivals"
-  const normaliseFolder = (folder: string) => folder.replace("cloudinary/", "")
+  // Normalise folder for tab grouping: "bunny/arrivals" → "arrivals"
+  const normaliseFolder = (folder: string) => folder.replace("bunny/", "")
 
   const folders = Array.from(new Set(images.map(img => normaliseFolder(img.folder)))).sort()
 
@@ -190,7 +190,7 @@ export default function ImagesPage() {
 
   const usedImages = images.filter(img => img.isUsed)
   const unusedImages = images.filter(img => !img.isUsed)
-  const cloudinaryCount = images.filter(img => img.storageType === "cloudinary").length
+  const bunnyCount = images.filter(img => img.storageType === "bunny").length
   const localCount = images.filter(img => img.storageType === "local").length
   const selectedUnusedCount = Array.from(selectedImages).filter(p => unusedImages.some(img => img.path === p)).length
 
@@ -209,7 +209,7 @@ export default function ImagesPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Image Management</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Manage images across local storage and Cloudinary.</p>
+              <p className="text-sm text-gray-500 mt-0.5">Manage images across local storage and Bunny.net.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -266,8 +266,8 @@ export default function ImagesPage() {
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-sm">
                 <Cloud className="w-3.5 h-3.5 text-blue-500" />
-                <span className="font-semibold text-gray-900 tabular-nums">{cloudinaryCount}</span>
-                <span className="text-gray-400 text-xs">Cloudinary</span>
+                <span className="font-semibold text-gray-900 tabular-nums">{bunnyCount}</span>
+                <span className="text-gray-400 text-xs">Bunny.net</span>
               </div>
               <div className="flex items-center gap-1.5 text-sm">
                 <HardDrive className="w-3.5 h-3.5 text-gray-400" />
@@ -480,8 +480,8 @@ function ImageCard({
           </span>
         </div>
         <div className="flex items-center gap-1 text-xs text-gray-400">
-          {image.storageType === "cloudinary"
-            ? <><Cloud className="w-3 h-3 text-blue-500" /><span>Cloudinary</span></>
+          {image.storageType === "bunny"
+            ? <><Cloud className="w-3 h-3 text-blue-500" /><span>Bunny.net</span></>
             : <><HardDrive className="w-3 h-3" /><span>Local</span></>}
         </div>
         <p className="text-sm font-medium text-gray-900 truncate" title={image.filename}>{image.filename}</p>

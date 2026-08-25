@@ -1,47 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import fs from "fs"
 import path from "path"
-import { v2 as cloudinary } from "cloudinary"
 import { connectDB } from "@/lib/db"
 import { Product } from "@/lib/models/product"
 import { Blog } from "@/lib/models/blog"
 import { Company } from "@/lib/models/company"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+import { isBunnyUrl, bunnyPathFromUrl, deleteFromBunny } from "@/lib/bunny"
 
 const PUBLIC_DIR = path.join(process.cwd(), "public")
 const ALLOWED_LOCAL_FOLDERS = ["arrivals", "blogs", "carousel", "shop-by-concern", "uploads"]
-
-function isCloudinaryUrl(url: string): boolean {
-  return typeof url === "string" && url.startsWith("https://res.cloudinary.com/")
-}
-
-// Extract Cloudinary public_id from URL
-// e.g. https://res.cloudinary.com/demo/image/upload/v123/nezal/arrivals/foo.jpg
-//   → "nezal/arrivals/foo"  (without extension)
-function getCloudinaryPublicId(url: string): string {
-  try {
-    const pathname = new URL(url).pathname
-    // Remove leading slash, strip version segment (v\d+), strip extension
-    const parts = pathname.split("/").filter(Boolean)
-    // parts: ["demo","image","upload","v123","nezal","arrivals","foo.jpg"]
-    const uploadIdx = parts.indexOf("upload")
-    if (uploadIdx === -1) throw new Error("Not a valid Cloudinary upload URL")
-    const relevant = parts.slice(uploadIdx + 1)
-    // Skip version segment if present (starts with "v" followed by digits)
-    const start = /^v\d+$/.test(relevant[0]) ? 1 : 0
-    const withoutExt = relevant.slice(start).join("/").replace(/\.[^/.]+$/, "")
-    return withoutExt
-  } catch {
-    throw new Error(`Cannot extract public_id from Cloudinary URL: ${url}`)
-  }
-}
 
 async function isImageUsedInDB(imagePath: string): Promise<{ used: boolean; counts: Record<string, number> }> {
   const [productUsage, blogUsage, companyUsage] = await Promise.all([
@@ -81,8 +50,8 @@ export async function DELETE(request: NextRequest) {
 
     await connectDB()
 
-    // ── Cloudinary image ──────────────────────────────────────────────────────
-    if (isCloudinaryUrl(imagePath)) {
+    // ── Bunny.net image ──────────────────────────────────────────────────────
+    if (isBunnyUrl(imagePath)) {
       const { used, counts } = await isImageUsedInDB(imagePath)
       if (used) {
         return NextResponse.json(
@@ -91,17 +60,9 @@ export async function DELETE(request: NextRequest) {
         )
       }
 
-      const publicId = getCloudinaryPublicId(imagePath)
-      const result = await cloudinary.uploader.destroy(publicId)
+      await deleteFromBunny(bunnyPathFromUrl(imagePath))
 
-      if (result.result !== "ok" && result.result !== "not found") {
-        return NextResponse.json(
-          { success: false, error: `Cloudinary deletion failed: ${result.result}` },
-          { status: 500 }
-        )
-      }
-
-      return NextResponse.json({ success: true, message: "Cloudinary image deleted", path: imagePath })
+      return NextResponse.json({ success: true, message: "Bunny.net image deleted", path: imagePath })
     }
 
     // ── Local image ───────────────────────────────────────────────────────────
