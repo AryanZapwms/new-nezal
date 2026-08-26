@@ -72,6 +72,7 @@ export default function HomeCarouselAdminPage() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [urlError, setUrlError] = useState(false)
 
   // Product picker state
   const [productQuery, setProductQuery] = useState("")
@@ -129,6 +130,7 @@ export default function HomeCarouselAdminPage() {
     setEditingId(null)
     setProductQuery("")
     setProductResults([])
+    setUrlError(false)
   }
 
   const startEdit = (banner: Banner) => {
@@ -143,6 +145,7 @@ export default function HomeCarouselAdminPage() {
       linkLabel: banner.linkLabel || "",
       isActive: banner.isActive,
     })
+    setUrlError(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -167,10 +170,18 @@ export default function HomeCarouselAdminPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.url) {
-      toast({ title: "An image is required", variant: "destructive" })
+    // Only the desktop image is required — mobileUrl is always optional, even if it's set
+    // and desktop isn't, so the message below must call out *which* field is missing.
+    if (!form.url?.trim()) {
+      setUrlError(true)
+      toast({
+        title: "Desktop banner image is required",
+        description: "Mobile banner image is optional and falls back to the desktop image if left blank.",
+        variant: "destructive",
+      })
       return
     }
+    setUrlError(false)
     setSaving(true)
     try {
       const payload = {
@@ -305,11 +316,13 @@ export default function HomeCarouselAdminPage() {
                   Desktop banner image
                 </Label>
                 <ImageUploadField
+                  id="banner-desktop-image"
                   label=""
                   value={form.url}
-                  onChange={(url) => setForm((f) => ({ ...f, url }))}
+                  onChange={(url) => { setForm((f) => ({ ...f, url })); if (url.trim()) setUrlError(false) }}
                   folder="carousel"
                   required
+                  error={urlError ? "Desktop banner image is required" : undefined}
                 />
               </div>
               <div>
@@ -317,6 +330,7 @@ export default function HomeCarouselAdminPage() {
                   Mobile banner image <span className="font-normal normal-case text-gray-400">(optional — square/portrait, falls back to desktop image)</span>
                 </Label>
                 <ImageUploadField
+                  id="banner-mobile-image"
                   label=""
                   value={form.mobileUrl}
                   onChange={(mobileUrl) => setForm((f) => ({ ...f, mobileUrl }))}
@@ -530,11 +544,18 @@ export default function HomeCarouselAdminPage() {
 
                     {/* Thumbnail(s) */}
                     <div className="relative shrink-0 flex items-center gap-1.5">
-                      <img
-                        src={banner.url}
-                        alt=""
-                        className={`w-28 h-[70px] object-cover rounded-lg border border-gray-200 ${!banner.isActive ? "grayscale opacity-60" : ""}`}
-                      />
+                      {banner.url?.trim() ? (
+                        <img
+                          src={banner.url}
+                          alt=""
+                          className={`w-28 h-[70px] object-cover rounded-lg border border-gray-200 ${!banner.isActive ? "grayscale opacity-60" : ""}`}
+                        />
+                      ) : (
+                        <div className="w-28 h-[70px] flex flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-red-300 bg-red-50">
+                          <ImageIcon className="w-4 h-4 text-red-400" />
+                          <span className="text-[10px] font-semibold text-red-600 text-center leading-tight px-1">Desktop image required</span>
+                        </div>
+                      )}
                       {banner.mobileUrl && (
                         <img
                           src={banner.mobileUrl}

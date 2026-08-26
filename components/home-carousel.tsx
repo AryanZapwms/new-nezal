@@ -67,11 +67,17 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
   const isDataUrl = currentImage?.url?.startsWith("data:")
   const isClickable = Boolean(currentImage?.link)
 
-  // Mobile falls back to the desktop image (landscape, cropped via object-cover)
-  // when no mobile-specific image has been set for this slide in the admin panel.
+  // Mobile falls back to the desktop image when no mobile-specific image has been
+  // set for this slide in the admin panel. The dedicated mobile image is purpose-shot
+  // for the portrait frame so it can safely be cropped (object-cover); the desktop
+  // fallback was designed for a landscape frame, so it must be shown in full
+  // (object-contain, letterboxed) rather than center-cropped — cropping a wide banner
+  // into a portrait/short box cuts off headings and product shots.
+  const hasMobileImage = Boolean(currentImage?.mobileUrl)
   const mobileSrc = currentImage?.mobileUrl || currentImage?.url
   const mobileIsDataUrl = mobileSrc?.startsWith("data:")
-  const mobileAspectClass = currentImage?.mobileUrl ? "aspect-[4/5]" : "aspect-[1000/384]"
+  const mobileAspectClass = hasMobileImage ? "aspect-[4/5]" : "aspect-[1000/384]"
+  const mobileObjectFitClass = hasMobileImage ? "object-cover" : "object-contain"
 
   return (
     <div
@@ -148,14 +154,14 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
                 <img
                   src={mobileSrc}
                   alt={currentImage.title || "Carousel image"}
-                  className="w-full h-full object-cover object-center"
+                  className={`w-full h-full object-center ${mobileObjectFitClass}`}
                 />
               ) : (
                 <Image
                   src={mobileSrc}
                   alt={currentImage.title || "Carousel image"}
                   fill
-                  className="object-cover object-center transition-opacity duration-500"
+                  className={`object-center transition-opacity duration-500 ${mobileObjectFitClass}`}
                   sizes="100vw"
                   priority
                   unoptimized={

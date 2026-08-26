@@ -15,6 +15,9 @@ interface ImageUploadFieldProps {
   folder?: string
   required?: boolean
   placeholder?: string
+  id?: string
+  /** Inline validation message — e.g. shown after a failed submit. Renders a red border + helper text. */
+  error?: string
 }
 
 export function ImageUploadField({
@@ -24,6 +27,8 @@ export function ImageUploadField({
   folder = "uploads",
   required = false,
   placeholder = "https://...",
+  id = "image-upload",
+  error,
 }: ImageUploadFieldProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -79,7 +84,7 @@ export function ImageUploadField({
 
   return (
     <div>
-      <Label htmlFor="image-upload">{label}</Label>
+      <Label htmlFor={id} className={error ? "text-destructive" : undefined}>{label}</Label>
       <Tabs defaultValue="url" className="mt-2">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="url">URL</TabsTrigger>
@@ -88,12 +93,13 @@ export function ImageUploadField({
 
         <TabsContent value="url" className="space-y-2">
           <Input
-            id="image-upload"
+            id={id}
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             required={required}
+            aria-invalid={!!error}
           />
         </TabsContent>
 
@@ -130,6 +136,8 @@ export function ImageUploadField({
           {uploadError && <p className="text-sm text-red-500">{uploadError}</p>}
         </TabsContent>
       </Tabs>
+
+      {error && <p className="text-sm text-destructive mt-1.5">{error}</p>}
 
       {/* Preview */}
       {value && (

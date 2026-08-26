@@ -22,6 +22,11 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
+    // Desktop `url` is the only required image field — `mobileUrl` is always optional.
+    if ("url" in body && !body.url?.trim()) {
+      return NextResponse.json({ error: "Image URL is required" }, { status: 400 })
+    }
+
     const allowed = ["url", "mobileUrl", "title", "description", "linkType", "link", "linkLabel", "order", "isActive"]
     const update: Record<string, any> = {}
     for (const key of allowed) {

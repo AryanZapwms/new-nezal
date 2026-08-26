@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     await connectDB()
     const body = await request.json()
 
-    if (!body.url) {
+    if (!body.url?.trim()) {
       return NextResponse.json({ error: "Image URL is required" }, { status: 400 })
     }
 
