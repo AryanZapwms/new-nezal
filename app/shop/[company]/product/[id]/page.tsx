@@ -750,6 +750,7 @@ const currentImage =
       src={`${currentImage}?v=${product._id.slice(-6)}`}
       alt={product.name}
       fill
+      sizes="(max-width: 1024px) 100vw, (max-width: 1280px) 50vw, 640px"
       className="object-contain p-8"
       priority
     />
@@ -804,18 +805,45 @@ const currentImage =
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
-                    className="relative flex-shrink-0 w-20 h-20 rounded-xl border-2 overflow-hidden transition-all duration-150"
+                    className="relative flex-shrink-0 w-14 h-14 sm:w-20 sm:h-20 rounded-xl border-2 overflow-hidden transition-all duration-150"
                     style={{
                       backgroundColor: "#ffffff",
                       borderColor: selectedImage === idx ? "#2a5c3a" : "#dde8de",
                       transform: selectedImage === idx ? "scale(1.05)" : "scale(1)",
                     }}
                   >
-                    <Image src={img} alt={`View ${idx + 1}`} fill className="object-cover" />
+                    <Image src={img} alt={`View ${idx + 1}`} fill sizes="(max-width: 640px) 56px, 80px" className="object-cover" />
                   </button>
                 ))}
               </div>
             )}
+
+            {/* Amazon + Wishlist — relocated here for mobile only (judgment call on placement, see chat).
+                Desktop keeps its own copies of these in the info column, untouched. */}
+            <div className="sm:hidden flex gap-2">
+              {product.amazonUrl && (
+                <a
+                  href={buildAmazonLink(product.amazonUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-semibold border-2 transition-all duration-150 active:scale-95"
+                  style={{
+                    backgroundColor: "#fff8ee",
+                    borderColor: "#f0c14b",
+                    color: "#111827",
+                  }}
+                >
+                  <Image src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="" width={56} height={17} className="object-contain" />
+                  Buy on Amazon
+                </a>
+              )}
+              <WishlistButton
+                productId={product._id}
+                productName={product.name}
+                productPrice={displayPrice}
+                className="flex items-center justify-center h-11 w-11 flex-shrink-0 rounded-xl border-2 border-[#dde8de] bg-white"
+              />
+            </div>
 
             {/* Product Description card (visible on desktop below images) */}
             <div
@@ -849,7 +877,7 @@ const currentImage =
           </div>
 
           {/* ── RIGHT: Product Info ── */}
-          <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <div className="space-y-4 sm:space-y-6 lg:sticky lg:top-24 lg:self-start">
 
             {/* Brand + Name */}
             <div>
@@ -861,7 +889,7 @@ const currentImage =
                   {product.company.name}
                 </p>
               )} */}
-              <h2 className="text-xs lg:text-3xl font-bold leading-tight" style={{ color: "#1e3a28" }}>
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold leading-tight" style={{ color: "#1e3a28" }}>
                 {product.name}
               </h2>
               <ProductDescription description={product.description} className="mt-2" />
@@ -891,7 +919,7 @@ const currentImage =
 
 {/* Price */}
 <div
-  className="rounded-2xl border p-5 space-y-1"
+  className="rounded-2xl border p-4 sm:p-5 space-y-1"
   style={{ backgroundColor: "#ffffff", borderColor: "#dde8de" }}
 >
   {product.flashSale && timeLeft && (
@@ -1001,7 +1029,7 @@ const currentImage =
                         key={idx}
                         onClick={() => !oos && setSelectedSize(size)}
                         disabled={oos}
-                        className="px-5 py-2.5 rounded-xl text-sm font-medium border-2 transition-all duration-150"
+                        className="px-4 sm:px-5 py-2.5 rounded-xl text-sm font-medium border-2 transition-all duration-150"
                         style={{
                           backgroundColor: isSel ? "#1e3a28" : "#ffffff",
                           borderColor: isSel ? "#1e3a28" : "#c8dac9",
@@ -1065,15 +1093,15 @@ const currentImage =
               </div>
             </div>
 
-            {/* CTA buttons */}
-            <div className="space-y-3">
-              <div className="flex gap-3">
+            {/* CTA buttons — desktop only; mobile uses the permanent sticky bottom bar instead */}
+            <div className="hidden sm:block space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
 
 
                 <button
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
-                  className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl text-base font-semibold transition-all duration-150 active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2.5 py-3 sm:py-4 rounded-xl text-base font-semibold transition-all duration-150 active:scale-95"
                   style={{
                     backgroundColor: isOutOfStock ? "#c8dac9" : "#1e3a28",
                     color: "#ffffff",
@@ -1085,7 +1113,7 @@ const currentImage =
                 </button>
                 <button
                   disabled={isOutOfStock}
-                  className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl text-base font-semibold border-2 transition-all duration-150 active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2.5 py-3 sm:py-4 rounded-xl text-base font-semibold border-2 transition-all duration-150 active:scale-95"
                   style={{
                     backgroundColor: isOutOfStock ? "#f0f7f0" : "#2a5c3a",
                     borderColor: isOutOfStock ? "#c8dac9" : "#2a5c3a",
@@ -1104,7 +1132,7 @@ const currentImage =
                   href={buildAmazonLink(product.amazonUrl)}
                   target="_blank"
                   rel="noopener noreferrer sponsored"
-                  className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-semibold border-2 transition-all duration-150 active:scale-95"
+                  className="w-full flex items-center justify-center gap-2.5 py-2.5 sm:py-3.5 rounded-xl text-sm font-semibold border-2 transition-all duration-150 active:scale-95"
                   style={{
                     backgroundColor: "#fff8ee",
                     borderColor: "#f0c14b",
@@ -1120,26 +1148,26 @@ const currentImage =
                 productId={product._id}
                 productName={product.name}
                 productPrice={displayPrice}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-medium border-2"
+                className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3.5 rounded-xl text-sm font-medium border-2"
               />
             </div>
 
                 
 
             {/* Trust badges */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
               {[
-                { icon: <Truck className="w-5 h-5" />, title: "Free Delivery", sub: "Orders ₹1399+" },
-                { icon: <RotateCcw className="w-5 h-5" />, title: "Easy Return", sub: "7 Day Policy" },
-                { icon: <Package className="w-5 h-5" />, title: "Bulk Purchase", sub: "Get Special Offers" },
+                { icon: <Truck className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Free Delivery", sub: "Orders ₹1399+" },
+                { icon: <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Easy Return", sub: "7 Day Policy" },
+                { icon: <Package className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Bulk Purchase", sub: "Get Special Offers" },
               ].map((b) => (
                 <div
                   key={b.title}
-                  className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2"
+                  className="rounded-2xl border p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2"
                   style={{ backgroundColor: "#ffffff", borderColor: "#dde8de" }}
                 >
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center"
                     style={{ backgroundColor: "#e0f0e4", color: "#1e3a28" }}
                   >
                     {b.icon}
@@ -1160,17 +1188,17 @@ const currentImage =
 
         {/* ── Mobile description ── */}
         <div
-          className="lg:hidden mt-8 rounded-2xl border p-5 space-y-3"
+          className="lg:hidden mt-6 sm:mt-8 rounded-2xl border p-4 sm:p-5 space-y-2 sm:space-y-3"
           style={{ backgroundColor: "#f0f7f0", borderColor: "#d2e8d4" }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center"
               style={{ backgroundColor: "#d2e8d4" }}
             >
-              <Leaf className="w-5 h-5" style={{ color: "#1e3a28" }} />
+              <Leaf className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: "#1e3a28" }} />
             </div>
-            <h3 className="text-base font-semibold" style={{ color: "#1e3a28" }}>
+            <h3 className="text-sm sm:text-base font-semibold" style={{ color: "#1e3a28" }}>
               Product Description
             </h3>
           </div>
@@ -1210,7 +1238,7 @@ const currentImage =
               style={{ backgroundColor: "#ffffff", borderColor: "#dde8de" }}
             >
               <div className="flex items-end gap-4">
-                <span className="text-6xl font-extrabold leading-none" style={{ color: "#1e3a28" }}>
+                <span className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-none" style={{ color: "#1e3a28" }}>
                   {reviewSummary.averageRating.toFixed(1)}
                 </span>
                 <div>
@@ -1283,7 +1311,7 @@ const currentImage =
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     type="text"
                     placeholder="Your name"
@@ -1425,6 +1453,49 @@ const currentImage =
         {/* FAQ */}
         <div className="mt-14">
           <FAQ />
+        </div>
+
+        {/* Spacer so the mobile sticky CTA bar doesn't cover the last section */}
+        <div className="sm:hidden" style={{ height: "calc(4.5rem + env(safe-area-inset-bottom))" }} aria-hidden="true" />
+      </div>
+
+      {/* Mobile permanent sticky Add to Cart / Buy Now bar — reuses the same handlers/state as the desktop CTA buttons */}
+      <div
+        className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t"
+        style={{
+          borderColor: "#dde8de",
+          boxShadow: "0 -2px 12px rgba(0,0,0,0.08)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
+        <div className="flex gap-2 px-4 pt-3 pb-3">
+          <button
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className="flex-[1.6] flex items-center justify-center gap-1.5 h-12 rounded-xl text-xs font-semibold transition-all duration-150 active:scale-95"
+            style={{
+              backgroundColor: isOutOfStock ? "#c8dac9" : "#1e3a28",
+              color: "#ffffff",
+              cursor: isOutOfStock ? "not-allowed" : "pointer",
+            }}
+          >
+            <ShoppingCart className="w-4 h-4 flex-shrink-0" />
+            <span className="whitespace-nowrap">Add to Cart – ₹{displayPrice}</span>
+          </button>
+          <button
+            onClick={handleShopNow}
+            disabled={isOutOfStock}
+            className="flex-1 flex items-center justify-center gap-1.5 h-12 rounded-xl text-sm font-semibold border-2 transition-all duration-150 active:scale-95"
+            style={{
+              backgroundColor: isOutOfStock ? "#f0f7f0" : "#2a5c3a",
+              borderColor: isOutOfStock ? "#c8dac9" : "#2a5c3a",
+              color: "#ffffff",
+              cursor: isOutOfStock ? "not-allowed" : "pointer",
+            }}
+          >
+            <Zap className="w-4 h-4" />
+            Buy Now
+          </button>
         </div>
       </div>
     </main>

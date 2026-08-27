@@ -548,10 +548,20 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
+  // Home page only, mobile only: the hero carousel sits directly below the
+  // header and is short enough that even a small scroll (e.g. the mobile
+  // browser chrome collapsing) tucks its heading behind the sticky header.
+  // Keep the header in normal flow (so it scrolls away with the hero, never
+  // covering it) until the hero has fully passed behind where the header
+  // would sit, then let it become sticky as usual. Defaults to `true` (today's
+  // always-sticky behavior) so every other page/breakpoint is unaffected.
+  const [headerPinned, setHeaderPinned] = useState(true);
+
   const hasFetchedRef = useRef(false);
   const prefetchedRef = useRef(new Set<string>());
   const shopMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
 
   const [menuCollections, setMenuCollections] = useState<MenuCollection[]>([]);
 const [menuConcerns, setMenuConcerns] = useState<MenuConcern[]>([]);
@@ -565,6 +575,37 @@ const [menuRituals, setMenuRituals] = useState<MenuRitual[]>([]);
     const cached = getCachedSync<Company[]>(COMPANIES_KEY, MAX_AGE) ?? [];
     if (cached.length > 0) setCompanies(cached);
   }, []);
+
+  useEffect(() => {
+    if (pathname !== "/") { setHeaderPinned(true); return; }
+
+    const hero = document.getElementById("home-hero");
+    if (!hero) { setHeaderPinned(true); return; } // fail safe: same as current behavior if hero isn't found
+
+    const mq = window.matchMedia("(min-width: 768px)");
+    let onScroll: (() => void) | null = null;
+
+    const apply = () => {
+      if (onScroll) { window.removeEventListener("scroll", onScroll); onScroll = null; }
+      if (mq.matches) { setHeaderPinned(true); return; } // desktop keeps today's always-sticky behavior
+
+      onScroll = () => {
+        const headerHeight = headerRef.current?.getBoundingClientRect().height || 0;
+        setHeaderPinned(hero.getBoundingClientRect().bottom <= headerHeight);
+      };
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    };
+
+    apply();
+    mq.addEventListener("change", apply);
+    window.addEventListener("resize", apply);
+    return () => {
+      if (onScroll) window.removeEventListener("scroll", onScroll);
+      mq.removeEventListener("change", apply);
+      window.removeEventListener("resize", apply);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     if (hasFetchedRef.current) return;
@@ -689,7 +730,7 @@ const navCategories: MenuCategoryGroup[] = useMemo(() => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white shadow-sm ">
+      <header ref={headerRef} className={`${headerPinned ? "sticky" : "relative"} top-0 z-50 w-full bg-white shadow-sm `}>
         <div className="" style={{ borderColor: "var(--color-border)" }}>
           <div className="container-nezal w-full">
             <div className="flex h-25 items-center gap-6  ">

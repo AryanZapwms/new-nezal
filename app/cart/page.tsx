@@ -89,8 +89,8 @@ const totalGST = items.reduce((sum, item) => {
   if (items.length === 0) {
     return (
       <main className="min-h-screen bg-background">
-        <div className="container-nezal py-10">
-          <h1 className="text-4xl font-bold text-foreground mb-8">Shopping Cart</h1>
+        <div className="container-nezal py-6 sm:py-8 lg:py-10">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-8">Shopping Cart</h1>
 
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <svg className="w-24 h-24 text-muted-foreground mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,10 +110,10 @@ const totalGST = items.reduce((sum, item) => {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="container-nezal py-10">
-        <h1 className="text-4xl font-bold text-foreground mb-8">Shopping Cart</h1>
+      <div className="container-nezal py-6 sm:py-8 lg:py-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-8">Shopping Cart</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Cart Items – 2/3 width */}
           {/* Cart Items – 2/3 width */}
 <div className="lg:col-span-2 space-y-4">
@@ -143,9 +143,9 @@ const totalGST = items.reduce((sum, item) => {
           >
             <CardContent className="p-4">
               <div className="flex gap-4">
-                <div className="relative w-24 h-24 bg-muted rounded-xl overflow-hidden flex-shrink-0">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-muted rounded-xl overflow-hidden flex-shrink-0">
                   {item.image ? (
-                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    <Image src={item.image} alt={item.name} fill sizes="96px" className="object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
                       No image

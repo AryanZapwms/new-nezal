@@ -612,8 +612,8 @@ const amountLeftForFreeShipping =
     <main className="min-h-screen bg-[--color-bg-page] ">
       <TopProgressBar visible={isLoading} />
 
-      <div className="container-nezal py-10">
-        <h1 className="text-4xl font-bold text-[--color-text-heading] mb-8">Checkout</h1>
+      <div className="container-nezal py-6 sm:py-8 lg:py-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[--color-text-heading] mb-8">Checkout</h1>
 
         {checkoutError && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -621,7 +621,7 @@ const amountLeftForFreeShipping =
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Checkout Form – 2/3 */}
           <div className="lg:col-span-2">
             <CheckoutForm
