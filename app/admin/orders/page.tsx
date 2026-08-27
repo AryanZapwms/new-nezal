@@ -1,13 +1,13 @@
 // app/admin/orders/page.tsx
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Eye, MapPin, CreditCard, Package, Truck, ExternalLink, Search, ShoppingBag, RefreshCw, Ban, RotateCw } from "lucide-react"
+import { Eye, MapPin, CreditCard, Package, Truck, ExternalLink, Search, ShoppingBag, RefreshCw, Ban, RotateCw, Trash2 } from "lucide-react"
 
 interface OrderItem {
   product?: {
@@ -109,7 +109,21 @@ export default function AdminOrdersPage() {
   const [shipError, setShipError] = useState<Record<string, string>>({})
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+
+  const PAGE_SIZE = 20
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [stats, setStats] = useState({ totalOrders: 0, completed: 0, pending: 0, shipped: 0, feesCollected: 0 })
+
+  // Duplicate top scrollbar synced to the table's horizontal scroll, so
+  // horizontal scrolling doesn't require scrolling past the whole table first.
+  const topScrollRef = useRef<HTMLDivElement>(null)
+  const bottomScrollRef = useRef<HTMLDivElement>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
+  const [tableScrollWidth, setTableScrollWidth] = useState(0)
 
 
   const [cancellationActionId, setCancellationActionId] = useState<string | null>(null)
@@ -118,6 +132,10 @@ const [adminNoteInput, setAdminNoteInput] = useState("")
 const [cancelTarget, setCancelTarget] = useState<Order | null>(null)
 const [cancelReason, setCancelReason] = useState("")
 const [cancellingId, setCancellingId] = useState<string | null>(null)
+
+const [deleteTarget, setDeleteTarget] = useState<Order | null>(null)
+const [deletingId, setDeletingId] = useState<string | null>(null)
+const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const [syncingId, setSyncingId] = useState<string | null>(null)
 
@@ -164,6 +182,30 @@ const handleAdminCancel = async (orderId: string) => {
   }
 }
 
+const handleDeleteOrder = async (orderId: string) => {
+  setDeletingId(orderId)
+  setDeleteError(null)
+  try {
+    const res = await fetch(`/api/admin/orders/${orderId}`, { method: "DELETE" })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || "Failed to delete order")
+    setDeleteTarget(null)
+    if (selectedOrder && selectedOrder._id === orderId) {
+      setShowDetails(false)
+      setSelectedOrder(null)
+    }
+    // Refetch the current page — removes the row and refreshes the
+    // total/stats cards in one round-trip, same pattern as every other
+    // row action on this page.
+    await fetchOrders()
+  } catch (error: any) {
+    console.error("Error deleting order:", error)
+    setDeleteError(error.message || "Failed to delete order")
+  } finally {
+    setDeletingId(null)
+  }
+}
+
 const handleCancellationAction = async (orderId: string, action: "approve" | "reject" | "complete") => {
   setCancellationActionId(orderId)
   try {
@@ -193,19 +235,76 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
       router.push("/")
       return
     }
-    fetchOrders()
   }, [session, router])
+
+  // Debounce the search box so we're not hitting the API on every keystroke;
+  // any new search term resets back to page 1.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+      setPage(1)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  useEffect(() => {
+    if (!session || (session.user as any)?.role !== "admin") return
+    fetchOrders()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, page, searchQuery])
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch("/api/admin/orders")
+      const params = new URLSearchParams()
+      params.set("page", String(page))
+      params.set("limit", String(PAGE_SIZE))
+      if (searchQuery) params.set("search", searchQuery)
+      const res = await fetch(`/api/admin/orders?${params.toString()}`)
       if (!res.ok) throw new Error("Failed to fetch orders")
       const data = await res.json()
-      setOrders(Array.isArray(data) ? data : data.orders || [])
+      if (Array.isArray(data)) {
+        // Backward-compat fallback — shouldn't happen against the current API.
+        setOrders(data)
+        setTotal(data.length)
+        setTotalPages(1)
+      } else {
+        setOrders(data.orders || [])
+        setTotal(data.total ?? 0)
+        setTotalPages(data.totalPages ?? 1)
+        if (data.stats) setStats(data.stats)
+      }
     } catch (error) {
       console.error("Error fetching orders:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // If the current page becomes out of range (e.g. an order on the last page
+  // gets cancelled/removed from the filtered set), step back into range.
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [totalPages, page])
+
+  // Keep the duplicate top scrollbar's width in sync with the real table.
+  useEffect(() => {
+    const table = tableRef.current
+    if (!table) return
+    const update = () => setTableScrollWidth(table.scrollWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(table)
+    return () => ro.disconnect()
+  }, [orders])
+
+  const syncFromTop = () => {
+    if (bottomScrollRef.current && topScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft
+    }
+  }
+  const syncFromBottom = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft
     }
   }
 
@@ -273,15 +372,6 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
     setShowDetails(true)
   }
 
-  const filteredOrders = orders.filter((order) => {
-    const query = searchQuery.trim().toLowerCase()
-    if (!query) return true
-    const orderId = (order.orderNumber || order._id).toLowerCase()
-    const customerName = (order.user?.name || order.guestName || "").toLowerCase()
-    const customerEmail = (order.user?.email || order.guestEmail || "").toLowerCase()
-    return orderId.includes(query) || customerName.includes(query) || customerEmail.includes(query)
-  })
-
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -291,10 +381,6 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
       </main>
     )
   }
-
-  const completedCount = orders.filter((o) => o.paymentStatus === "completed").length
-  const pendingCount = orders.filter((o) => o.paymentStatus !== "completed" && o.paymentStatus !== "failed").length
-  const shippedCount = orders.filter((o) => !!o.shiprocketOrderId).length
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -325,13 +411,13 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
         {/* ── Stats row ────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total orders", value: orders.length, dot: "bg-gray-400", color: "text-gray-900" },
-            { label: "Payment completed", value: completedCount, dot: "bg-emerald-500", color: "text-emerald-700" },
-            { label: "Payment pending", value: pendingCount, dot: "bg-amber-500", color: "text-amber-700" },
-            { label: "Shipped", value: shippedCount, dot: "bg-blue-500", color: "text-blue-700" },
+            { label: "Total orders", value: stats.totalOrders, dot: "bg-gray-400", color: "text-gray-900" },
+            { label: "Payment completed", value: stats.completed, dot: "bg-emerald-500", color: "text-emerald-700" },
+            { label: "Payment pending", value: stats.pending, dot: "bg-amber-500", color: "text-amber-700" },
+            { label: "Shipped", value: stats.shipped, dot: "bg-blue-500", color: "text-blue-700" },
             {
   label: "Fees collected (shipping)",
-  value: `₹${orders.reduce((sum, o) => sum + ((o.shippingBreakdown?.smartOrderFee ?? 0) + (o.shippingBreakdown?.rateDriftBuffer ?? 0)), 0).toFixed(2)}`,
+  value: `₹${stats.feesCollected.toFixed(2)}`,
   dot: "bg-purple-500",
   color: "text-purple-700",
 }
@@ -350,35 +436,45 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50/60">
             <h2 className="font-semibold text-gray-900">
-              All orders ({searchQuery ? filteredOrders.length : orders.length})
+              All orders ({total})
             </h2>
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search by order ID or customer name..."
                 className="w-full h-10 pl-9 pr-3 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
               />
             </div>
           </div>
 
-          {orders.length === 0 ? (
+          {total === 0 && !searchQuery ? (
             <div className="py-16 text-center">
               <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                 <ShoppingBag className="w-5 h-5 text-gray-400" />
               </div>
               <p className="text-sm font-medium text-gray-700">No orders found</p>
             </div>
-          ) : filteredOrders.length === 0 ? (
+          ) : total === 0 ? (
             <div className="py-16 text-center">
               <p className="text-sm font-medium text-gray-700">No orders match "{searchQuery}"</p>
               <p className="text-xs text-gray-400 mt-1">Try a different search term.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+            <>
+            {/* Duplicate top scrollbar, synced to the table body's horizontal scroll */}
+            <div
+              ref={topScrollRef}
+              onScroll={syncFromTop}
+              className="overflow-x-auto overflow-y-hidden"
+              style={{ height: 16 }}
+            >
+              <div style={{ width: tableScrollWidth, height: 1 }} />
+            </div>
+            <div ref={bottomScrollRef} onScroll={syncFromBottom} className="overflow-x-auto">
+              <table ref={tableRef} className="w-full text-sm border-collapse">
                 <thead>
   <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-100">
     <th className="py-3 px-3 sticky text-center left-0 bg-gray-50/60 z-10 border">Actions</th>
@@ -396,7 +492,7 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
   </tr>
 </thead>
                 <tbody>
-  {filteredOrders.map((order) => (
+  {orders.map((order) => (
     <tr key={order._id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 transition-colors border">
       <td className="py-3.5 px-3 sticky left-0 bg-white hover:bg-gray-50/60 z-10 border-gray-300 border">
         <div className="flex items-center gap-1">
@@ -432,6 +528,16 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
               <Ban className="w-4 h-4" />
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteTarget(order)}
+            disabled={!!order.shiprocketOrderId}
+            className="text-gray-400 hover:text-red-600 border disabled:opacity-30 disabled:hover:text-gray-400"
+            title={order.shiprocketOrderId ? "Cancel the Shiprocket shipment first, then delete" : "Delete order"}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </td>
       <td className="py-3.5 px-6 font-mono text-xs font-semibold text-gray-700 border-gray-300 border">
@@ -514,6 +620,55 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
 </tbody>
               </table>
             </div>
+
+            {/* ── Pagination ─────────────────────────────────── */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
+                <p className="text-xs text-gray-500">
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="border-gray-200"
+                  >
+                    Previous
+                  </Button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let n = i + 1
+                    if (totalPages > 5) {
+                      if (page <= 3) n = i + 1
+                      else if (page >= totalPages - 2) n = totalPages - 4 + i
+                      else n = page - 2 + i
+                    }
+                    return (
+                      <Button
+                        key={n}
+                        variant={n === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(n)}
+                        className={n === page ? "bg-emerald-700 hover:bg-emerald-700" : "border-gray-200"}
+                      >
+                        {n}
+                      </Button>
+                    )
+                  })}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="border-gray-200"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>
@@ -870,6 +1025,53 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
             className="bg-rose-600 hover:bg-rose-700"
           >
             {cancellingId === cancelTarget._id ? "Cancelling..." : "Cancel order"}
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
+
+      {/* ── Delete Order Confirmation ────────────────────── */}
+      {deleteTarget && (
+  <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteError(null) } }}>
+    <DialogContent className="max-w-md rounded-2xl">
+      <DialogHeader>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shrink-0">
+            <Trash2 className="w-4 h-4 text-white" />
+          </div>
+          <DialogTitle>Delete order {deleteTarget.orderNumber || deleteTarget._id.slice(-6)}?</DialogTitle>
+        </div>
+      </DialogHeader>
+
+      <div className="space-y-4">
+        <p className="text-sm text-gray-600">
+          This permanently removes the order record from the database. Unlike Cancel, this does{" "}
+          <span className="font-medium text-gray-900">not</span> change order status, refund the customer, or
+          touch Shiprocket — it just deletes the row. <span className="font-medium text-gray-900">This cannot be undone.</span>
+        </p>
+
+        {deleteError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3">
+            {deleteError}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button
+            variant="outline"
+            className="border-gray-200"
+            onClick={() => { setDeleteTarget(null); setDeleteError(null) }}
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={deletingId === deleteTarget._id}
+            onClick={() => handleDeleteOrder(deleteTarget._id)}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {deletingId === deleteTarget._id ? "Deleting..." : "Delete order"}
           </Button>
         </div>
       </div>

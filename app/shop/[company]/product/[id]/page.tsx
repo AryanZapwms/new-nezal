@@ -1157,7 +1157,7 @@ const currentImage =
             {/* Trust badges */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
               {[
-                { icon: <Truck className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Free Delivery", sub: "Orders ₹1399+" },
+                { icon: <Truck className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Free Delivery", sub: "Orders ₹650+" },
                 { icon: <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Easy Return", sub: "7 Day Policy" },
                 { icon: <Package className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Bulk Purchase", sub: "Get Special Offers" },
               ].map((b) => (
@@ -1170,6 +1170,7 @@ const currentImage =
                     className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center"
                     style={{ backgroundColor: "#e0f0e4", color: "#1e3a28" }}
                   >
+                    
                     {b.icon}
                   </div>
                   <div>

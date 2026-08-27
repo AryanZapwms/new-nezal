@@ -26,6 +26,7 @@ interface CheckoutFormProps {
     country?: string
   }
   isSubmitting?: boolean
+  shippingReady?: boolean
 }
 
 const CheckIcon = () => (
@@ -193,6 +194,7 @@ export function CheckoutForm({
   availablePaymentMethods,
   initialData,
   isSubmitting = false,
+  shippingReady = true,
 }: CheckoutFormProps) {
   const {
     address: savedAddress,
@@ -596,13 +598,18 @@ const handleSelectPayment = (method: string) => {
         <div className="space-y-3">
           <Button
             type="submit"
-            disabled={isSubmitting}
-            className="w-full h-14 rounded-2xl bg-(--color-brand-primary) hover:bg-(--color-brand-primary-dark) text-white font-semibold text-[15px] transition-all duration-200 active:scale-[0.99] shadow-lg flex items-center justify-center gap-2"
+            disabled={isSubmitting || !shippingReady}
+            className="w-full h-14 rounded-2xl bg-(--color-brand-primary) hover:bg-(--color-brand-primary-dark) text-white font-semibold text-[15px] transition-all duration-200 active:scale-[0.99] shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>
                 <SpinnerIcon />
                 <span>Processing your order…</span>
+              </>
+            ) : !shippingReady ? (
+              <>
+                <SpinnerIcon />
+                <span>Calculating shipping…</span>
               </>
             ) : (
               <>
@@ -612,6 +619,11 @@ const handleSelectPayment = (method: string) => {
               </>
             )}
           </Button>
+          {!isSubmitting && !shippingReady && (
+            <p className="text-center text-xs text-(--color-text-muted)">
+              Calculating your shipping cost — this only takes a moment.
+            </p>
+          )}
 
           <div className="flex items-center justify-center gap-5 pt-1">
             <span className="flex items-center gap-1.5 text-[11px] text-(--color-text-muted)">

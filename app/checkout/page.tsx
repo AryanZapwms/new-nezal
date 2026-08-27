@@ -113,6 +113,10 @@ function CheckoutPageInner() {
 
   const [shippingBreakdown, setShippingBreakdown] = useState<any>(null)
   const [shippingCodCharge, setShippingCodCharge] = useState<number>(0)
+  // Tracks whether the /api/shipping-rate fetch for the current pincode has
+  // finished (success or failure) — guards against submitting the order
+  // while shippingRate/shippingCodCharge are still at their 0/null defaults.
+  const [shippingRateResolved, setShippingRateResolved] = useState(false)
 
       useEffect(() => {
         if (items.length === 0) { setGstMap({}); return }
@@ -244,6 +248,7 @@ const fetchShippingRate = async (pincode: string) => {
   if (items.length === 0) return
   setShippingLoading(true)
   setShippingError(null)
+  setShippingRateResolved(false)
   try {
     const res = await fetch("/api/shipping-rate", {
       method: "POST",
@@ -276,6 +281,7 @@ const fetchShippingRate = async (pincode: string) => {
     setShippingError("Couldn't fetch shipping rate.")
   } finally {
     setShippingLoading(false)
+    setShippingRateResolved(true)
   }
 }
 
@@ -369,11 +375,18 @@ const amountLeftForFreeShipping =
     : 0
 
   const handleCheckout = async (shippingAddress: any, paymentMethod: string) => {
+    // Guard against submitting before the shipping-rate fetch for this
+    // address has resolved — otherwise shippingCharge/codCharge silently
+    // fall back to their 0/null defaults instead of the real computed values.
+    if (!shippingRateResolved) {
+      setCheckoutError("We're still calculating your shipping cost — please wait a moment and click Place Order again.")
+      return
+    }
     setIsLoading(true)
     setCheckoutError(null)
      trackAddPaymentInfo(finalTotal, items.map((item) => item.productId))
     try {
-      
+
       if (paymentMethod === "cod") {
   const orderResponse = await fetch("/api/orders", {
     method: "POST",
@@ -641,6 +654,7 @@ const amountLeftForFreeShipping =
                 country: "India",
               }}
               isSubmitting={isLoading}
+              shippingReady={shippingRateResolved || !currentPincode}
             />
           </div>
 
