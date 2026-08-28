@@ -168,7 +168,7 @@ const testimonials = reviews.slice(0, 8).map((r: any) => ({
     <main className="min-h-screen bg-background overflow-x-hidden">
 
       {/* Hero Carousel */}
-     <section id="home-hero" className="w-full">
+     <section id="home-hero" className="w-full" style={{ scrollMarginTop: "var(--sticky-header-stack-height)" }}>
          <HomeCarousel images={banners} />
       </section>
 

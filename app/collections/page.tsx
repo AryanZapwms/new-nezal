@@ -286,7 +286,7 @@ const activeCategory =
       </section>
 
       {/* ── Filter tabs ── */}
-      <section className="bg-white border-b border-[var(--color-border)] sticky top-16 z-30">
+      <section className="bg-white border-b border-[var(--color-border)] sticky top-[var(--sticky-header-stack-height)] z-30">
         <div className="container-nezal">
           <div className="flex items-center gap-1 overflow-x-auto py-3 scrollbar-hide">
             {NAV_CATEGORIES.map((cat) => (

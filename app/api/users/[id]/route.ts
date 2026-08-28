@@ -24,14 +24,37 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      {
-        role: body.role,
-        isActive: body.isActive,
-      },
-      { new: true }
-    ).select("-password")
+    // Role is intentionally never accepted here — this endpoint is for
+    // general profile edits only. Promoting/demoting an admin needs its own
+    // deliberate, confirmed flow, not a field on a quick-edit form.
+    const { name, email, phone, address, city, state, pincode, isActive } = body
+
+    if (typeof name === "string" && !name.trim()) {
+      return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 })
+    }
+    if (typeof email === "string" && !email.trim()) {
+      return NextResponse.json({ error: "Email cannot be empty" }, { status: 400 })
+    }
+
+    const update: Record<string, any> = {}
+    if (typeof name === "string") update.name = name.trim()
+    if (typeof email === "string") update.email = email.trim().toLowerCase()
+    if (typeof phone === "string") update.phone = phone.trim()
+    if (typeof isActive === "boolean") update.isActive = isActive
+    if (address !== undefined || city !== undefined || state !== undefined || pincode !== undefined) {
+      update.address = {
+        street: address ?? "",
+        city: city ?? "",
+        state: state ?? "",
+        zipCode: pincode ?? "",
+        country: "India",
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true,
+    }).select("-password")
 
     if (!user) {
       return NextResponse.json(
@@ -41,7 +64,10 @@ export async function PUT(
     }
 
     return NextResponse.json(user)
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 11000) {
+      return NextResponse.json({ error: "Email already in use" }, { status: 409 })
+    }
     return NextResponse.json(
       { error: "Failed to update user" },
       { status: 500 }

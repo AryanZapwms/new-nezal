@@ -9,6 +9,7 @@ import crypto from "crypto"
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } from "@/lib/email"
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket"
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi"
+import { syncUserContactFromOrder } from "@/lib/syncUserContact"
 import Razorpay from "razorpay"
 
 
@@ -137,7 +138,9 @@ if (razorpayOrder.amount !== expectedAmountPaise) {
   })
 }
 
-    await autoCreateShiprocketOrder(order._id.toString()) 
+    if (user) await syncUserContactFromOrder(user._id, mappedAddress);
+
+    await autoCreateShiprocketOrder(order._id.toString())
 
     await Promise.all(
       items.map(async (item: any) => {

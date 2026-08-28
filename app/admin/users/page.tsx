@@ -1,10 +1,18 @@
 // app/admin/users/page.tsx
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Trash2, Edit2, Search, Check, X, Users, ShieldCheck, UserCheck } from "lucide-react"
+import { Trash2, Edit2, Eye, Search, Users, ShieldCheck, UserCheck } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface User {
   _id: string
@@ -13,6 +21,52 @@ interface User {
   role: "user" | "admin"
   isActive: boolean
   createdAt: string
+  updatedAt?: string
+  phone?: string
+  address?: { street?: string; city?: string; state?: string; zipCode?: string; country?: string }
+  isVerified?: boolean
+  provider?: "credentials" | "google"
+  wishlist?: string[]
+}
+
+interface EditForm {
+  name: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  state: string
+  pincode: string
+  isActive: boolean
+}
+
+const EMPTY_FORM: EditForm = {
+  name: "", email: "", phone: "", address: "", city: "", state: "", pincode: "", isActive: true,
+}
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+
+// ─── Small display helpers used by the View modal ──────────────────────────
+
+function DetailField({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div>
+      <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#a8a29e", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+        {label}
+      </p>
+      <p style={{ margin: "3px 0 0", fontSize: 13, color: "#1c1917" }}>{value}</p>
+    </div>
+  )
+}
+
+function FormField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 500, color: "#44403c" }}>
+      {label}
+      {children}
+    </label>
+  )
 }
 
 export default function UsersPage() {
@@ -20,12 +74,16 @@ export default function UsersPage() {
   const { data: session } = useSession()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editRole, setEditRole] = useState<"user" | "admin">("user")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const itemsPerPage = 8
+
+  const [viewUser, setViewUser] = useState<User | null>(null)
+  const [editUser, setEditUser] = useState<User | null>(null)
+  const [editForm, setEditForm] = useState<EditForm>(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!session) { router.push("/auth/login"); return }
@@ -45,18 +103,45 @@ export default function UsersPage() {
     }
   }
 
-  const handleEditRole = async (userId: string, newRole: "user" | "admin") => {
+  const openEdit = (user: User) => {
+    setEditUser(user)
+    setEditError(null)
+    setEditForm({
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      address: user.address?.street || "",
+      city: user.address?.city || "",
+      state: user.address?.state || "",
+      pincode: user.address?.zipCode || "",
+      isActive: user.isActive,
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editUser) return
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      setEditError("Name and email are required.")
+      return
+    }
+    setSaving(true)
+    setEditError(null)
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(`/api/users/${editUser._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
+        body: JSON.stringify(editForm),
       })
-      if (!res.ok) throw new Error("Failed to update user")
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to update user")
+      }
       await fetchUsers()
-      setEditingId(null)
-    } catch (error) {
-      console.error("Error updating user:", error)
+      setEditUser(null)
+    } catch (error: any) {
+      setEditError(error?.message || "Failed to update user")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -116,8 +201,9 @@ export default function UsersPage() {
         .icon-btn.danger:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
         .icon-btn.save { background: #1c1917; border-color: #1c1917; color: white; }
         .icon-btn.save:hover { background: #292524; }
-        .role-select { border: 1px solid #e7e5e4; border-radius: 6px; padding: 4px 8px; font-size: 12px; background: white; color: #1c1917; font-family: 'DM Sans', sans-serif; }
-        .role-select:focus { outline: none; border-color: #d97706; }
+        .icon-btn.save:disabled { opacity: 0.6; cursor: not-allowed; }
+        .form-input { border: 1px solid #e7e5e4; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: #1c1917; font-family: 'DM Sans', sans-serif; background: #fafaf9; box-sizing: border-box; width: 100%; }
+        .form-input:focus { outline: none; border-color: #d97706; }
         .page-btn { border: 1px solid #e7e5e4; background: white; border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #44403c; transition: all 0.15s ease; }
         .page-btn:hover:not(:disabled) { border-color: #d97706; color: #d97706; }
         .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -130,7 +216,7 @@ export default function UsersPage() {
             User Management
           </h1>
           <p style={{ color: "#78716c", fontSize: 14, marginTop: 6 }}>
-            View, edit roles, and remove users from the platform.
+            View, edit, and remove users from the platform.
           </p>
         </div>
 
@@ -213,63 +299,38 @@ export default function UsersPage() {
                         <span style={{ fontSize: 12, color: "#78716c" }}>{user.email}</span>
                       </td>
                       <td style={{ padding: "14px 24px" }}>
-                        {editingId === user._id ? (
-                          <select
-                            value={editRole}
-                            onChange={(e) => setEditRole(e.target.value as "user" | "admin")}
-                            className="role-select"
-                          >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        ) : (
-                          <span style={{
-                            display: "inline-flex", alignItems: "center", padding: "3px 10px",
-                            borderRadius: 99, fontSize: 11, fontWeight: 500,
-                            background: user.role === "admin" ? "#fef3c7" : "#f5f5f4",
-                            color: user.role === "admin" ? "#d97706" : "#78716c",
-                          }}>
-                            {user.role}
-                          </span>
-                        )}
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", padding: "3px 10px",
+                          borderRadius: 99, fontSize: 11, fontWeight: 500,
+                          background: user.role === "admin" ? "#fef3c7" : "#f5f5f4",
+                          color: user.role === "admin" ? "#d97706" : "#78716c",
+                        }}>
+                          {user.role}
+                        </span>
                       </td>
                       <td style={{ padding: "14px 24px" }}>
                         <span style={{ fontSize: 12, color: "#a8a29e" }}>
-                          {new Date(user.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                          {formatDate(user.createdAt)}
                         </span>
                       </td>
                       <td style={{ padding: "14px 24px" }}>
                         <div style={{ display: "flex", gap: 6 }}>
-                          {editingId === user._id ? (
-                            <>
-                              <button className="icon-btn save" title="Save" onClick={() => handleEditRole(user._id, editRole)}>
-                                <Check size={13} />
-                              </button>
-                              <button className="icon-btn" title="Cancel" onClick={() => setEditingId(null)}>
-                                <X size={13} />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                className="icon-btn"
-                                title="Edit role"
-                                onClick={() => { setEditingId(user._id); setEditRole(user.role) }}
-                              >
-                                <Edit2 size={13} />
-                              </button>
-                              {user._id !== (session?.user as any)?.id && (
-                                <button
-                                  className="icon-btn danger"
-                                  title="Delete user"
-                                  onClick={() => handleDeleteUser(user._id)}
-                                  disabled={deletingId === user._id}
-                                  style={{ opacity: deletingId === user._id ? 0.5 : 1 }}
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              )}
-                            </>
+                          <button className="icon-btn" title="View user" onClick={() => setViewUser(user)}>
+                            <Eye size={13} />
+                          </button>
+                          <button className="icon-btn" title="Edit user" onClick={() => openEdit(user)}>
+                            <Edit2 size={13} />
+                          </button>
+                          {user._id !== (session?.user as any)?.id && (
+                            <button
+                              className="icon-btn danger"
+                              title="Delete user"
+                              onClick={() => handleDeleteUser(user._id)}
+                              disabled={deletingId === user._id}
+                              style={{ opacity: deletingId === user._id ? 0.5 : 1 }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           )}
                         </div>
                       </td>
@@ -298,6 +359,180 @@ export default function UsersPage() {
           )}
         </div>
       </div>
+
+      {/* ── View user modal ─────────────────────────────────────────── */}
+      <Dialog open={!!viewUser} onOpenChange={(open) => { if (!open) setViewUser(null) }}>
+        <DialogContent className="max-w-md rounded-2xl" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          {viewUser && (
+            <>
+              <DialogHeader>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: "50%", background: "#fef3c7",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 15, fontWeight: 600, color: "#d97706", flexShrink: 0,
+                  }}>
+                    {viewUser.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <DialogTitle style={{ fontSize: 16, color: "#1c1917" }}>{viewUser.name}</DialogTitle>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#78716c" }}>{viewUser.email}</p>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <DetailField
+                  label="Role"
+                  value={
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", padding: "2px 8px",
+                      borderRadius: 99, fontSize: 11, fontWeight: 500,
+                      background: viewUser.role === "admin" ? "#fef3c7" : "#f5f5f4",
+                      color: viewUser.role === "admin" ? "#d97706" : "#78716c",
+                    }}>
+                      {viewUser.role}
+                    </span>
+                  }
+                />
+                <DetailField label="Status" value={viewUser.isActive ? "Active" : "Inactive"} />
+                <DetailField label="Phone" value={viewUser.phone || "—"} />
+                <DetailField label="Email verified" value={viewUser.isVerified ? "Yes" : "No"} />
+                <DetailField label="Sign-in method" value={viewUser.provider === "google" ? "Google" : "Email & password"} />
+                <DetailField label="Wishlist items" value={String(viewUser.wishlist?.length ?? 0)} />
+                <DetailField label="Joined" value={formatDate(viewUser.createdAt)} />
+                {viewUser.updatedAt && <DetailField label="Last updated" value={formatDate(viewUser.updatedAt)} />}
+              </div>
+
+              <div>
+                <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#a8a29e", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  Address
+                </p>
+                <p style={{ margin: "3px 0 0", fontSize: 13, color: "#1c1917" }}>
+                  {[viewUser.address?.street, viewUser.address?.city, viewUser.address?.state, viewUser.address?.zipCode, viewUser.address?.country]
+                    .filter(Boolean)
+                    .join(", ") || "—"}
+                </p>
+              </div>
+
+              <DialogFooter>
+                <button
+                  type="button"
+                  className="page-btn"
+                  onClick={() => { setViewUser(null); openEdit(viewUser) }}
+                >
+                  Edit user
+                </button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit user modal ─────────────────────────────────────────── */}
+      <Dialog open={!!editUser} onOpenChange={(open) => { if (!open && !saving) setEditUser(null) }}>
+        <DialogContent className="max-w-md rounded-2xl" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          {editUser && (
+            <>
+              <DialogHeader>
+                <DialogTitle style={{ fontSize: 16, color: "#1c1917" }}>Edit {editUser.name}</DialogTitle>
+                <DialogDescription>
+                  Profile details only — role can't be changed from this form.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleSaveEdit() }}
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
+              >
+                <FormField label="Name">
+                  <input
+                    className="form-input"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                    required
+                  />
+                </FormField>
+                <FormField label="Email">
+                  <input
+                    className="form-input"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                    required
+                  />
+                </FormField>
+                <FormField label="Phone">
+                  <input
+                    className="form-input"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  />
+                </FormField>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FormField label="City">
+                    <input
+                      className="form-input"
+                      value={editForm.city}
+                      onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
+                    />
+                  </FormField>
+                  <FormField label="State">
+                    <input
+                      className="form-input"
+                      value={editForm.state}
+                      onChange={(e) => setEditForm((f) => ({ ...f, state: e.target.value }))}
+                    />
+                  </FormField>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FormField label="Street address">
+                    <input
+                      className="form-input"
+                      value={editForm.address}
+                      onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
+                    />
+                  </FormField>
+                  <FormField label="PIN code">
+                    <input
+                      className="form-input"
+                      value={editForm.pincode}
+                      onChange={(e) => setEditForm((f) => ({ ...f, pincode: e.target.value }))}
+                    />
+                  </FormField>
+                </div>
+
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#44403c", marginTop: 2 }}>
+                  <input
+                    type="checkbox"
+                    checked={editForm.isActive}
+                    onChange={(e) => setEditForm((f) => ({ ...f, isActive: e.target.checked }))}
+                  />
+                  Account active
+                </label>
+
+                {editError && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{editError}</p>}
+
+                <DialogFooter>
+                  <button type="button" className="page-btn" onClick={() => setEditUser(null)} disabled={saving}>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="icon-btn save"
+                    style={{ width: "auto", padding: "0 16px", fontSize: 13 }}
+                    disabled={saving}
+                  >
+                    {saving ? "Saving…" : "Save changes"}
+                  </button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }

@@ -148,7 +148,7 @@ function CollectionHero({ collection }: { collection: Collection }) {
             </p>
          
 
-            <div className="flex flex-row gap-4 items-center ">
+            <div className="flex flex-row flex-wrap gap-3 sm:gap-4 items-center ">
             {[
               { icon: <Leaf size={18} />, label: "Herbal Powered" },
               { icon: <ShieldCheck size={18} />, label: "Expertly Formulated" },
@@ -156,7 +156,7 @@ function CollectionHero({ collection }: { collection: Collection }) {
             ].map((item) => (
               <div
                 key={item.label}
-                className="flex items-center gap-3 p-4 rounded-xl bg-[var(--color-bg-cream)] border border-[var(--color-border)]"
+                className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-[var(--color-bg-cream)] border border-[var(--color-border)]"
               >
                 <span className="text-[var(--color-brand-primary)]">{item.icon}</span>
                 <span className="text-sm font-medium text-[var(--color-text-heading)]">

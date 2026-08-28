@@ -701,7 +701,13 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Phone</p>
-                    <p className="font-medium text-sm text-gray-900">{selectedOrder.user?.phone || selectedOrder.guestPhone || "N/A"}</p>
+                    {/* Prefer this order's own shipping-address phone — the actual
+                        contact number captured at checkout — over the linked User
+                        record's phone, which is frequently blank (checkout has
+                        never written contact info back to the User profile). */}
+                    <p className="font-medium text-sm text-gray-900">
+                      {selectedOrder.shippingAddress?.phone || selectedOrder.user?.phone || selectedOrder.guestPhone || "N/A"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Order date</p>

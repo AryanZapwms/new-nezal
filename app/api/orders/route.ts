@@ -10,6 +10,7 @@ import "@/lib/models/user"
 import { Product } from "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
+import { syncUserContactFromOrder } from "@/lib/syncUserContact";
 
 // Strips spaces/dashes/parens/country-code prefixes and returns a clean
 // 10-digit Indian mobile number, or "" if it can't be normalized to one.
@@ -171,6 +172,8 @@ const realShippingBreakdown = shippingBreakdown ?? {
       totalTaxableValue: Math.round(totalTaxableValue * 100) / 100,
       totalGstAmount: Math.round(totalGstAmount * 100) / 100,
     });
+
+    if (user) await syncUserContactFromOrder(user._id, mappedAddress);
 
     const recipientEmail = user?.email || shippingAddress.email;
     const recipientName = user?.name || shippingAddress.name;

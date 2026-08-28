@@ -4,8 +4,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Poppins } from "next/font/google";
 import { Analytics, GTMNoScript, PageViewTracker } from "@/components/analytics";   // New analytics component
 import { AuthSessionProvider } from "@/components/auth/session-provider";
-import { Header } from "@/components/header";
-import { PromoBar } from "@/components/promo-bar";
+import { StickyHeaderStack } from "@/components/sticky-header-stack";
 import { Toaster } from "@/components/ui/toaster";
 import Footer from "@/components/footer";
 import "./globals.css";
@@ -139,9 +138,8 @@ export default function RootLayout({
   />
   <AuthSessionProvider>
     <GlobalLoader />   {/* ← add this line */}
-     <FetchInterceptorInit />  
-    <PromoBar />
-    <Header />
+     <FetchInterceptorInit />
+    <StickyHeaderStack />
     <main className="flex-1">{children}</main>
     <Footer />
   </AuthSessionProvider>

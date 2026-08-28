@@ -82,7 +82,13 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
   return (
     <div
       className="relative w-full overflow-hidden"
-      style={{ background: "var(--color-bg-hero)" }}
+      style={{
+        background: "var(--color-bg-hero)",
+        // Keeps this in sync with StickyHeaderStack's live-measured height
+        // (promo bar + header) so an anchor/programmatic scroll to the hero
+        // never lands it hidden underneath the sticky stack.
+        scrollMarginTop: "var(--sticky-header-stack-height)",
+      }}
       onMouseEnter={() => setAutoPlay(false)}
       onMouseLeave={() => setAutoPlay(true)}
       onKeyDown={(e) => {

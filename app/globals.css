@@ -29,6 +29,10 @@
   --color-text-muted: #888888;
   --color-border: hsl(var(--border));
   --color-bg-cream: #F5F0E8;
+
+  /* Live-measured height of the sticky promo-bar + header stack — kept in
+     sync by StickyHeaderStack's ResizeObserver. 0 until JS runs on mount. */
+  --sticky-header-stack-height: 0px;
 }
 
 /* ========== Dark mode (optional – adjust to your brand) ========== */

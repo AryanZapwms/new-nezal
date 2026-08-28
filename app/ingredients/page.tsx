@@ -316,7 +316,7 @@ export default function IngredientsPage() {
       </section>
 
       {/* ── Filter bar ── */}
-      <section className="sticky top-0 z-20 bg-white border-b border-[var(--color-border)] shadow-sm">
+      <section className="sticky top-[var(--sticky-header-stack-height)] z-20 bg-white border-b border-[var(--color-border)] shadow-sm">
         <div className="container-nezal py-3 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
 
           {/* Search */}
