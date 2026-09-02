@@ -10,6 +10,7 @@ import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } 
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket"
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi"
 import { syncUserContactFromOrder } from "@/lib/syncUserContact"
+import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTokenCookie, type CartIdentity } from "@/lib/cart-server"
 import Razorpay from "razorpay"
 
 
@@ -85,6 +86,16 @@ if (razorpayOrder.amount !== expectedAmountPaise) {
       return NextResponse.json({ success: true, orderId: existingOrder._id })
     }
 
+    // Cart mirror: unlike CCAvenue, this route is hit via a same-origin
+    // client fetch (not a cross-site redirect), so the session/guest cookie
+    // is reliably present and identity can be resolved here directly.
+    // Razorpay never creates a pending local Order before payment succeeds,
+    // so this is the first and only place a Razorpay cart gets converted.
+    const cartIdentity: CartIdentity = user
+      ? { kind: "user", userId: user._id.toString() }
+      : { kind: "guest", guestToken: request.cookies.get(CART_TOKEN_COOKIE)?.value || null }
+    const { cart: orderCart, newGuestToken } = await getOrCreateActiveCart(cartIdentity)
+
     // Find a pending order to update — match by user OR guest email
     existingOrder = await Order.findOne(
       user
@@ -114,6 +125,7 @@ if (razorpayOrder.amount !== expectedAmountPaise) {
       shippingAmount: shippingAmount ?? existingOrder.shippingAmount ?? 0,   // ← add this
       paymentStatus: "completed",
       orderStatus: "processing",
+      cartId: existingOrder.cartId ?? orderCart._id,
     },
     { new: true }
   )
@@ -135,8 +147,13 @@ if (razorpayOrder.amount !== expectedAmountPaise) {
     orderStatus: "processing",
     razorpayOrderId,
     razorpayPaymentId,
+    cartId: orderCart._id,
   })
 }
+
+    // Signature already verified above and payment status is "completed" —
+    // this is a confirmed purchase, so convert now.
+    await markCartConverted(orderCart._id, order._id)
 
     if (user) await syncUserContactFromOrder(user._id, mappedAddress);
 
@@ -229,10 +246,12 @@ if (razorpayOrder.amount !== expectedAmountPaise) {
       console.error("Failed to send order emails:", emailError)
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       orderId: order._id,
     })
+    if (newGuestToken) setCartTokenCookie(response, newGuestToken)
+    return response
   } catch (error) {
     console.error("Payment verification error:", error)
     return NextResponse.json({ error: "Payment verification failed" }, { status: 500 })

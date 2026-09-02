@@ -11,6 +11,7 @@ import { Product } from "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 import { syncUserContactFromOrder } from "@/lib/syncUserContact";
+import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTokenCookie, type CartIdentity } from "@/lib/cart-server";
 
 // Strips spaces/dashes/parens/country-code prefixes and returns a clean
 // 10-digit Indian mobile number, or "" if it can't be normalized to one.
@@ -154,6 +155,18 @@ const realShippingBreakdown = shippingBreakdown ?? {
       country: shippingAddress.country,
     };
 
+    // Cart mirror: resolve who this order's cart belongs to (reusing the
+    // `user` lookup already done above avoids a second session/DB round
+    // trip). Every order gets a cartId snapshot at creation time — COD
+    // converts it immediately below since COD is a confirmed purchase;
+    // CCAvenue deliberately does NOT convert here (see the response-callback
+    // route) so an abandoned CCAvenue payment still shows up as an active
+    // cart for the admin.
+    const cartIdentity: CartIdentity = user
+      ? { kind: "user", userId: user._id.toString() }
+      : { kind: "guest", guestToken: request.cookies.get(CART_TOKEN_COOKIE)?.value || null };
+    const { cart: orderCart, newGuestToken } = await getOrCreateActiveCart(cartIdentity);
+
     const order = await Order.create({
       orderNumber,
       user: user?._id,
@@ -171,7 +184,12 @@ const realShippingBreakdown = shippingBreakdown ?? {
       orderStatus: "pending",
       totalTaxableValue: Math.round(totalTaxableValue * 100) / 100,
       totalGstAmount: Math.round(totalGstAmount * 100) / 100,
+      cartId: orderCart._id,
     });
+
+    if ((paymentMethod || "cod") === "cod") {
+      await markCartConverted(orderCart._id, order._id);
+    }
 
     if (user) await syncUserContactFromOrder(user._id, mappedAddress);
 
@@ -259,7 +277,7 @@ const realShippingBreakdown = shippingBreakdown ?? {
       }
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         orderId: order._id,
         orderNumber: order.orderNumber,
@@ -267,6 +285,8 @@ const realShippingBreakdown = shippingBreakdown ?? {
       },
       { status: 201 }
     );
+    if (newGuestToken) setCartTokenCookie(response, newGuestToken);
+    return response;
   } catch (error) {
     console.error("Error creating order:", error);
     return NextResponse.json(

@@ -21,6 +21,7 @@ import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail, g
 import "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
+import { markCartConverted } from "@/lib/cart-server";
 
 export async function POST(req: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -68,6 +69,14 @@ export async function POST(req: NextRequest) {
       );
 
       if (updatedOrder) {
+        // Payment is confirmed now — this is the only point a CCAvenue cart
+        // should convert. We deliberately don't re-resolve cart identity
+        // from cookies here: CCAvenue posts back to this route as a
+        // cross-site redirect, where a SameSite=Lax cookie isn't guaranteed
+        // to travel. The cartId snapshot taken at order-creation time
+        // (app/api/orders/route.ts) sidesteps that entirely.
+        await markCartConverted((updatedOrder as any).cartId, updatedOrder._id);
+
         await autoCreateShiprocketOrder(order_id);
         try {
           const populatedOrder = await Order.findById(updatedOrder._id)

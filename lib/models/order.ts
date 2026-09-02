@@ -50,6 +50,15 @@ const orderSchema = new mongoose.Schema(
 
     abandonedEmailSentAt: { type: Date, default: null },
 
+    // Snapshot of which server-side Cart (lib/models/cart.ts) this order came
+    // from, captured at order-creation time. Read-only fetches would work for
+    // COD/Razorpay (same-origin requests, session/guest cookies present) but
+    // CCAvenue's success callback is a cross-site POST redirect where a
+    // SameSite=Lax cookie may not travel — storing the id here lets the
+    // conversion step (lib/cart-server.ts markCartConverted) skip re-resolving
+    // identity entirely and just update this cart directly.
+    cartId: { type: mongoose.Schema.Types.ObjectId, ref: "Cart", default: null },
+
     shippingAddress: {
       name:    String,
       phone:   String,

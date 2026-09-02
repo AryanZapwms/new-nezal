@@ -5,6 +5,7 @@ import "@/lib/models/product";
 import "@/lib/models/category";
 import "@/lib/models/company";
 import "@/lib/models/order";
+import "@/lib/models/cart";
 // add any other models here
 
 
