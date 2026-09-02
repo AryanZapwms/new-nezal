@@ -1,11 +1,17 @@
 // Integration tests for app/api/cart/merge/route.ts — guest cart -> logged-in
 // user cart merge, including the duplicate-item quantity-summing + stock-cap
 // example from the feature spec (guest x3 + account x2, stock 4 -> result 4).
+//
+// resolveCartIdentity (lib/cart-server.ts) resolves the logged-in identity
+// via User.findOne({email}) rather than trusting session.user.id, so every
+// "logged in" case here needs a real User document behind the mocked
+// session's email, not just a bare ObjectId.
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest"
 import mongoose from "mongoose"
 import { NextRequest } from "next/server"
 import { Cart } from "@/lib/models/cart"
 import { Product } from "@/lib/models/product"
+import { User } from "@/lib/models/user"
 import { connectTestDb, disconnectTestDb } from "./setup-db"
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }))
@@ -23,7 +29,7 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await Promise.all([Cart.deleteMany({}), Product.deleteMany({})])
+  await Promise.all([Cart.deleteMany({}), Product.deleteMany({}), User.deleteMany({})])
   vi.mocked(getServerSession).mockReset()
 })
 
@@ -32,6 +38,12 @@ function makeRequest(cookie?: string) {
     method: "POST",
     headers: cookie ? { cookie } : undefined,
   })
+}
+
+async function loginAs(email: string, name = "Test User") {
+  const user = await User.create({ email, name, role: "user" })
+  vi.mocked(getServerSession).mockResolvedValue({ user: { email: user.email } } as any)
+  return user
 }
 
 describe("POST /api/cart/merge", () => {
@@ -50,12 +62,12 @@ describe("POST /api/cart/merge", () => {
       sku: "SKU-SERUM",
       stock: 4,
     })
-    const userId = new mongoose.Types.ObjectId()
+    const user = await User.create({ email: "a@test.com", name: "A", role: "user" })
 
     await Cart.create({ guestToken: "guest-1", status: "active", items: [{ product: product._id, quantity: 3 }] })
-    await Cart.create({ user: userId, status: "active", items: [{ product: product._id, quantity: 2 }] })
+    await Cart.create({ user: user._id, status: "active", items: [{ product: product._id, quantity: 2 }] })
 
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: userId.toString(), email: "a@test.com" } } as any)
+    vi.mocked(getServerSession).mockResolvedValue({ user: { email: user.email } } as any)
     const res = await POST(makeRequest("nezal-cart-token=guest-1"))
     const data = await res.json()
 
@@ -80,12 +92,12 @@ describe("POST /api/cart/merge", () => {
       sku: "SKU-B",
       stock: 10,
     })
-    const userId = new mongoose.Types.ObjectId()
+    const user = await User.create({ email: "b@test.com", name: "B", role: "user" })
 
     await Cart.create({ guestToken: "guest-2", status: "active", items: [{ product: productB._id, quantity: 1 }] })
-    await Cart.create({ user: userId, status: "active", items: [{ product: productA._id, quantity: 1 }] })
+    await Cart.create({ user: user._id, status: "active", items: [{ product: productA._id, quantity: 1 }] })
 
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: userId.toString(), email: "b@test.com" } } as any)
+    vi.mocked(getServerSession).mockResolvedValue({ user: { email: user.email } } as any)
     const res = await POST(makeRequest("nezal-cart-token=guest-2"))
     const data = await res.json()
 
@@ -101,10 +113,9 @@ describe("POST /api/cart/merge", () => {
       sku: "SKU-C",
       stock: 10,
     })
-    const userId = new mongoose.Types.ObjectId()
     const guestCart = await Cart.create({ guestToken: "guest-3", status: "active", items: [{ product: product._id, quantity: 1 }] })
 
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: userId.toString(), email: "c@test.com" } } as any)
+    await loginAs("c@test.com", "C")
     const res = await POST(makeRequest("nezal-cart-token=guest-3"))
 
     const setCookie = res.headers.get("set-cookie")
@@ -118,8 +129,7 @@ describe("POST /api/cart/merge", () => {
   })
 
   it("is a harmless no-op (still 200) when the user has no guest cart cookie", async () => {
-    const userId = new mongoose.Types.ObjectId()
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: userId.toString(), email: "d@test.com" } } as any)
+    await loginAs("d@test.com", "D")
 
     const res = await POST(makeRequest())
     expect(res.status).toBe(200)
@@ -129,13 +139,36 @@ describe("POST /api/cart/merge", () => {
 
   it("drops an item whose product no longer exists", async () => {
     const ghostProductId = new mongoose.Types.ObjectId()
-    const userId = new mongoose.Types.ObjectId()
     await Cart.create({ guestToken: "guest-4", status: "active", items: [{ product: ghostProductId, quantity: 1 }] })
 
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: userId.toString(), email: "e@test.com" } } as any)
+    await loginAs("e@test.com", "E")
     const res = await POST(makeRequest("nezal-cart-token=guest-4"))
     const data = await res.json()
 
     expect(data.items).toEqual([])
+  })
+
+  it("resolves the correct user even though session.user.id is absent (matches the codebase's email-lookup identity pattern)", async () => {
+    const product = await Product.create({
+      name: "Product F",
+      slug: "product-f",
+      price: 90,
+      company: new mongoose.Types.ObjectId(),
+      sku: "SKU-F",
+      stock: 10,
+    })
+    const user = await User.create({ email: "f@test.com", name: "F", role: "user" })
+    // Deliberately no `id` field on session.user — this is the shape that
+    // previously caused logged-in customers' carts to be treated as guest.
+    vi.mocked(getServerSession).mockResolvedValue({ user: { email: user.email, name: user.name } } as any)
+
+    await Cart.create({ guestToken: "guest-6", status: "active", items: [{ product: product._id, quantity: 1 }] })
+
+    const res = await POST(makeRequest("nezal-cart-token=guest-6"))
+    expect(res.status).toBe(200)
+
+    const userCart = await Cart.findOne({ user: user._id })
+    expect(userCart).toBeTruthy()
+    expect(userCart!.items).toHaveLength(1)
   })
 })

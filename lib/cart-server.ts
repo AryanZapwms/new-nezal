@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { connectDB } from "@/lib/db"
 import { Cart } from "@/lib/models/cart"
+import { User } from "@/lib/models/user"
 
 export const CART_TOKEN_COOKIE = "nezal-cart-token"
 const CART_TOKEN_MAX_AGE_SECONDS = 180 * 24 * 60 * 60 // ~180 days
@@ -25,17 +26,24 @@ export type CartIdentity =
   | { kind: "guest"; guestToken: string | null }
 
 /**
- * Resolves who the current request's cart belongs to. Logged-in sessions
- * always win (session.user.id is populated by the jwt/session callbacks in
- * app/api/auth/[...nextauth]/route.ts, so no extra User lookup is needed on
- * this hot path — cart syncs fire on every debounced mutation). Otherwise
- * falls back to the guest cart-token cookie, which may not exist yet.
+ * Resolves who the current request's cart belongs to. Deliberately does NOT
+ * trust session.user.id/role from the bare getServerSession() call — every
+ * other route in this codebase (app/api/orders, app/api/admin/orders, ...)
+ * re-derives identity from a User.findOne({email}) lookup instead of relying
+ * on those JWT-sourced fields, and for good reason: they aren't reliably
+ * populated by getServerSession() when called without authOptions. Trusting
+ * session.user.id here originally caused logged-in customers' carts to be
+ * silently written under a guest identity instead. Otherwise falls back to
+ * the guest cart-token cookie, which may not exist yet.
  */
 export async function resolveCartIdentity(request: NextRequest): Promise<CartIdentity> {
   const session = await getServerSession()
-  const userId = (session?.user as any)?.id
-  if (session?.user && userId) {
-    return { kind: "user", userId }
+  if (session?.user?.email) {
+    await connectDB()
+    const user = await User.findOne({ email: session.user.email }).select("_id")
+    if (user) {
+      return { kind: "user", userId: user._id.toString() }
+    }
   }
 
   const guestToken = request.cookies.get(CART_TOKEN_COOKIE)?.value || null

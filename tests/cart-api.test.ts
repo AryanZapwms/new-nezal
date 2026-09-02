@@ -6,6 +6,7 @@ import mongoose from "mongoose"
 import { NextRequest } from "next/server"
 import { Cart } from "@/lib/models/cart"
 import { Product } from "@/lib/models/product"
+import { User } from "@/lib/models/user"
 import { connectTestDb, disconnectTestDb } from "./setup-db"
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }))
@@ -24,7 +25,7 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await Promise.all([Cart.deleteMany({}), Product.deleteMany({})])
+  await Promise.all([Cart.deleteMany({}), Product.deleteMany({}), User.deleteMany({})])
   vi.mocked(getServerSession).mockReset()
   vi.mocked(getServerSession).mockResolvedValue(null)
 })
@@ -128,8 +129,11 @@ describe("PUT /api/cart", () => {
   })
 
   it("writes to the logged-in user's cart, ignoring any guest cookie", async () => {
-    const userId = new mongoose.Types.ObjectId()
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: userId.toString(), email: "a@test.com" } } as any)
+    // Session identity is resolved via a User.findOne({email}) lookup (see
+    // lib/cart-server.ts resolveCartIdentity) — session.user.id alone is not
+    // trusted, so the mocked session must correspond to a real User doc.
+    const user = await User.create({ email: "a@test.com", name: "Test User", role: "user" })
+    vi.mocked(getServerSession).mockResolvedValue({ user: { email: user.email } } as any)
     const product = await Product.create({
       name: "Aloe Gel",
       slug: "aloe-gel-2",
@@ -142,9 +146,32 @@ describe("PUT /api/cart", () => {
     const res = await PUT(makePutRequest({ items: [{ product: product._id.toString(), quantity: 1 }] }, "nezal-cart-token=some-guest-token"))
     expect(res.headers.get("set-cookie")).toBeNull() // logged-in path never touches the guest cookie
 
-    const userCart = await Cart.findOne({ user: userId })
+    const userCart = await Cart.findOne({ user: user._id })
     expect(userCart).toBeTruthy()
     expect(userCart!.items).toHaveLength(1)
+  })
+
+  it("still resolves the logged-in user when session.user.id is absent", async () => {
+    // Regression test: session.user.id is not reliably populated by the
+    // bare getServerSession() call this codebase uses, so identity must be
+    // resolved via email lookup, not by trusting `.id`.
+    const user = await User.create({ email: "no-id@test.com", name: "No Id User", role: "user" })
+    vi.mocked(getServerSession).mockResolvedValue({ user: { email: user.email, name: user.name } } as any)
+    const product = await Product.create({
+      name: "Face Serum",
+      slug: "face-serum-no-id",
+      price: 350,
+      company: new mongoose.Types.ObjectId(),
+      sku: "SKU-FSNI",
+      stock: 5,
+    })
+
+    await PUT(makePutRequest({ items: [{ product: product._id.toString(), quantity: 1 }] }))
+
+    const userCart = await Cart.findOne({ user: user._id })
+    expect(userCart).toBeTruthy()
+    expect(userCart!.items).toHaveLength(1)
+    expect(await Cart.countDocuments({ guestToken: { $ne: null } })).toBe(0) // must not have fallen back to a guest cart
   })
 
   it("drops structurally invalid items instead of persisting them", async () => {
