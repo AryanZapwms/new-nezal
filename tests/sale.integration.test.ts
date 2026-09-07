@@ -22,6 +22,7 @@ import {
   removeCollectionSaleOnRemove,
 } from "@/lib/sale"
 import { getActiveFlashSaleMap, applyFlashSale } from "@/lib/flashSale"
+import { resolveCurrentPrice } from "@/lib/pricing"
 
 let mongod: MongoMemoryServer
 
@@ -250,5 +251,74 @@ describe("flash sale overrides both direct and collection sale for display", () 
 
     const displayed = applyFlashSale(stored, flashSaleMap)
     expect(displayed.discountPrice).toBe(900) // direct sale (10%), not collection
+  })
+})
+
+// lib/pricing.ts's resolveCurrentPrice() is the server-side counterpart to
+// components/product-card.tsx's sizeSalePrice() — app/api/orders/route.ts and
+// lib/cart-server.ts both go through it so checkout and the cart mirror
+// charge/display exactly what the storefront showed for a given size.
+describe("resolveCurrentPrice (lib/pricing.ts) for a product with a selected size", () => {
+  const size = { price: 200, discountPrice: undefined as number | undefined }
+
+  it("(a) no sale at all resolves to the size's own full price", async () => {
+    const product = await makeProduct({ price: 1000 })
+    const flashSaleMap = await getActiveFlashSaleMap()
+
+    const resolved = resolveCurrentPrice(product, flashSaleMap, size)
+    expect(resolved.discountPrice).toBeUndefined()
+    expect(resolved.price).toBe(200)
+  })
+
+  it("(b) an active collection sale with no manual per-size discount applies the % to the size's price", async () => {
+    const collection = await makeCollection({ slug: "summer-glow-pricing" })
+    const product = await makeProduct({ price: 1000, collectionSlug: collection.slug })
+    await applyCollectionSale(collection.slug, 20)
+    const fresh = await Product.findById(product._id)
+    const flashSaleMap = await getActiveFlashSaleMap()
+
+    const resolved = resolveCurrentPrice(fresh!, flashSaleMap, size)
+    expect(resolved.discountPrice).toBe(160) // 200 - 20%
+  })
+
+  it("(c) an active direct sale with no manual per-size discount applies the % to the size's price", async () => {
+    const product = await makeProduct({ price: 1000 })
+    await setDirectSale(product._id.toString(), 30)
+    const fresh = await Product.findById(product._id)
+    const flashSaleMap = await getActiveFlashSaleMap()
+
+    const resolved = resolveCurrentPrice(fresh!, flashSaleMap, size)
+    expect(resolved.discountPrice).toBe(140) // 200 - 30%
+  })
+
+  it("(d) a manual per-size discount overrides an active product-level sale", async () => {
+    const collection = await makeCollection({ slug: "winter-care-pricing" })
+    const product = await makeProduct({ price: 1000, collectionSlug: collection.slug })
+    await applyCollectionSale(collection.slug, 20) // would otherwise be 160
+    const fresh = await Product.findById(product._id)
+    const flashSaleMap = await getActiveFlashSaleMap()
+
+    const resolved = resolveCurrentPrice(fresh!, flashSaleMap, { price: 200, discountPrice: 150 })
+    expect(resolved.discountPrice).toBe(150)
+  })
+
+  it("(e) an active flash sale overrides everything else, including a manual per-size discount", async () => {
+    const collection = await makeCollection({ slug: "monsoon-care-pricing" })
+    const product = await makeProduct({ price: 1000, collectionSlug: collection.slug })
+    await applyCollectionSale(collection.slug, 20)
+    await FlashSale.create({
+      name: "Lightning Deal",
+      discountPercent: 50,
+      startsAt: new Date(Date.now() - 1000),
+      endsAt: new Date(Date.now() + 3600_000),
+      products: [product._id],
+      isActive: true,
+    })
+    const fresh = await Product.findById(product._id)
+    const flashSaleMap = await getActiveFlashSaleMap()
+
+    const resolved = resolveCurrentPrice(fresh!, flashSaleMap, { price: 200, discountPrice: 150 })
+    expect(resolved.discountPrice).toBe(100) // flash wins outright: 200 - 50%
+    expect(resolved.flashSale?.discountPercent).toBe(50)
   })
 })

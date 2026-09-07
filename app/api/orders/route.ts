@@ -12,6 +12,8 @@ import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 import { syncUserContactFromOrder } from "@/lib/syncUserContact";
 import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTokenCookie, type CartIdentity } from "@/lib/cart-server";
+import { getActiveFlashSaleMap } from "@/lib/flashSale";
+import { resolveCurrentPrice } from "@/lib/pricing";
 
 // Strips spaces/dashes/parens/country-code prefixes and returns a clean
 // 10-digit Indian mobile number, or "" if it can't be normalized to one.
@@ -73,18 +75,23 @@ export async function POST(request: NextRequest) {
     let totalGstAmount = 0;
     const verifiedItems = [];
 
+    const flashSaleMap = await getActiveFlashSaleMap();
+
       for (const item of items) {
   const product = await Product.findById(item.product);
   if (!product) {
     return NextResponse.json({ error: `Product not found: ${item.product}` }, { status: 400 });
   }
 
-  // Resolve price + stock from the selected size variant if one was chosen.
-  // Falling back to the base product.price/stock silently (as before) was
-  // the bug: it ignored which size the customer actually picked and charged
-  // them the base variant's price regardless.
-  let realPrice = product.price;
-  let availableStock = product.stock;
+  // Resolve price + stock from the selected size variant if one was chosen,
+  // and — either way — apply whichever sale (flash, direct, or collection)
+  // is currently active, the same way the storefront prices the item (see
+  // lib/pricing.ts). Falling back to the base product.price/stock silently,
+  // or only honoring a size's own manual discountPrice, was the bug: the
+  // customer could be charged more at checkout than they saw on every page
+  // leading up to it.
+  let realPrice: number;
+  let availableStock: number;
 
   if (item.selectedSize?.size) {
     const matchedSize = product.sizes?.find(
@@ -100,8 +107,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    realPrice = matchedSize.discountPrice || matchedSize.price;
+    const resolved = resolveCurrentPrice(product, flashSaleMap, matchedSize);
+    realPrice = resolved.discountPrice ?? resolved.price;
     availableStock = matchedSize.stock;
+  } else {
+    const resolved = resolveCurrentPrice(product, flashSaleMap, null);
+    realPrice = resolved.discountPrice ?? resolved.price;
+    availableStock = product.stock;
   }
 
   if (availableStock < item.quantity) {

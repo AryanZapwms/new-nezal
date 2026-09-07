@@ -12,6 +12,8 @@ import { getServerSession } from "next-auth"
 import { connectDB } from "@/lib/db"
 import { Cart } from "@/lib/models/cart"
 import { User } from "@/lib/models/user"
+import { getActiveFlashSaleMap, type FlashSaleInfo } from "@/lib/flashSale"
+import { resolveCurrentPrice } from "@/lib/pricing"
 
 export const CART_TOKEN_COOKIE = "nezal-cart-token"
 const CART_TOKEN_MAX_AGE_SECONDS = 180 * 24 * 60 * 60 // ~180 days
@@ -227,29 +229,31 @@ export function sanitizeCartItems(rawItems: unknown): SanitizedCartItem[] {
  * nested subdocuments (selectedSize/flashSale/ritual) come back as plain
  * objects that are safe to spread/serialize.
  */
-function shapeLeanCartItems(items: any[]) {
+function shapeLeanCartItems(items: any[], flashSaleMap: Map<string, FlashSaleInfo>) {
   return items
     .filter((item) => !!item.product)
     .map((item) => {
       const product = item.product
-      const price = item.selectedSize?.price ?? product.price
-      const discountPrice = item.selectedSize?.discountPrice ?? product.discountPrice ?? undefined
+      const resolved = resolveCurrentPrice(product, flashSaleMap, item.selectedSize ?? null)
 
       return {
         productId: product._id.toString(),
         name: product.name,
-        price,
-        discountPrice,
+        price: resolved.price,
+        discountPrice: resolved.discountPrice,
         image: product.image,
         quantity: item.quantity,
         selectedSize: item.selectedSize ?? undefined,
-        flashSale: item.flashSale ?? undefined,
+        flashSale: resolved.flashSale ?? undefined,
         ritual: item.ritual ?? undefined,
       }
     })
 }
 
-const CART_ITEM_PRODUCT_POPULATE = { path: "items.product", select: "name image price discountPrice" }
+// `salePercentage` is required (not just price/discountPrice) so
+// lib/pricing.ts's resolveCurrentPrice can apply an active direct/collection
+// sale to a size's own price — matching the storefront's percentOff logic.
+const CART_ITEM_PRODUCT_POPULATE = { path: "items.product", select: "name image price discountPrice salePercentage" }
 
 /** Read-only, serialized cart for a resolved identity — used by GET /api/cart. */
 export async function getSerializedCartForIdentity(identity: CartIdentity) {
@@ -264,7 +268,8 @@ export async function getSerializedCartForIdentity(identity: CartIdentity) {
 
   const cart = await Cart.findOne(filter).populate(CART_ITEM_PRODUCT_POPULATE).lean()
   if (!cart) return []
-  return shapeLeanCartItems((cart as any).items)
+  const flashSaleMap = await getActiveFlashSaleMap()
+  return shapeLeanCartItems((cart as any).items, flashSaleMap)
 }
 
 /** Read-only, serialized cart by id — used after PUT /api/cart/merge saves. */
@@ -272,5 +277,6 @@ export async function serializeCartForClient(cartId: mongoose.Types.ObjectId | s
   await connectDB()
   const cart = await Cart.findById(cartId).populate(CART_ITEM_PRODUCT_POPULATE).lean()
   if (!cart) return []
-  return shapeLeanCartItems((cart as any).items)
+  const flashSaleMap = await getActiveFlashSaleMap()
+  return shapeLeanCartItems((cart as any).items, flashSaleMap)
 }

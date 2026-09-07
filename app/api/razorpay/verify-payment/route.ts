@@ -11,6 +11,8 @@ import { autoCreateShiprocketOrder } from "@/lib/shiprocket"
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi"
 import { syncUserContactFromOrder } from "@/lib/syncUserContact"
 import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTokenCookie, type CartIdentity } from "@/lib/cart-server"
+import { getActiveFlashSaleMap } from "@/lib/flashSale"
+import { resolveCurrentPrice } from "@/lib/pricing"
 import Razorpay from "razorpay"
 
 
@@ -35,15 +37,45 @@ export async function POST(request: NextRequest) {
 
      let computedTotal = 0
 const verifiedItems = []
+const flashSaleMap = await getActiveFlashSaleMap()
 for (const item of items) {
   const product = await Product.findById(item.product)
   if (!product) {
     return NextResponse.json({ error: `Product not found: ${item.product}` }, { status: 400 })
   }
-  if (product.stock < item.quantity) {
+
+  // Resolve price + stock from the selected size variant if one was chosen,
+  // and apply whichever sale (flash, direct, or collection) is currently
+  // active — see lib/pricing.ts. Matches app/api/orders/route.ts's COD/
+  // CCAvenue path so a Razorpay payment charges the same amount.
+  let realPrice: number
+  let availableStock: number
+
+  if (item.selectedSize?.size) {
+    const matchedSize = product.sizes?.find(
+      (s: any) =>
+        s.size === item.selectedSize.size &&
+        (item.selectedSize.sku ? s.sku === item.selectedSize.sku : true)
+    )
+    if (!matchedSize) {
+      return NextResponse.json(
+        { error: `Selected size "${item.selectedSize.size}" is no longer available for ${product.name}` },
+        { status: 400 }
+      )
+    }
+    const resolved = resolveCurrentPrice(product, flashSaleMap, matchedSize)
+    realPrice = resolved.discountPrice ?? resolved.price
+    availableStock = matchedSize.stock
+  } else {
+    const resolved = resolveCurrentPrice(product, flashSaleMap, null)
+    realPrice = resolved.discountPrice ?? resolved.price
+    availableStock = product.stock
+  }
+
+  if (availableStock < item.quantity) {
     return NextResponse.json({ error: `Insufficient stock for ${product.name}` }, { status: 400 })
   }
-  const realPrice = product.price
+
   computedTotal += realPrice * item.quantity
   verifiedItems.push({
     product: product._id,
