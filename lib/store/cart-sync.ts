@@ -16,6 +16,20 @@ const SYNC_DEBOUNCE_MS = 500
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let started = false
+// zustand's persist middleware unconditionally calls set(mergedState, true)
+// during rehydration (node_modules/zustand/esm/middleware.mjs) — for any
+// browser that already has a `cart-storage` localStorage entry (even one
+// representing an empty cart), the default merge spreads in a freshly
+// JSON.parse'd `items` array, which is a different array reference from
+// whatever was in memory even though the content is identical `[]`. Our
+// subscribe callback below only checks reference equality, so that
+// rehydration was read as "the cart changed" and synced an empty cart to
+// the server on effectively every page load — creating a fresh, pointless
+// guest cart + cookie for visitors who never touched the cart at all.
+// Guarding on "has this session ever actually held an item" fixes it
+// without weakening the real case: a cart that genuinely goes from
+// non-empty back to empty (items added then removed) still syncs correctly.
+let everHadItems = false
 
 function serializeItemsForSync() {
   return useCartStore.getState().items.map((item) => ({
@@ -58,8 +72,20 @@ export function initCartSync() {
   if (started || typeof window === "undefined") return
   started = true
 
+  everHadItems = useCartStore.getState().items.length > 0
+
   useCartStore.subscribe((state, prevState) => {
     if (state.items === prevState.items) return
+
+    if (state.items.length > 0) {
+      everHadItems = true
+    } else if (!everHadItems) {
+      // Still never had anything this session — this is the spurious
+      // rehydration reference-change, not a real mutation. Don't create a
+      // cart just to sync nothing.
+      return
+    }
+
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => pushCartToServer(false), SYNC_DEBOUNCE_MS)
   })
