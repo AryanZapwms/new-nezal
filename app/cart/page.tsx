@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { BULK_ORDER_LIMIT } from "@/lib/config"
+import { WhatsAppDiscountPopup } from "@/components/whatsapp-discount-popup"
 
 export default function CartPage() {
 const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotalItems } = useCartStore()
@@ -110,6 +111,7 @@ const totalGST = items.reduce((sum, item) => {
 
   return (
     <main className="min-h-screen bg-background">
+      <WhatsAppDiscountPopup />
       <div className="container-nezal py-6 sm:py-8 lg:py-10">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-8">Shopping Cart</h1>
 

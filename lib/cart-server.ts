@@ -131,6 +131,21 @@ export function clearCartTokenCookie(res: NextResponse) {
   res.cookies.set(CART_TOKEN_COOKIE, "", { path: "/", maxAge: 0 })
 }
 
+// Mirrors sanitizePhone in app/api/orders/route.ts (kept separate rather
+// than importing from there, since that one isn't exported — same
+// normalization: strip to digits, drop a "91" country-code prefix or a
+// leading "0", require exactly 10 digits left). Used to clean
+// guestPhone before it's stored on Cart (see app/api/cart/route.ts and
+// components/checkout-form.tsx), so it lands in the same canonical form
+// User.phone and the WhatsApp opt-out list already use.
+export function sanitizeGuestPhone(raw: unknown): string | null {
+  if (typeof raw !== "string") return null
+  let digits = raw.replace(/\D/g, "")
+  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2)
+  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1)
+  return digits.length === 10 ? digits : null
+}
+
 // ─── Item validation (lightweight — see app/api/cart/route.ts) ────────────
 // Real stock/price/availability checks stay in the checkout/order APIs;
 // this only guards against structurally invalid data landing in the mirror.
@@ -255,8 +270,20 @@ function shapeLeanCartItems(items: any[], flashSaleMap: Map<string, FlashSaleInf
 // sale to a size's own price — matching the storefront's percentOff logic.
 const CART_ITEM_PRODUCT_POPULATE = { path: "items.product", select: "name image price discountPrice salePercentage" }
 
-/** Read-only, serialized cart for a resolved identity — used by GET /api/cart. */
-export async function getSerializedCartForIdentity(identity: CartIdentity) {
+export interface SerializedCart {
+  items: ReturnType<typeof shapeLeanCartItems>
+  guestPhone: string | null
+  whatsappConsent: boolean
+}
+
+/**
+ * Read-only, serialized cart for a resolved identity — used by GET /api/cart.
+ * Includes guestPhone/whatsappConsent alongside items (not just a bare items
+ * array) so callers like components/whatsapp-discount-popup.tsx can decide
+ * whether to render without a second round trip. Sole caller as of writing
+ * is app/api/cart/route.ts's GET handler — safe to reshape.
+ */
+export async function getSerializedCartForIdentity(identity: CartIdentity): Promise<SerializedCart> {
   await connectDB()
   const filter =
     identity.kind === "user"
@@ -264,12 +291,17 @@ export async function getSerializedCartForIdentity(identity: CartIdentity) {
       : identity.guestToken
         ? { guestToken: identity.guestToken, status: "active" }
         : null
-  if (!filter) return []
+  const empty: SerializedCart = { items: [], guestPhone: null, whatsappConsent: false }
+  if (!filter) return empty
 
   const cart = await Cart.findOne(filter).populate(CART_ITEM_PRODUCT_POPULATE).lean()
-  if (!cart) return []
+  if (!cart) return empty
   const flashSaleMap = await getActiveFlashSaleMap()
-  return shapeLeanCartItems((cart as any).items, flashSaleMap)
+  return {
+    items: shapeLeanCartItems((cart as any).items, flashSaleMap),
+    guestPhone: (cart as any).guestPhone ?? null,
+    whatsappConsent: !!(cart as any).whatsappConsent,
+  }
 }
 
 /** Read-only, serialized cart by id — used after PUT /api/cart/merge saves. */

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCheckoutStore } from "@/lib/store/checkout-store"
+import { syncCartContactInfo } from "@/lib/store/cart-sync"
 import Link from "next/link"
 
 interface CheckoutFormProps {
@@ -228,6 +229,30 @@ export function CheckoutForm({
       ? savedPaymentMethod
       : availablePaymentMethods[0] || "ccavenue",
   )
+
+  // WhatsApp marketing consent — separate from placing the order. Synced to
+  // the cart (not the eventual Order) as soon as it's confirmed, since the
+  // whole point is reaching people who *don't* finish checking out — see
+  // lib/store/cart-sync.ts's syncCartContactInfo and
+  // app/api/cron/abandoned-cart-whatsapp/route.ts.
+  const [whatsappConsent, setWhatsappConsent] = useState(false)
+
+  const handlePhoneBlur = () => {
+    const digits = formData.phone.replace(/\D/g, "")
+    if (digits.length >= 10) {
+      syncCartContactInfo({ guestPhone: formData.phone })
+    }
+  }
+
+  const handleConsentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked
+    setWhatsappConsent(checked)
+    const digits = formData.phone.replace(/\D/g, "")
+    syncCartContactInfo({
+      whatsappConsent: checked,
+      ...(digits.length >= 10 ? { guestPhone: formData.phone } : {}),
+    })
+  }
 
   useEffect(() => {
   onPaymentMethodChange?.(paymentMethod)
@@ -466,12 +491,24 @@ const handleSelectPayment = (method: string) => {
                   <div>
                     <FieldLabel>Phone Number</FieldLabel>
                     <StyledInput
-                      name="phone" value={formData.phone} onChange={handleChange}
+                      name="phone" value={formData.phone} onChange={handleChange} onBlur={handlePhoneBlur}
                       placeholder="+91 98765 43210" required
                       icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.8 19.79 19.79 0 01.22 4.22 2 2 0 012.2 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.27a16 16 0 006.72 6.72l1.34-1.34a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></svg>}
                     />
                   </div>
                 </div>
+
+                <label className="flex items-start gap-2.5 cursor-pointer select-none -mt-1">
+                  <input
+                    type="checkbox"
+                    checked={whatsappConsent}
+                    onChange={handleConsentChange}
+                    className="mt-0.5 h-4 w-4 rounded border-(--color-border) text-(--color-brand-primary) focus:ring-2 focus:ring-(--color-brand-primary)/30 cursor-pointer"
+                  />
+                  <span className="text-xs text-(--color-text-muted) leading-relaxed">
+                    Send me order updates and offers on WhatsApp
+                  </span>
+                </label>
 
                 <div>
                   <FieldLabel>Email Address</FieldLabel>

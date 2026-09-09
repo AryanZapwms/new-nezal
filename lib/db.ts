@@ -6,6 +6,8 @@ import "@/lib/models/category";
 import "@/lib/models/company";
 import "@/lib/models/order";
 import "@/lib/models/cart";
+import "@/lib/models/whatsapp-opt-out";
+import "@/lib/models/whatsapp-discount-claim";
 // add any other models here
 
 

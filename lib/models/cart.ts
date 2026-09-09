@@ -60,6 +60,24 @@ const cartSchema = new mongoose.Schema(
 
     convertedOrderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order", default: null },
     convertedAt: { type: Date, default: null },
+
+    // ── WhatsApp abandoned-cart reminders (app/api/cron/abandoned-cart-whatsapp) ──
+    // Per-cart: fine here, since a reminder is tied to one specific
+    // abandonment instance, not the phone number in general.
+    whatsappReminderSentAt: { type: Date, default: null },
+
+    // Phone confirmed (and consent given) at checkout, before an order
+    // exists — separate from any phone on the User record, and from the
+    // eventual Order's shipping phone. See components/checkout-form.tsx and
+    // app/api/cart/route.ts for how this gets set. Opt-out is deliberately
+    // NOT here — see lib/models/whatsapp-opt-out.ts for why.
+    guestPhone: { type: String, default: null },
+
+    // Explicit opt-in captured at checkout — defaults false and is never
+    // backfilled for carts/users that existed before this checkbox did.
+    // Required by app/api/cron/abandoned-cart-whatsapp before it will
+    // message anyone; a phone number alone is not consent.
+    whatsappConsent: { type: Boolean, default: false },
   },
   { timestamps: true },
 )
@@ -80,5 +98,14 @@ cartSchema.index(
 // Backs both the admin abandoned-cart list (status + recency sort) and any
 // future cleanup/cron job.
 cartSchema.index({ status: 1, lastActivityAt: -1 })
+
+// Backs the WhatsApp reminder cron's query (active, consented, not yet
+// reminded, ordered by staleness). Opt-out is checked separately against
+// lib/models/whatsapp-opt-out.ts, not against this collection, so it's not
+// part of this index.
+cartSchema.index(
+  { status: 1, whatsappConsent: 1, whatsappReminderSentAt: 1, lastActivityAt: 1 },
+  { partialFilterExpression: { status: "active" } },
+)
 
 export const Cart = mongoose.models.Cart || mongoose.model("Cart", cartSchema)

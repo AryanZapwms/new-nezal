@@ -95,3 +95,25 @@ export function initCartSync() {
   })
   window.addEventListener("pagehide", flushNow)
 }
+
+/**
+ * Sends guestPhone and/or whatsappConsent to the server cart, independent of
+ * the items-sync subscription above — used by components/checkout-form.tsx
+ * when the phone field is confirmed or the WhatsApp-consent checkbox
+ * changes. Deliberately omits `items` from the body: app/api/cart/route.ts
+ * treats a missing `items` key as "don't touch the cart's items," so this
+ * can't accidentally wipe the cart. Same fire-and-forget posture as the rest
+ * of this file — a failed sync here must never block or error the checkout
+ * form.
+ */
+export async function syncCartContactInfo(fields: { guestPhone?: string; whatsappConsent?: boolean }) {
+  try {
+    await fetch("/api/cart", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fields),
+    })
+  } catch (err) {
+    console.error("[cart-sync] failed to sync contact info:", err)
+  }
+}
