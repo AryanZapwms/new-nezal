@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     const [carts, total, activeCarts, abandonedCarts, revenueAgg, topProductsAgg] = await Promise.all([
       Cart.find(filter)
-        .sort({ lastActivityAt: 1 }) // stalest (most neglected) first — the ones worth acting on
+        .sort({ lastActivityAt: -1 }) // most recent activity first — new abandonments surface on page 1
         .skip(skip)
         .limit(limit)
         .populate("user", "name email phone")

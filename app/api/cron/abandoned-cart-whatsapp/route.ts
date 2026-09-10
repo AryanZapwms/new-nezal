@@ -6,6 +6,15 @@
 // and haven't already been reminded — then fires an approved WhatsApp
 // template message to the ones we can actually reach.
 //
+// Two templates, chosen per cart: if any item carries a flash-sale snapshot
+// (cartItemSchema.flashSale in lib/models/cart.ts) whose endsAt hasn't
+// passed yet, ecommerce_abandoned_cart goes out quoting that discount —
+// otherwise the plain cart_reminder_plain nudge. When more than one item
+// qualifies, the first one (array order) is used; when none do, the first
+// item in the cart is used same as before. An on-sale item is preferred
+// over the cart's literal first item as the one named in the message,
+// since the discount is the stronger hook.
+//
 // "Reachable" means: a phone number is available, from either the cart's
 // own guestPhone (captured at checkout, see app/api/cart/route.ts) or the
 // logged-in user's User.phone — whichever is present, preferring guestPhone
@@ -30,7 +39,8 @@ import { WhatsAppOptOut } from "@/lib/models/whatsapp-opt-out"
 import { sendWhatsAppTemplate } from "@/lib/whatsapp"
 
 const REMINDER_DELAY_MINUTES = 30 // wait this long since the cart's last real activity
-const REMINDER_TEMPLATE_NAME = "cart_reminder" // must be Meta-approved first
+const REMINDER_TEMPLATE_DISCOUNT = "ecommerce_abandoned_cart" // must be Meta-approved first
+const REMINDER_TEMPLATE_PLAIN = "cart_reminder_plain" // must be Meta-approved first
 const BATCH_SIZE = 100 // candidate carts inspected per run, not guaranteed sends
 
 interface CronResult {
@@ -46,6 +56,20 @@ interface CronResult {
 // code still matches.
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(-10)
+}
+
+// First item (array order) whose flash-sale snapshot hasn't expired yet.
+// The snapshot is point-in-time (see cartItemSchema.flashSale in
+// lib/models/cart.ts) — it doesn't carry an isActive flag, so "still on
+// sale" is just endsAt being in the future.
+function findActiveFlashSaleItem(items: any[]): any | undefined {
+  const now = Date.now()
+  return items.find((item) => item.flashSale?.endsAt && new Date(item.flashSale.endsAt).getTime() > now)
+}
+
+// Short human date for the WhatsApp template body, e.g. "15 Sep".
+function formatShortDate(date: Date): string {
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
 }
 
 export async function GET(request: NextRequest) {
@@ -117,17 +141,32 @@ export async function GET(request: NextRequest) {
       continue
     }
 
-    const firstItem = cart.items[0] as any // populated .product
-    const firstItemName = firstItem?.product?.name ?? "your items"
+    const items = cart.items as any[] // populated .product
+    const saleItem = findActiveFlashSaleItem(items)
+    // The on-sale item is the stronger hook, so it's named in the message
+    // over the cart's literal first item when both are available.
+    const featuredItem = saleItem ?? items[0]
+    const featuredItemName = featuredItem?.product?.name ?? "your items"
+
+    const templateName = saleItem ? REMINDER_TEMPLATE_DISCOUNT : REMINDER_TEMPLATE_PLAIN
+    const variables = saleItem
+      ? [
+          user?.name ?? "there",
+          featuredItemName,
+          `${saleItem.flashSale.discountPercent}%`,
+          formatShortDate(new Date(saleItem.flashSale.endsAt)),
+        ]
+      : [user?.name ?? "there", featuredItemName]
 
     try {
       await sendWhatsAppTemplate({
         phone: rawPhone,
-        templateName: REMINDER_TEMPLATE_NAME,
-        // Body placeholders — match the order defined when the template was
+        templateName,
+        // Body placeholders — match the order defined when each template was
         // submitted for approval, e.g.:
-        // "Hi {{1}}, you left {{2}} in your cart. Complete your order now!"
-        variables: [user?.name ?? "there", firstItemName],
+        // discount: "Hi {{1}}, {{2}} in your cart is {{3}} off until {{4}}!"
+        // plain:    "Hi {{1}}, you left {{2}} in your cart. Complete your order now!"
+        variables,
         buttonVariables: [
           {
             index: 0,

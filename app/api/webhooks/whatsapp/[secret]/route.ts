@@ -1,28 +1,25 @@
-// app/api/webhooks/whatsapp/route.ts
+// app/api/webhooks/whatsapp/[secret]/route.ts
 //
 // Register this URL once via ScaleChat's webhook API:
 //   POST https://scalechat.in/api/v1/webhooks
-//   { "url": "https://nezalherbocare.com/api/webhooks/whatsapp",
-//     "events": ["message.received", "message.status", "contact.created"],
-//     "headers": { "x-webhook-secret": "<WHATSAPP_WEBHOOK_SECRET value>" } }
+//   { "url": "https://nezalherbocare.com/api/webhooks/whatsapp/WHATSAPP_WEBHOOK_SECRET_VALUE",
+//     "events": ["message.received", "message.status", "contact.created"] }
 //
-// Auth: ScaleChat's docs don't document a request-signing scheme for webhook
-// deliveries (I couldn't find one — worth double-checking their dashboard
-// directly, since I can't browse it from here). Rather than invent a new
-// mechanism, this reuses the exact shared-secret-header pattern already used
-// for Shiprocket's webhook (app/api/webhooks/shipment-updates/route.ts):
-// a custom header checked against an env var. This only works if ScaleChat's
-// webhook config actually lets you attach a custom header to their outgoing
-// calls — confirm that when registering. If it can't, this needs to move to
-// a secret path segment or query param instead, and swap for real
-// signature/HMAC verification if ScaleChat ever adds one.
+// Auth: ScaleChat's webhook registration API (POST /webhooks) only accepts
+// {url, events} — no custom header or secret field, so a shared-secret
+// header (the pattern used for Shiprocket's webhook, see
+// app/api/webhooks/shipment-updates/route.ts) can never actually be
+// satisfied by real ScaleChat traffic. Instead the secret lives in the URL
+// path itself: the segment after /whatsapp/ must match
+// WHATSAPP_WEBHOOK_SECRET, checked below. Swap for real signature/HMAC
+// verification if ScaleChat ever adds one.
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { WhatsAppOptOut } from "@/lib/models/whatsapp-opt-out"
 
-export async function POST(request: NextRequest) {
-  const incomingSecret = request.headers.get("x-webhook-secret")
-  if (incomingSecret !== process.env.WHATSAPP_WEBHOOK_SECRET) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ secret: string }> }) {
+  const { secret } = await params
+  if (secret !== process.env.WHATSAPP_WEBHOOK_SECRET) {
     console.warn("WhatsApp webhook: invalid or missing secret")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
