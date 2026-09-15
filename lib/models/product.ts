@@ -3,6 +3,7 @@ import mongoose from "mongoose"
 
 const productSchema = new mongoose.Schema(
   {
+    numericId: { type: Number, unique: true, sparse: true, index: true },
     name: {
       type: String,
       required: true,

@@ -65,6 +65,9 @@ interface Order {
     courierNameQuoted?: string
   }
   totalAmount: number
+  couponCode?: string | null
+  discountAmount?: number
+  couponDiscrepancy?: string | null
   shippingAmount?: number
   codCharge?: number   // ← add
   totalTaxableValue?: number
@@ -812,6 +815,12 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
     <span>GST</span>
     <span>₹{(selectedOrder.totalGstAmount ?? 0).toFixed(2)}</span>
   </div>
+  {selectedOrder.couponCode && (
+    <div className="flex justify-between text-emerald-700">
+      <span>Coupon ({selectedOrder.couponCode})</span>
+      <span>−₹{(selectedOrder.discountAmount ?? 0).toFixed(2)}</span>
+    </div>
+  )}
   <div className="flex justify-between text-gray-600">
   <span>Shipping</span>
   <span>₹{(selectedOrder.shippingAmount ?? 0).toFixed(2)}</span>
@@ -861,6 +870,13 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
                   </div>
                 </div>
               </div>
+
+              {selectedOrder.couponDiscrepancy && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl p-4">
+                  <p className="font-semibold uppercase tracking-wide mb-1">⚠️ Coupon discrepancy — needs review</p>
+                  <p>{selectedOrder.couponDiscrepancy}</p>
+                </div>
+              )}
 
               {/* Shiprocket / Shipping Info */}
               <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl">

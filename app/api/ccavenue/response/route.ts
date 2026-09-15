@@ -22,6 +22,7 @@ import "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 import { markCartConverted } from "@/lib/cart-server";
+import { redeemCoupon } from "@/lib/coupon-server";
 
 export async function POST(req: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -69,6 +70,28 @@ export async function POST(req: NextRequest) {
       );
 
       if (updatedOrder) {
+        // Redeem now that payment is confirmed. The coupon itself was
+        // already validated and the discount already baked into
+        // existingOrder.totalAmount back at order-creation time
+        // (app/api/orders/route.ts) — unlike Razorpay's verify-payment
+        // route, there's no re-validation to do here and no Option-3-style
+        // discrepancy handling needed: CCAvenue's order is created (and its
+        // coupon validated) BEFORE any redirect to CCAvenue happens, so a
+        // stale coupon is already caught there, before money moves — this
+        // callback only ever fires after that already-settled amount is
+        // paid. If the atomic redeem loses a race (last-use redeemed by
+        // someone else in the same instant), don't fail this response —
+        // payment is already captured by CCAvenue and the order already
+        // exists; just log it, same as the Razorpay success path.
+        if ((updatedOrder as any).couponCode) {
+          const redeemResult = await redeemCoupon((updatedOrder as any).couponCode);
+          if (!redeemResult.success) {
+            console.error(
+              `[ccavenue/response] redeemCoupon lost the race for ${(updatedOrder as any).couponCode} on order ${updatedOrder._id}: ${redeemResult.error}`
+            );
+          }
+        }
+
         // Payment is confirmed now — this is the only point a CCAvenue cart
         // should convert. We deliberately don't re-resolve cart identity
         // from cookies here: CCAvenue posts back to this route as a

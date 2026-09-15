@@ -14,6 +14,7 @@ import { syncUserContactFromOrder } from "@/lib/syncUserContact";
 import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTokenCookie, type CartIdentity } from "@/lib/cart-server";
 import { getActiveFlashSaleMap } from "@/lib/flashSale";
 import { resolveCurrentPrice } from "@/lib/pricing";
+import { validateCouponServerSide, redeemCoupon } from "@/lib/coupon-server";
 
 // Strips spaces/dashes/parens/country-code prefixes and returns a clean
 // 10-digit Indian mobile number, or "" if it can't be normalized to one.
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       
 
 
-    const { items, shippingAddress, totalAmount, paymentMethod, shippingAmount, codCharge, shippingBreakdown } = body;
+    const { items, shippingAddress, totalAmount, paymentMethod, shippingAmount, codCharge, shippingBreakdown, couponCode } = body;
 
 
 
@@ -143,7 +144,47 @@ export async function POST(request: NextRequest) {
 
 const realShipping = shippingAmount ?? 0;
 const realCodCharge = paymentMethod === "cod" ? (codCharge ?? 0) : 0;
-const realTotal = computedTotal + realShipping + realCodCharge;
+
+// Coupon: re-validate server-side against the just-verified item subtotal —
+// never trust discountAmount/totalAmount echoed back by the client (see
+// lib/coupon-server.ts). Mirrors app/checkout/page.tsx's own ordering: the
+// discount comes off the product subtotal only, before shipping/COD
+// surcharge are added on top.
+let verifiedCouponCode: string | null = null;
+let verifiedDiscountAmount = 0;
+
+if (couponCode) {
+  const couponResult = await validateCouponServerSide(couponCode, computedTotal);
+  if (!couponResult.valid) {
+    return NextResponse.json(
+      { error: couponResult.error || "This coupon is no longer valid." },
+      { status: 400 }
+    );
+  }
+  verifiedCouponCode = couponResult.coupon.code;
+  verifiedDiscountAmount = couponResult.discountAmount ?? 0;
+
+  // COD is treated as a confirmed purchase immediately (see the
+  // markCartConverted call below), so redeem the coupon use right here,
+  // before the order is created — if the atomic redeem loses a race
+  // (someone else just took the last use), fail before any DB write
+  // instead of creating an order we'd then have to unwind. CCAvenue and
+  // Razorpay redeem later, only once payment is actually confirmed (see
+  // their respective routes) — an abandoned or failed payment must not
+  // burn a single-use code.
+  if (paymentMethod === "cod") {
+    const redeemResult = await redeemCoupon(verifiedCouponCode);
+    if (!redeemResult.success) {
+      return NextResponse.json(
+        { error: redeemResult.error || "This coupon could not be redeemed." },
+        { status: 409 }
+      );
+    }
+  }
+}
+
+const discountedItemsTotal = Math.max(0, computedTotal - verifiedDiscountAmount);
+const realTotal = discountedItemsTotal + realShipping + realCodCharge;
 
 // fallback if the checkout page doesn't send a breakdown (e.g. old cached client bundle)
 const realShippingBreakdown = shippingBreakdown ?? {
@@ -187,6 +228,8 @@ const realShippingBreakdown = shippingBreakdown ?? {
       guestPhone: user ? undefined : cleanPhone,
       items: verifiedItems,
       totalAmount: realTotal,
+      couponCode: verifiedCouponCode,
+      discountAmount: verifiedDiscountAmount,
       shippingAmount: realShipping,
       shippingBreakdown: realShippingBreakdown,
       codCharge: realCodCharge,

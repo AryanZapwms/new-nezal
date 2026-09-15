@@ -122,6 +122,14 @@ ccavenueBankRefNo: { type: String, default: null },
     // ── Coupon ────────────────────────────────────────────
     couponCode:     { type: String, default: null },
     discountAmount: { type: Number, default: 0    },
+    // Set when a coupon was requested at checkout but couldn't be honored
+    // (or couldn't be re-verified) after payment was already captured —
+    // e.g. Razorpay's verify-payment route discovering the coupon went
+    // stale between capture and verification. couponCode/discountAmount
+    // stay null/0 in that case (the discount wasn't actually applied to
+    // this order's bookkeeping), and this field holds a human-readable
+    // explanation for admin review — see app/admin/orders/page.tsx.
+    couponDiscrepancy: { type: String, default: null },
     cancellation: {
   status: {
     type: String,
