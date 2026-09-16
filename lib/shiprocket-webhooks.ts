@@ -9,9 +9,16 @@
 // break an admin save, a checkout, or any other request. Both notify
 // functions below never throw for this exact reason.
 //
-// Until SHIPROCKET_WEBHOOK_API_KEY / SHIPROCKET_WEBHOOK_SECRET are set (real
-// credentials aren't issued yet), every call skips silently with a
-// console.warn — this is expected and not an error.
+// Until SHIPROCKET_CATALOG_WEBHOOK_API_KEY / SHIPROCKET_CATALOG_WEBHOOK_SECRET
+// are set (real credentials aren't issued yet), every call skips silently
+// with a console.warn — this is expected and not an error.
+//
+// Named distinctly from SHIPROCKET_WEBHOOK_SECRET (see
+// app/api/webhooks/shipment-updates/route.ts) — that's a PRE-EXISTING,
+// already-in-production env var for a completely different feature
+// (inbound shipment-status webhook auth). This file originally reused that
+// same name by mistake; renamed to avoid the two features silently sharing
+// (and conflicting over) one secret.
 
 import { mapProductToShiprocket, mapCollectionToShiprocket } from "@/lib/shiprocket-mapper";
 import { computeHmac } from "@/lib/shiprocket-hmac";
@@ -24,12 +31,12 @@ const PRODUCT_WEBHOOK_PATH = "/wh/v1/custom/product";
 const COLLECTION_WEBHOOK_PATH = "/wh/v1/custom/collection";
 
 async function postWebhook(url: string, payload: unknown, label: string): Promise<void> {
-  const apiKey = process.env.SHIPROCKET_WEBHOOK_API_KEY;
-  const secret = process.env.SHIPROCKET_WEBHOOK_SECRET;
+  const apiKey = process.env.SHIPROCKET_CATALOG_WEBHOOK_API_KEY;
+  const secret = process.env.SHIPROCKET_CATALOG_WEBHOOK_SECRET;
 
   if (!apiKey || !secret) {
     console.warn(
-      `[shiprocket-webhooks] Skipping ${label} — SHIPROCKET_WEBHOOK_API_KEY / SHIPROCKET_WEBHOOK_SECRET not set`
+      `[shiprocket-webhooks] Skipping ${label} — SHIPROCKET_CATALOG_WEBHOOK_API_KEY / SHIPROCKET_CATALOG_WEBHOOK_SECRET not set`
     );
     return;
   }
