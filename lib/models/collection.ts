@@ -3,6 +3,13 @@ import mongoose from "mongoose"
 
 const collectionSchema = new mongoose.Schema(
   {
+    // Shiprocket Custom Checkout's required unique integer id for
+    // collections[].id — same pattern as Product.numericId. Backfilled via
+    // scripts/backfill-collection-numeric-ids.ts; new collections get one
+    // from getNextSequence('collectionId') — a separate counter sequence
+    // from Product's 'productId' so the two never collide.
+    numericId: { type: Number, unique: true, sparse: true, index: true },
+
     // ─── Identity ────────────────────────────────────────────────────────────
     name: {
       type: String,

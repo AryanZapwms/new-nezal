@@ -22,6 +22,7 @@ const MONGODB_URI =
 
 const collectionSchema = new mongoose.Schema(
   {
+    numericId:        { type: Number, unique: true, sparse: true, index: true },
     name:             { type: String, required: true, trim: true },
     slug:             { type: String, required: true, unique: true, lowercase: true, trim: true },
     tagline:          { type: String, trim: true },
@@ -49,6 +50,7 @@ const Collection = mongoose.model("Collection", collectionSchema)
 
 const productSchema = new mongoose.Schema(
   {
+    numericId:      { type: Number, unique: true, sparse: true, index: true },
     name:           { type: String, required: true, trim: true },
     slug:           { type: String, required: true, unique: true, lowercase: true, trim: true },
     price:          { type: Number, required: true },
@@ -70,6 +72,23 @@ const productSchema = new mongoose.Schema(
 )
 delete mongoose.models.Product
 const Product = mongoose.model("Product", productSchema)
+
+// Same "counters" collection contract as lib/models/counter.ts — shared
+// with the app so numericId values never collide with ones it assigns.
+const counterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  seq: { type: Number, default: 0 },
+})
+const Counter = mongoose.models.Counter || mongoose.model("Counter", counterSchema)
+
+async function getNextSequence(name) {
+  const counter = await Counter.findByIdAndUpdate(
+    name,
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  )
+  return counter.seq
+}
 
 // Helper — generate slug from name
 function toSlug(str) {
@@ -1642,7 +1661,11 @@ async function seed() {
 
   // ── 2. INSERT COLLECTIONS ────────────────────────────────
   console.log("📚  Seeding collections...")
-  const insertedCollections = await Collection.insertMany(collectionsData)
+  const collectionsWithIds = []
+  for (const c of collectionsData) {
+    collectionsWithIds.push({ ...c, numericId: await getNextSequence("collectionId") })
+  }
+  const insertedCollections = await Collection.insertMany(collectionsWithIds)
   console.log(`   ✓ ${insertedCollections.length} collections created`)
   insertedCollections.forEach((c) =>
     console.log(`     • [${c.navCategory}/${c.subCategory}] ${c.name} → /collections/${c.slug}`)
@@ -1654,9 +1677,11 @@ async function seed() {
   const companyDoc = await mongoose.connection.db.collection("companies").findOne({ slug: "nezal-herbocare" })
 if (!companyDoc) throw new Error("Company not found. Run seed.js first.")
   
-const insertedProducts = await Product.insertMany(
-  productsData.map((p) => ({ ...p, company: companyDoc._id }))
-)
+const productsWithIds = []
+for (const p of productsData) {
+  productsWithIds.push({ ...p, company: companyDoc._id, numericId: await getNextSequence("productId") })
+}
+const insertedProducts = await Product.insertMany(productsWithIds)
 
   // ── SUMMARY ──────────────────────────────────────────────
   console.log("\n══════════════════════════════════════════════")

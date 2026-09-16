@@ -24,16 +24,30 @@ function sanitizePhone(raw: string | undefined | null): string {
   return digits.length === 10 ? digits : "";
 }
 
-export async function autoCreateShiprocketOrder(orderId: string) {
+// Builds a Shiprocket adhoc-order payload from an existing local Order doc
+// and calls createShiprocketOrder(). Shared by:
+//   - autoCreateShiprocketOrder() below (guarded on shiprocketOrderId,
+//     persists the result there — used by COD/Razorpay/CCAvenue orders)
+//   - app/api/shiprocket/order-webhook/[secret]/route.ts, which calls this
+//     directly (bypassing that guard) since a Shiprocket Custom Checkout
+//     order's shiprocketOrderId is already occupied by Shiprocket's own
+//     fastrr_order_id — a different Shiprocket concept — so it persists the
+//     result into shiprocketLogisticsOrderId instead.
+// On failure (bad phone, API error), records shippingStatus/shiprocketError
+// on the order itself (same as before) and returns null rather than
+// throwing; callers should treat null as "already logged/recorded, nothing
+// more to do" rather than an exception to catch.
+export async function createShiprocketOrderForOrder(
+  orderId: string
+): Promise<ShiprocketOrderResult | null> {
   const order = await Order.findById(orderId).populate("items.product");
   if (!order) {
-    console.error(`Auto Shiprocket: order ${orderId} not found`);
-    return;
+    console.error(`Shiprocket: order ${orderId} not found`);
+    return null;
   }
-  if (order.shiprocketOrderId) return;
 
   const addr = order.shippingAddress;
-   const items = order.items.map((item: any) => {
+  const items = order.items.map((item: any) => {
     // Prefer the selected size's own weight/dimensions; fall back to the
     // base product's if this size has none set (e.g. older sizes that
     // haven't been backfilled/edited yet).
@@ -57,7 +71,7 @@ export async function autoCreateShiprocketOrder(orderId: string) {
   });
 
   // ── DEBUG: exactly what per-item dimensions/weight we pulled from products ─
-  console.log("[Shiprocket:autoCreateOrder] Order items with dimensions:", JSON.stringify(items, null, 2));
+  console.log("[Shiprocket:createOrderForOrder] Order items with dimensions:", JSON.stringify(items, null, 2));
 
   const cleanPhone = sanitizePhone(addr?.phone ?? order.guestPhone);
 
@@ -67,19 +81,19 @@ export async function autoCreateShiprocketOrder(orderId: string) {
     // silently (or, if something upstream ever retries this function,
     // failing identically on every retry forever).
     console.error(
-      `Auto Shiprocket: order ${order._id} has an invalid phone ("${addr?.phone ?? order.guestPhone}"), skipping creation`
+      `Shiprocket: order ${order._id} has an invalid phone ("${addr?.phone ?? order.guestPhone}"), skipping creation`
     );
     await Order.findByIdAndUpdate(order._id, {
       shippingStatus: "needs_attention",
       shiprocketError: "Invalid phone number — could not create shipment. Please correct the phone number and retry from admin.",
     });
-    return;
+    return null;
   }
 
   const shippingAddress = {
     name: addr?.name ?? order.guestName ?? "Customer",
     phone: cleanPhone,
-    email: order.guestEmail ?? addr?.email ?? "",
+    email: order.guestEmail ?? addr?.email ?? process.env.SHIPROCKET_FALLBACK_EMAIL ?? "orders@nezalherbocare.com",
     address: addr?.address ?? addr?.street ?? "",
     city: addr?.city ?? "",
     state: addr?.state ?? "",
@@ -111,19 +125,9 @@ export async function autoCreateShiprocketOrder(orderId: string) {
       codCharge: order.codCharge ?? 0,
     });
 
-    await Order.findByIdAndUpdate(order._id, {
-      shiprocketOrderId: result.shiprocketOrderId,
-      shiprocketShipmentId: result.shiprocketShipmentId,
-      awbCode: result.awbCode ?? null,
-      courierName: result.courierName ?? null,
-      shippingStatus: "processing",
-      shiprocketError: null,
-      ...(result.awbCode && {
-        trackingUrl: `https://shiprocket.co/tracking/${result.awbCode}`,
-      }),
-    });
+    return result;
   } catch (err) {
-    console.error(`Auto Shiprocket creation failed for order ${order._id}:`, err);
+    console.error(`Shiprocket order creation failed for order ${order._id}:`, err);
     // Record the failure on the order itself so it's visible in admin
     // rather than only living in the server logs — makes stuck orders
     // (like the recurring billing_phone 422s) easy to find and fix.
@@ -133,7 +137,32 @@ export async function autoCreateShiprocketOrder(orderId: string) {
     }).catch((updateErr) =>
       console.error(`Failed to record Shiprocket error on order ${order._id}:`, updateErr)
     );
+    return null;
   }
+}
+
+export async function autoCreateShiprocketOrder(orderId: string) {
+  const order = await Order.findById(orderId);
+  if (!order) {
+    console.error(`Auto Shiprocket: order ${orderId} not found`);
+    return;
+  }
+  if (order.shiprocketOrderId) return;
+
+  const result = await createShiprocketOrderForOrder(orderId);
+  if (!result) return; // failure already logged/recorded inside
+
+  await Order.findByIdAndUpdate(order._id, {
+    shiprocketOrderId: result.shiprocketOrderId,
+    shiprocketShipmentId: result.shiprocketShipmentId,
+    awbCode: result.awbCode ?? null,
+    courierName: result.courierName ?? null,
+    shippingStatus: "processing",
+    shiprocketError: null,
+    ...(result.awbCode && {
+      trackingUrl: `https://shiprocket.co/tracking/${result.awbCode}`,
+    }),
+  });
 }
 
 export async function cancelShiprocketOrder(shiprocketOrderId: number) {

@@ -44,9 +44,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       ["shipped", "out_for_delivery", "delivered", "rto_initiated", "rto_delivered"].includes(order.shippingStatus)
 
     if (!isShipped) {
-      if (order.shiprocketOrderId) {
+      // shiprocketOrderId holds a DIFFERENT Shiprocket product's id (the
+      // checkout/fastrr order id) for shiprocket_checkout orders — the real
+      // logistics/shipment order lives in shiprocketLogisticsOrderId for
+      // those. See lib/models/order.ts for the full explanation.
+      const logisticsId = order.shiprocketLogisticsOrderId || order.shiprocketOrderId
+      if (logisticsId) {
         try {
-          await cancelShiprocketOrder(order.shiprocketOrderId)
+          await cancelShiprocketOrder(logisticsId)
         } catch (err) {
           console.error(`Shiprocket cancel failed for order ${order._id}:`, err)
         }

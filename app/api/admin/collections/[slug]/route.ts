@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db"
 import { Collection } from "@/lib/models/collection"
 import { applyCollectionSale, clearCollectionSale } from "@/lib/sale"
 import { isAdmin } from "@/lib/admin-check"
+import { notifyCollectionWebhook } from "@/lib/shiprocket-webhooks"
 
 // GET /api/admin/collections/[slug] — fetch regardless of isActive, for editing
 export async function GET(
@@ -90,6 +91,11 @@ export async function PUT(
       updated = result.collection
     }
 
+    // Fire-and-forget — a Shiprocket outage must never block this admin save.
+    // (applyCollectionSale/clearCollectionSale above already notify per
+    // affected PRODUCT — this call is for the collection document itself.)
+    void notifyCollectionWebhook(updated)
+
     return NextResponse.json({ collection: updated })
   } catch (error: any) {
     console.error("[admin/collections/slug] PUT error:", error)
@@ -127,6 +133,10 @@ export async function PATCH(
     if (!updated) {
       return NextResponse.json({ error: "Collection not found" }, { status: 404 })
     }
+
+    // Fire-and-forget — a Shiprocket outage must never block this admin save.
+    void notifyCollectionWebhook(updated)
+
     return NextResponse.json({ collection: updated })
   } catch (error) {
     console.error("[admin/collections/slug] PATCH error:", error)

@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectDB } from "@/lib/db";
 import { Order } from "@/lib/models/order";
-import { createShiprocketOrder } from "@/lib/shiprocket";
+import { createShiprocketOrderForOrder } from "@/lib/shiprocket";
 
 export async function POST(
   req: NextRequest,
@@ -21,68 +21,60 @@ export async function POST(
 
   await connectDB();
 
-  const order = await Order.findById(id).populate("items.product");
+  const order = await Order.findById(id);
 
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  if (order.shiprocketOrderId) {
+  // shiprocketOrderId holds a DIFFERENT Shiprocket product's id (the
+  // checkout/fastrr order id) for shiprocket_checkout orders, so it's
+  // always set for them regardless of whether a real logistics shipment
+  // exists yet — only shiprocketLogisticsOrderId means one actually does.
+  // Other payment methods still use shiprocketOrderId as before. See
+  // lib/models/order.ts for the full explanation.
+  const hasShipment =
+    order.paymentMethod === "shiprocket_checkout"
+      ? !!order.shiprocketLogisticsOrderId
+      : !!order.shiprocketOrderId;
+
+  if (hasShipment) {
     return NextResponse.json(
       { error: "Shipment already created for this order" },
       { status: 400 }
     );
   }
 
-  const addr = order.shippingAddress;
-
-  // Build items array from order
- const items = order.items.map((item: any) => ({
-  name: item.product?.name ?? "Product",
-  sku: item.product?.sku ?? "SKU",
-  units: item.quantity,
-  selling_price: item.price,
-  weight: item.product?.weight ?? 0.3,
-  gstPercent: item.product?.gstPercent ?? 0,
-  hsn: item.product?.hsn ?? "",
-}));
-
-const goodsTotal = order.items.reduce(
-  (sum: number, item: any) => sum + item.price * item.quantity,
-  0
-);
-
-  const shippingAddress = {
-    name: addr?.name ?? order.guestName ?? "Customer",
-    phone: addr?.phone ?? order.guestPhone ?? "",
-    email: order.guestEmail ?? (session.user as any).email ?? "",
-    address: addr?.address ?? addr?.street ?? "",
-    city: addr?.city ?? "",
-    state: addr?.state ?? "",
-    pincode: String(addr?.pincode ?? addr?.zipCode ?? ""),
-    country: addr?.country ?? "India",
-  };
-
   try {
-    const result = await createShiprocketOrder({
-  orderId: order._id.toString(),
-  orderDate: new Date(order.createdAt).toISOString().split("T")[0],
-  items,
-  shipping: shippingAddress,
-  billing: shippingAddress,
-  paymentMethod: order.paymentMethod === "cod" ? "COD" : "Prepaid",
-  subTotal: goodsTotal,
-  shippingCharges: order.shippingAmount ?? 0,   // ← was hardcoded 0
-  totalDiscount: order.discountAmount ?? 0,
-});
+    // Shared with autoCreateShiprocketOrder() and the Shiprocket Custom
+    // Checkout order webhook — one implementation of the item/address
+    // building + createShiprocketOrder() call instead of three, so this
+    // manual-retry path gets the same phone sanitization and
+    // shippingStatus/shiprocketError bookkeeping as the automatic paths.
+    const result = await createShiprocketOrderForOrder(id);
 
-    // Save Shiprocket IDs back to order
+    if (!result) {
+      // Failure is already logged and recorded on the order itself
+      // (shippingStatus/shiprocketError) by createShiprocketOrderForOrder.
+      return NextResponse.json(
+        { error: "Shiprocket order creation failed — see the order's shiprocketError for details." },
+        { status: 500 }
+      );
+    }
+
+    // shiprocket_checkout orders keep their fastrr id in shiprocketOrderId,
+    // so the newly-created logistics order id goes into the separate field
+    // instead — same split the order webhook uses.
+    const logisticsIdField =
+      order.paymentMethod === "shiprocket_checkout" ? "shiprocketLogisticsOrderId" : "shiprocketOrderId";
+
     await Order.findByIdAndUpdate(id, {
-      shiprocketOrderId: result.shiprocketOrderId,
+      [logisticsIdField]: result.shiprocketOrderId,
       shiprocketShipmentId: result.shiprocketShipmentId,
       awbCode: result.awbCode ?? null,
       courierName: result.courierName ?? null,
       shippingStatus: "processing",
+      shiprocketError: null,
       ...(result.awbCode && {
         trackingUrl: `https://shiprocket.co/tracking/${result.awbCode}`,
       }),

@@ -21,6 +21,7 @@ const MONGODB_URI =
 
 const collectionSchema = new mongoose.Schema(
   {
+    numericId: { type: Number, unique: true, sparse: true, index: true },
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     tagline: { type: String, trim: true },
@@ -82,6 +83,23 @@ const productSchema = new mongoose.Schema(
 );
 delete mongoose.models.Product;
 const Product = mongoose.model("Product", productSchema);
+
+// Same "counters" collection contract as lib/models/counter.ts — shared
+// with the app so numericId values never collide with ones it assigns.
+const counterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  seq: { type: Number, default: 0 },
+});
+const Counter = mongoose.models.Counter || mongoose.model("Counter", counterSchema);
+
+async function getNextSequence(name) {
+  const counter = await Counter.findByIdAndUpdate(
+    name,
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return counter.seq;
+}
 
 // ══════════════════════════════════════════════════════════
 //  COLLECTION DATA
@@ -743,7 +761,11 @@ async function seed() {
 
   // ── 2. INSERT COLLECTIONS ────────────────────────────────
   console.log("📚  Seeding collections...");
-  const inserted = await Collection.insertMany(collectionsData);
+  const collectionsWithIds = [];
+  for (const c of collectionsData) {
+    collectionsWithIds.push({ ...c, numericId: await getNextSequence("collectionId") });
+  }
+  const inserted = await Collection.insertMany(collectionsWithIds);
   console.log(`   ✓ ${inserted.length} collections created`);
   inserted.forEach((c) => console.log(`     • [${c.navCategory}] ${c.name} → /collections/${c.slug}`));
 

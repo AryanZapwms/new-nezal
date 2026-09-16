@@ -40,6 +40,7 @@ const Category = mongoose.model("Category", categorySchema)
 
 const productSchema = new mongoose.Schema(
   {
+    numericId:     { type: Number, unique: true, sparse: true, index: true },
     name:          { type: String, required: true },
     slug:          { type: String, required: true, lowercase: true },
     description:   String,
@@ -79,6 +80,23 @@ const productSchema = new mongoose.Schema(
 )
 delete mongoose.models.Product
 const Product = mongoose.model("Product", productSchema)
+
+// Same "counters" collection contract as lib/models/counter.ts — shared
+// with the app so numericId values never collide with ones it assigns.
+const counterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  seq: { type: Number, default: 0 },
+})
+const Counter = mongoose.models.Counter || mongoose.model("Counter", counterSchema)
+
+async function getNextSequence(name) {
+  const counter = await Counter.findByIdAndUpdate(
+    name,
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  )
+  return counter.seq
+}
 
 // ── HELPERS ─────────────────────────────────────────────────
 function toSlug(str) {
@@ -1930,9 +1948,11 @@ async function seed() {
   // ── 5. INSERT PRODUCTS ───────────────────────────────────
   console.log(`📦  Inserting ${productsData.length} products...`)
 
-  const products = await Product.insertMany(
-    productsData.map((p) => ({ ...p, company: companyId, isActive: true }))
-  )
+  const productsWithIds = []
+  for (const p of productsData) {
+    productsWithIds.push({ ...p, company: companyId, isActive: true, numericId: await getNextSequence("productId") })
+  }
+  const products = await Product.insertMany(productsWithIds)
   console.log(`   ✓ ${products.length} products created`)
 
   // ── 6. SUMMARY ───────────────────────────────────────────

@@ -199,12 +199,6 @@ function CheckoutPageInner() {
   }, [searchParams])
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/auth/login?redirect=/checkout")
-    }
-  }, [status, router])
-
-  useEffect(() => {
     const fetchData = async () => {
       try {
         const settingsRes = await fetch("/api/admin/payment-settings")
@@ -897,11 +891,11 @@ const amountLeftForFreeShipping =
       <div className="rounded-xl bg-[--color-bg-cream] px-4 py-3.5 flex justify-between items-center">
         <span className="font-semibold text-[#024a21]">Total</span>
         <div className="text-right">
-          {couponData && (
+          {/* {couponData && (
             <p className="text-xs line-through text-[#858585] font-normal leading-none mb-0.5">
               ₹{totalPrice.toFixed(2)}
             </p>
-          )}
+          )} */}
           <span className="text-xl font-bold text-[#2d8116]">₹{finalTotal.toFixed(2)}</span>
         </div>
       </div>

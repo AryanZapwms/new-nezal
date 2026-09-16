@@ -2,7 +2,7 @@
 
 "use client"
 
-import { FormEvent, useCallback, useEffect, useRef, useState, useMemo, memo } from "react"
+import { FormEvent, MouseEvent, useCallback, useEffect, useRef, useState, useMemo, memo } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
@@ -18,6 +18,7 @@ import ProductDescription from "@/components/ProductDescription"
 import ProductSections from "@/components/ProductSections"
 import { useLoading } from "@/hooks/use-loading"
 import { WishlistButton } from "@/components/wishlist-button"
+import { useShiprocketCheckout } from "@/hooks/use-shiprocket-checkout"
 
 
 
@@ -327,8 +328,9 @@ const ProductDetailPage = memo(function ProductDetailPage() {
   const { toast } = useToast()
   const addItem = useCartStore((state) => state.addItem)
   const getTotalItems = useCartStore((state) => state.getTotalItems)
-  const router = useRouter()  
+  const router = useRouter()
   const { withLoading } = useLoading()
+  const { initiateCheckout } = useShiprocketCheckout()
 
  const initialProduct = null
 const initialReviews = null
@@ -508,7 +510,7 @@ const itemDiscountPrice = currentDiscountPrice
     setQuantity(1)
   }
 
- const handleShopNow = () => {
+ const handleShopNow = (event: MouseEvent<HTMLButtonElement>) => {
   if (!product) return
 
   // ← removed: the !session?.user redirect block
@@ -538,7 +540,11 @@ addItem({
   flashSale: product.flashSale,
 })
 
-router.push("/checkout")
+// Shiprocket checkout needs the FULL current cart (same as /checkout
+// itself reads via useCartStore) — getState() for a synchronous read
+// right after addItem(), since the subscribed `items` elsewhere on this
+// page won't reflect this addItem() call until the next render.
+initiateCheckout(event, useCartStore.getState().items, "/checkout")
 }
 
   const handleSubmitReview = async (event: FormEvent<HTMLFormElement>) => {

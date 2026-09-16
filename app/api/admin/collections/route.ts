@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Collection } from "@/lib/models/collection"
+import { getNextSequence } from "@/lib/models/counter"
 import { isAdmin } from "@/lib/admin-check"
+import { notifyCollectionWebhook } from "@/lib/shiprocket-webhooks"
 
 // GET /api/admin/collections — full list (active + inactive) for admin table
 export async function GET() {
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "A collection with this slug already exists" }, { status: 409 })
     }
     const collection = await Collection.create({
+      numericId: await getNextSequence("collectionId"),
       name: body.name.trim(),
       slug: body.slug.trim().toLowerCase(),
       tagline: body.tagline,
@@ -59,6 +62,10 @@ export async function POST(req: NextRequest) {
       sortOrder: body.sortOrder ?? 0,
       isActive: body.isActive ?? true,
     })
+
+    // Fire-and-forget — a Shiprocket outage must never block collection creation.
+    void notifyCollectionWebhook(collection)
+
     return NextResponse.json({ collection }, { status: 201 })
   } catch (error: any) {
     console.error("[admin/collections] POST error:", error)

@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type React from "react";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Playfair_Display, Poppins } from "next/font/google";
 import { Analytics, GTMNoScript, PageViewTracker } from "@/components/analytics";   // New analytics component
 import { AuthSessionProvider } from "@/components/auth/session-provider";
@@ -37,6 +38,29 @@ const getBaseUrl = () => {
   if (process.env.NODE_ENV === "production") return BRAND.domain;
   return `http://localhost:${process.env.PORT || 3004}`;
 };
+
+// Shiprocket Custom Checkout widget script/CSS — staging vs prod.
+// No existing NODE_ENV-based switch for a Shiprocket asset pair was found
+// anywhere in this codebase to follow: lib/shiprocket.ts's logistics API
+// base URL (SHIPROCKET_API) is a single hardcoded production URL with no
+// staging variant at all, and the closest actual precedent
+// (SHIPROCKET_WEBHOOK_BASE_URL in lib/shiprocket-webhooks.ts) is a
+// single-URL env-var-override-with-production-default, not a two-URL
+// staging/production enum. This introduces that enum pattern fresh —
+// SHIPROCKET_CHECKOUT_ENV=staging opts in, anything else (including unset)
+// defaults to production, matching this repo's general "default to prod,
+// opt into staging" convention.
+const SHIPROCKET_CHECKOUT_ENV = process.env.SHIPROCKET_CHECKOUT_ENV === "staging" ? "staging" : "production";
+
+const SHIPROCKET_CHECKOUT_SCRIPT_URL =
+  SHIPROCKET_CHECKOUT_ENV === "staging"
+    ? "https://customcheckoutfastrr.netlify.app/assets/js/channels/shopify.js"
+    : "https://checkout-ui.shiprocket.com/assets/js/channels/shopify.js";
+
+const SHIPROCKET_CHECKOUT_CSS_URL =
+  SHIPROCKET_CHECKOUT_ENV === "staging"
+    ? "https://customcheckoutfastrr.netlify.app/assets/styles/shopify.css"
+    : "https://checkout-ui.shiprocket.com/assets/styles/shopify.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
@@ -104,6 +128,8 @@ export default function RootLayout({
         <link rel="canonical" href={BRAND.domain} />
         <link rel="icon" href="/nezallogo.jpg" />
         <link rel="preload" as="image" href="/nezallogo.jpg" />
+        {/* Shiprocket Custom Checkout widget styles — see hooks/useShiprocketCheckout.ts */}
+        <link rel="stylesheet" href={SHIPROCKET_CHECKOUT_CSS_URL} />
 
         {/* Structured data (already present) */}
         <script
@@ -128,6 +154,10 @@ export default function RootLayout({
      <body className="font-sans antialiased min-h-screen flex flex-col">
        {/* Google Tag Manager (noscript) — must be immediately after <body> */}
        <GTMNoScript />
+       {/* Shiprocket Custom Checkout widget — loads window.HeadlessCheckout,
+           used by hooks/useShiprocketCheckout.ts. afterInteractive so it
+           never blocks initial page load/hydration. */}
+       <Script src={SHIPROCKET_CHECKOUT_SCRIPT_URL} strategy="afterInteractive" />
        {/* Fires page_view / PageView on client-side route changes */}
        <PageViewTracker />
        <NextTopLoader

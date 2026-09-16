@@ -61,7 +61,19 @@ export async function GET(request: NextRequest) {
       Order.countDocuments(filter),
       Order.countDocuments({}),
       Order.countDocuments({ paymentStatus: "completed" }),
-      Order.countDocuments({ shiprocketOrderId: { $exists: true, $ne: null } }),
+      // "Has a Shiprocket shipment" — shiprocketOrderId holds a DIFFERENT
+      // Shiprocket product's id (the checkout/fastrr order id) for
+      // shiprocket_checkout orders, so it's always set for those regardless
+      // of whether a real logistics shipment exists; shiprocketLogisticsOrderId
+      // is the one that means one actually does for that payment method.
+      // Other payment methods still count via shiprocketOrderId as before.
+      // See lib/models/order.ts for the full explanation.
+      Order.countDocuments({
+        $or: [
+          { shiprocketLogisticsOrderId: { $exists: true, $ne: null } },
+          { shiprocketOrderId: { $exists: true, $ne: null }, paymentMethod: { $ne: "shiprocket_checkout" } },
+        ],
+      }),
       Order.countDocuments({ paymentStatus: { $nin: ["completed", "failed"] } }),
       Order.aggregate([
         {

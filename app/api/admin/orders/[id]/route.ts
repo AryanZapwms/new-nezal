@@ -20,7 +20,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   // Orders with a live Shiprocket shipment must be cancelled (via the
   // existing Cancel action, which also cancels the Shiprocket shipment)
   // before they can be deleted — deleting never touches Shiprocket itself.
-  if (order.shiprocketOrderId) {
+  //
+  // shiprocketOrderId holds a DIFFERENT Shiprocket product's id (the
+  // checkout/fastrr order id) for shiprocket_checkout orders, so it's
+  // always set for them regardless of whether a real logistics shipment
+  // exists — only shiprocketLogisticsOrderId means one actually does. Other
+  // payment methods still use shiprocketOrderId as before. See
+  // lib/models/order.ts for the full explanation.
+  const hasShipment =
+    order.paymentMethod === "shiprocket_checkout"
+      ? !!order.shiprocketLogisticsOrderId
+      : !!order.shiprocketOrderId
+  if (hasShipment) {
     return NextResponse.json(
       { error: "This order has a Shiprocket shipment. Cancel it first, then delete." },
       { status: 400 }

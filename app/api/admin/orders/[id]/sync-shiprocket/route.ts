@@ -18,11 +18,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await connectDB()
   const order = await Order.findById(id)
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 })
-  if (!order.shiprocketOrderId) {
+  // shiprocketOrderId holds a DIFFERENT Shiprocket product's id (the
+  // checkout/fastrr order id) for shiprocket_checkout orders — the real
+  // logistics/shipment order lives in shiprocketLogisticsOrderId for those.
+  // See lib/models/order.ts for the full explanation.
+  const logisticsId = order.shiprocketLogisticsOrderId || order.shiprocketOrderId
+  if (!logisticsId) {
     return NextResponse.json({ error: "No Shiprocket order linked yet" }, { status: 400 })
   }
 
-  const remote = await getShiprocketOrderStatus(order.shiprocketOrderId)
+  const remote = await getShiprocketOrderStatus(logisticsId)
   console.log(`Shiprocket status for order ${order._id}:`, JSON.stringify(remote.raw))
 
   if (CANCELLED_STATUSES.includes(remote.status) && order.cancellation?.status !== "completed") {

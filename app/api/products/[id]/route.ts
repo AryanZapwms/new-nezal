@@ -8,6 +8,7 @@ import "@/lib/models/category";
 import "@/lib/models/collection";
 import { getActiveFlashSaleMap, applyFlashSale } from "@/lib/flashSale";
 import { setDirectSale, clearDirectSale } from "@/lib/sale";
+import { notifyProductWebhook } from "@/lib/shiprocket-webhooks";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json(product.toObject(), {
+    const productObject = product.toObject();
+
+    // Fire-and-forget — a Shiprocket outage must never block this toggle.
+    void notifyProductWebhook(productObject);
+
+    return NextResponse.json(productObject, {
       headers: { "Cache-Control": "no-store, must-revalidate" },
     });
   } catch (error) {
@@ -251,6 +257,11 @@ export async function PUT(
     await product!.populate("collectionSaleId", "name slug");
 
     const updatedProduct = product!.toObject ? product!.toObject() : product;
+
+    // Fire-and-forget — a Shiprocket outage must never block this admin save.
+    // Covers both plain field edits and the direct-sale change just applied
+    // above via setDirectSale/clearDirectSale (see comment in lib/sale.ts).
+    void notifyProductWebhook(updatedProduct);
 
     console.log("✅ Product updated successfully:", id);
     return NextResponse.json(updatedProduct, {

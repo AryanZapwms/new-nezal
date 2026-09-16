@@ -14,6 +14,7 @@ import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTok
 import { getActiveFlashSaleMap } from "@/lib/flashSale"
 import { resolveCurrentPrice } from "@/lib/pricing"
 import { validateCouponServerSide, redeemCoupon } from "@/lib/coupon-server"
+import { notifyProductWebhook } from "@/lib/shiprocket-webhooks"
 import Razorpay from "razorpay"
 
 
@@ -262,7 +263,15 @@ const finalOrderTotal = couponDiscrepancy ? razorpayOrder.amount / 100 : realTot
       items.map(async (item: any) => {
         const quantity = item.quantity ?? 0
         if (quantity && item.product) {
-          await Product.findByIdAndUpdate(item.product, { $inc: { stock: -quantity } })
+          const updatedProduct = await Product.findByIdAndUpdate(
+            item.product,
+            { $inc: { stock: -quantity } },
+            { new: true }
+          )
+            .populate("company", "name")
+            .populate("category", "name")
+          // Fire-and-forget — a Shiprocket outage must never block order confirmation.
+          if (updatedProduct) void notifyProductWebhook(updatedProduct.toObject())
         }
       }),
     )

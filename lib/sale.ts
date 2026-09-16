@@ -16,6 +16,12 @@
 import mongoose from "mongoose"
 import { Product } from "@/lib/models/product"
 import { Collection } from "@/lib/models/collection"
+import { notifyProductWebhook } from "@/lib/shiprocket-webhooks"
+// Registers these schemas so the .populate("company"/"category") calls below
+// resolve even when the caller connected to Mongoose directly (e.g. tests)
+// instead of through lib/db.ts, which normally does this registration.
+import "@/lib/models/company"
+import "@/lib/models/category"
 
 export function computeSalePrice(price: number, percentage: number): number {
   return Math.round(price - (price * percentage) / 100)
@@ -98,6 +104,11 @@ function applyEffectivePatch(product: any) {
 // directSaleAppliedAt when the percentage actually changed — the product
 // edit form resubmits the full record on every save, so a no-op resubmit
 // must not let direct sale steal priority away from a newer collection sale.
+//
+// No notifyProductWebhook() call here on purpose — this function's only
+// caller (the product PUT route) already fires one webhook notification
+// after the whole edit (base fields + this sale change) is fully applied
+// and populated. Firing here too would double-notify Shiprocket per save.
 export async function setDirectSale(productId: string, percentage: number) {
   if (!(percentage > 0)) return clearDirectSale(productId)
 
@@ -144,12 +155,19 @@ export async function applyCollectionSale(collectionSlug: string, percentage: nu
   collection.saleAppliedAt = now
   await collection.save()
 
+  // Populated so the Shiprocket webhook fired below has real vendor/
+  // product_type instead of falling back to the generic defaults.
   const products = await Product.find({ collectionSlug })
+    .populate("company", "name")
+    .populate("category", "name")
   const bulkOps = products.map((product: any) => {
     product.collectionSalePercentage = percentage
     product.collectionSaleAppliedAt = now
     product.collectionSaleId = collection._id
     const eff = applyEffectivePatch(product)
+    // Fire-and-forget — a Shiprocket outage must never block a collection
+    // sale from applying to every product in it.
+    void notifyProductWebhook(product.toObject())
     return {
       updateOne: {
         filter: { _id: product._id },
@@ -186,11 +204,14 @@ export async function clearCollectionSale(collectionSlug: string) {
   await collection.save()
 
   const products = await Product.find({ collectionSaleId: collection._id })
+    .populate("company", "name")
+    .populate("category", "name")
   const bulkOps = products.map((product: any) => {
     product.collectionSalePercentage = null
     product.collectionSaleAppliedAt = null
     product.collectionSaleId = null
     const eff = applyEffectivePatch(product)
+    void notifyProductWebhook(product.toObject())
     return {
       updateOne: {
         filter: { _id: product._id },
@@ -226,6 +247,8 @@ export async function inheritCollectionSaleOnAdd(productId: string, collectionSl
   if (!collection || !(collection.salePercentage > 0)) return null
 
   const product = await Product.findById(productId)
+    .populate("company", "name")
+    .populate("category", "name")
   if (!product) return null
 
   product.collectionSalePercentage = collection.salePercentage
@@ -234,6 +257,7 @@ export async function inheritCollectionSaleOnAdd(productId: string, collectionSl
 
   applyEffectivePatch(product)
   await product.save()
+  void notifyProductWebhook(product.toObject())
   return product
 }
 
@@ -245,6 +269,8 @@ export async function removeCollectionSaleOnRemove(
   collectionId: mongoose.Types.ObjectId | string
 ) {
   const product = await Product.findById(productId)
+    .populate("company", "name")
+    .populate("category", "name")
   if (!product) return null
   if (!product.collectionSaleId || product.collectionSaleId.toString() !== collectionId.toString()) {
     return product
@@ -256,5 +282,6 @@ export async function removeCollectionSaleOnRemove(
 
   applyEffectivePatch(product)
   await product.save()
+  void notifyProductWebhook(product.toObject())
   return product
 }

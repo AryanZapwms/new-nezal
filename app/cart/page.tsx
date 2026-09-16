@@ -19,12 +19,14 @@ import {
 } from "@/components/ui/dialog"
 import { BULK_ORDER_LIMIT } from "@/lib/config"
 import { WhatsAppDiscountPopup } from "@/components/whatsapp-discount-popup"
+import { useShiprocketCheckout } from "@/hooks/use-shiprocket-checkout"
 
 export default function CartPage() {
 const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotalItems } = useCartStore()
- const { status } = useSession() 
+ const { status } = useSession()
   const totalPrice = getTotalPrice()
   const router = useRouter()
+  const { initiateCheckout } = useShiprocketCheckout()
   const [showBulkOrderModal, setShowBulkOrderModal] = useState(false)
   const [gstMap, setGstMap] = useState<Record<string, number>>({})
 
@@ -438,9 +440,9 @@ const totalGST = items.reduce((sum, item) => {
 
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-5 rounded-xl text-base"
-                  onClick={() => {
+                  onClick={(event) => {
                     if (status === "authenticated") {
-                      router.push("/checkout")
+                      initiateCheckout(event, items, "/checkout")
                     } else {
                       router.push("/auth/login?redirect=/checkout")
                     }

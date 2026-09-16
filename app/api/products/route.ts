@@ -4,11 +4,13 @@ import { connectDB } from "@/lib/db";
 import { Product } from "@/lib/models/product";
 import { Company } from "@/lib/models/company";
 import { Category } from "@/lib/models/category";
+import { getNextSequence } from "@/lib/models/counter";
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale";
 import { computeEffectiveSale } from "@/lib/sale";
+import { notifyProductWebhook } from "@/lib/shiprocket-webhooks";
 import Fuse from "fuse.js";
 
 // Simple in-memory cache for API responses
@@ -287,9 +289,10 @@ export async function POST(request: Request) {
         : undefined;
 
       const highestOrder = await Product.findOne().sort({ sortOrder: -1 }).select("sortOrder");
-      const nextSortOrder = (highestOrder?.sortOrder ?? -1) + 1;    
+      const nextSortOrder = (highestOrder?.sortOrder ?? -1) + 1;
 
     const product = new Product({
+      numericId: await getNextSequence("productId"),
       name,
       slug: slug || name.toLowerCase().replace(/\s+/g, "-"),
       description,
@@ -328,7 +331,15 @@ export async function POST(request: Request) {
 
     await product.save();
 
+    // Populated so the Shiprocket webhook fired below has real vendor/
+    // product_type instead of falling back to the generic defaults.
+    await product.populate("company", "name");
+    await product.populate("category", "name");
+
     const productObject = product.toObject ? product.toObject() : product;
+
+    // Fire-and-forget — a Shiprocket outage must never block product creation.
+    void notifyProductWebhook(productObject);
 
     return NextResponse.json(productObject, { status: 201 });
   } catch (error) {

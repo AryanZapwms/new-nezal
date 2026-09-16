@@ -2,6 +2,8 @@ import { connectDB } from "@/lib/db";
 import { Product } from "@/lib/models/product";
 import { Company } from "@/lib/models/company";
 import { Category } from "@/lib/models/category";
+import { getNextSequence } from "@/lib/models/counter";
+import { notifyProductWebhook } from "@/lib/shiprocket-webhooks";
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-check";
 
@@ -290,8 +292,15 @@ export async function POST() {
           continue;
         }
 
-        const product = new Product(productData);
+        const product = new Product({
+          ...productData,
+          numericId: await getNextSequence("productId"),
+        });
         await product.save();
+        await product.populate("company", "name");
+        await product.populate("category", "name");
+        // Fire-and-forget — a Shiprocket outage must never block this setup route.
+        void notifyProductWebhook(product.toObject());
         createdProducts.push(product);
       } catch (error) {
         errors.push(`Failed to create ${productData.name}: ${error.message}`);
