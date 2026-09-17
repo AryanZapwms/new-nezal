@@ -57,6 +57,7 @@
     "fuse.js": "^7.4.2",
     "immer": "latest",
     "input-otp": "1.4.1",
+    "ioredis": "^6.0.0",
     "lucide-react": "^0.454.0",
     "mongoose": "latest",
     "motion": "^12.23.24",
