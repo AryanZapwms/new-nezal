@@ -65,6 +65,7 @@ jobs:
         run: echo "RELEASE_NAME=$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
 
       - name: Upload build to VPS
+        timeout-minutes: 10
         run: |
           scp -v -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
             -i ~/.ssh/deploy_key -P ${{ secrets.SSH_PORT }} \
