@@ -14,6 +14,7 @@ const bunnyHostname = (() => {
 
 const nextConfig = {
   output: 'standalone',
+  serverExternalPackages: ['ioredis'],
   typescript: {
     ignoreBuildErrors: true,
   },
