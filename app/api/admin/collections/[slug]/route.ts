@@ -4,6 +4,7 @@ import { Collection } from "@/lib/models/collection"
 import { applyCollectionSale, clearCollectionSale } from "@/lib/sale"
 import { isAdmin } from "@/lib/admin-check"
 import { notifyCollectionWebhook } from "@/lib/shiprocket-webhooks"
+import { invalidateCache } from "@/lib/cache" 
 
 // GET /api/admin/collections/[slug] — fetch regardless of isActive, for editing
 export async function GET(
@@ -26,6 +27,7 @@ export async function GET(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
 
 // PUT /api/admin/collections/[slug] — full update
 export async function PUT(
@@ -96,6 +98,8 @@ export async function PUT(
     // affected PRODUCT — this call is for the collection document itself.)
     void notifyCollectionWebhook(updated)
 
+    await invalidateCache("collections:list:*") 
+
     return NextResponse.json({ collection: updated })
   } catch (error: any) {
     console.error("[admin/collections/slug] PUT error:", error)
@@ -137,6 +141,8 @@ export async function PATCH(
     // Fire-and-forget — a Shiprocket outage must never block this admin save.
     void notifyCollectionWebhook(updated)
 
+    await invalidateCache("collections:list:*") 
+
     return NextResponse.json({ collection: updated })
   } catch (error) {
     console.error("[admin/collections/slug] PATCH error:", error)
@@ -159,6 +165,7 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: "Collection not found" }, { status: 404 })
     }
+    await invalidateCache("collections:list:*") 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[admin/collections/slug] DELETE error:", error)

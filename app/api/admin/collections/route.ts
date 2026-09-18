@@ -4,6 +4,7 @@ import { Collection } from "@/lib/models/collection"
 import { getNextSequence } from "@/lib/models/counter"
 import { isAdmin } from "@/lib/admin-check"
 import { notifyCollectionWebhook } from "@/lib/shiprocket-webhooks"
+import { invalidateCache } from "@/lib/cache"  
 
 // GET /api/admin/collections — full list (active + inactive) for admin table
 export async function GET() {
@@ -63,9 +64,12 @@ export async function POST(req: NextRequest) {
       isActive: body.isActive ?? true,
     })
 
+    await invalidateCache("collections:list:*")
+
     // Fire-and-forget — a Shiprocket outage must never block collection creation.
     void notifyCollectionWebhook(collection)
-
+    
+  
     return NextResponse.json({ collection }, { status: 201 })
   } catch (error: any) {
     console.error("[admin/collections] POST error:", error)
