@@ -24,7 +24,7 @@ export function GlobalLoader() {
             className="relative w-24 h-24 rounded-2xl overflow-hidden shadow-xl border-4 border-[var(--color-brand-primary)]"
           >
             <Image
-              src="/nezallogo.jpg"
+              src="/nezallogo.png"
               alt="Nezal"
               fill
               className="object-contain"

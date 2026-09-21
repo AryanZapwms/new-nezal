@@ -29,7 +29,7 @@ export function pageMetadata({
     ? image.startsWith("http")
       ? image
       : `${BRAND.domain}${image}`
-    : `${BRAND.domain}/nezallogo.jpg`
+    : `${BRAND.domain}/nezallogo.png`
 
   return {
     title: `${title} | ${BRAND.name}`,

@@ -94,7 +94,7 @@ export function NewArrivalsSidebar({ companyId, companySlug }: NewArrivalsSideba
   flashSale: product.flashSale ?? null,
 },
                   title: arrival.title || product.name || "New Arrival",
-                  image: arrival.image || product.image || "/nezallogo.jpg",
+                  image: arrival.image || product.image || "/nezallogo.png",
                   company: { _id: companyId, name: "", slug: companySlug },
                 }
               })
@@ -167,11 +167,11 @@ export function NewArrivalsSidebar({ companyId, companySlug }: NewArrivalsSideba
                   style={{ background: "#f0f5f0" }}
                 >
                   <img
-                    src={product.image || "/nezallogo.jpg"}
+                    src={product.image || "/nezallogo.png"}
                     alt={product.title}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                     onError={(e) => {
-                      ;(e.target as HTMLImageElement).src = "/nezallogo.jpg"
+                      ;(e.target as HTMLImageElement).src = "/nezallogo.png"
                     }}
                   />
                   <div

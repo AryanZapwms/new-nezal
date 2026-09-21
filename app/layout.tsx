@@ -81,7 +81,7 @@ export const metadata: Metadata = {
       "Premium natural skincare crafted with Ayurvedic wisdom. 100% natural, cruelty‑free.",
     images: [
       {
-        url: `${BRAND.domain}/nezallogo.jpg`,
+        url: `${BRAND.domain}/nezallogo.png`,
         width: 1200,
         height: 630,
         alt: BRAND.name,
@@ -92,7 +92,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `${BRAND.name} - Natural Skincare`,
     description: "Nature's care, visible everywhere.",
-    images: [`${BRAND.domain}/nezallogo.jpg`],
+    images: [`${BRAND.domain}/nezallogo.png`],
   },
   robots: {
     index: true,
@@ -126,8 +126,8 @@ export default function RootLayout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href={BRAND.domain} />
-        <link rel="icon" href="/nezallogo.jpg" />
-        <link rel="preload" as="image" href="/nezallogo.jpg" />
+        <link rel="icon" href="/nezallogo.png" />
+        <link rel="preload" as="image" href="/nezallogo.png" />
         {/* Shiprocket Custom Checkout widget styles — see hooks/useShiprocketCheckout.ts */}
         <link rel="stylesheet" href={SHIPROCKET_CHECKOUT_CSS_URL} />
 
@@ -140,7 +140,7 @@ export default function RootLayout({
               "@type": "Organization",
               name: BRAND.name,
               url: BRAND.domain,
-              logo: `${BRAND.domain}/nezallogo.jpg`,
+              logo: `${BRAND.domain}/nezallogo.png`,
               description:
                 "Premium natural skincare products crafted with Ayurvedic wisdom.",
               sameAs: [

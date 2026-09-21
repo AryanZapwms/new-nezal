@@ -54,7 +54,7 @@ export default function NotFound() {
               <div className="flex items-center gap-3">
                 <div className="relative h-12 w-12 overflow-hidden rounded-md">
                   <Image
-                    src="/nezallogo.jpg"
+                    src="/nezallogo.png"
                     alt="Nezal"
                     fill
                     className="object-contain"
@@ -168,7 +168,7 @@ export default function NotFound() {
                     <div className="absolute left-6 -top-8 flex h-24 w-24 rotate-6 items-center justify-center rounded-2xl bg-white dark:bg-neutral-900 shadow-lg">
                       <div className="relative h-14 w-14">
                         <Image
-                          src="/nezallogo.jpg"
+                          src="/nezallogo.png"
                           alt="Nezal logo"
                           fill
                           className="object-contain"

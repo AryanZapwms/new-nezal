@@ -277,11 +277,11 @@ export function HeroProducts() {
                         )}
 
                         <img
-                          src={p.productId.image || "/nezallogo.jpg"}
+                          src={p.productId.image || "/nezallogo.png"}
                           alt={p.productId.name}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           onError={(e) => {
-                            ;(e.target as HTMLImageElement).src = "/nezallogo.jpg"
+                            ;(e.target as HTMLImageElement).src = "/nezallogo.png"
                           }}
                         />
                         <div

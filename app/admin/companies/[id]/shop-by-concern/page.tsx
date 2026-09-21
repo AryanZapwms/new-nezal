@@ -394,7 +394,7 @@ export default function ShopByConcernPage() {
                                             </div>
 
                                             <img
-                                                src={item.image || "/nezallogo.jpg"}
+                                                src={item.image || "/nezallogo.png"}
                                                 alt={item.title}
                                                 className="h-16 w-24 rounded-lg object-cover border border-gray-200 shrink-0"
                                             />
@@ -513,7 +513,7 @@ export default function ShopByConcernPage() {
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-3 min-w-0">
-                                                        <img src={(p as Product).image || "/nezallogo.jpg"} alt={p.name} className="h-9 w-9 object-cover rounded-lg border border-gray-200 shrink-0" />
+                                                        <img src={(p as Product).image || "/nezallogo.png"} alt={p.name} className="h-9 w-9 object-cover rounded-lg border border-gray-200 shrink-0" />
                                                         <div className="min-w-0">
                                                             <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
                                                             <p className="text-xs text-gray-400">{p.sku}</p>
@@ -637,7 +637,7 @@ export default function ShopByConcernPage() {
                                                         selected ? "bg-emerald-50 ring-1 ring-emerald-300" : "hover:bg-gray-50"
                                                     }`}
                                                 >
-                                                    <img src={p.image || "/nezallogo.jpg"} alt={p.name} className="h-9 w-9 object-cover rounded-lg border border-gray-200 shrink-0" />
+                                                    <img src={p.image || "/nezallogo.png"} alt={p.name} className="h-9 w-9 object-cover rounded-lg border border-gray-200 shrink-0" />
                                                     <div className="min-w-0 flex-1">
                                                         <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
                                                         <p className="text-xs text-gray-400">{p.sku}</p>

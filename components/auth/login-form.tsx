@@ -123,7 +123,7 @@ async function onSubmit(e: React.FormEvent) {
               <div className="flex items-center gap-4">
                 <div className="relative w-20 h-20 rounded-2xl overflow-hidden shadow-lg border-4 border-[--color-brand-primary] bg-white">
                   <Image
-                    src="/nezallogo.jpg"
+                    src="/nezallogo.png"
                     alt={`${BRAND.name} Logo`}
                     fill
                     className="object-cover"
@@ -185,7 +185,7 @@ async function onSubmit(e: React.FormEvent) {
             <div className="flex justify-center mb-4">
               <div className="relative w-20 h-20 rounded-2xl overflow-hidden shadow-lg border-4 border-[--color-brand-primary] bg-white">
                 <Image
-                  src="/nezallogo.jpg"
+                  src="/nezallogo.png"
                   alt={`${BRAND.name} Logo`}
                   fill
                   className="object-cover"

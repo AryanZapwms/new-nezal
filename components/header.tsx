@@ -697,7 +697,7 @@ const navCategories: MenuCategoryGroup[] = useMemo(() => {
               {/* LOGO */}
               <Link href="/" className="flex shrink-0 items-center gap-2 " aria-label={`${BRAND.name} home`}>
                 <div className="relative h-16 w-16 md:h-25 md:w-25">
-                  <Image src="/nezallogo.jpg" alt={BRAND.name} fill className="object-contain" priority />
+                  <Image src="/nezallogo.png" alt={BRAND.name} fill className="object-contain" priority />
                 </div>
               </Link>
 

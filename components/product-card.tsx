@@ -429,7 +429,7 @@ export default function ProductCard({
           ) : (
             <div className="flex h-full items-center justify-center">
               <div className="relative h-16 w-16 opacity-70">
-                <Image src="/nezallogo.jpg" alt="Logo" fill className="object-contain" />
+                <Image src="/nezallogo.png" alt="Logo" fill className="object-contain" />
               </div>
             </div>
           )}

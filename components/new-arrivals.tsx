@@ -95,7 +95,7 @@ export function NewArrivals({ companyId, companySlug, companyName }: NewArrivals
   flashSale: product.flashSale ?? null,
 },
                 title: arrival.title || product.name || "New Arrival",
-                image: arrival.image || product.image || "/nezallogo.jpg",
+                image: arrival.image || product.image || "/nezallogo.png",
                 description: arrival.description || "",
                 company: { _id: companyId, name: companyName, slug: companySlug },
               }
@@ -258,13 +258,13 @@ export function NewArrivals({ companyId, companySlug, companyName }: NewArrivals
                         style={{ height: "clamp(180px, 22vw, 240px)", background: "#f0f5f0" }}
                       >
                         <img
-                          src={product.image || "/nezallogo.jpg"}
+                          src={product.image || "/nezallogo.png"}
                           alt={product.title}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-107"
                           style={{ transform: "scale(1)" }}
                           onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.07)")}
                           onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-                          onError={e => { (e.target as HTMLImageElement).src = "/nezallogo.jpg" }}
+                          onError={e => { (e.target as HTMLImageElement).src = "/nezallogo.png" }}
                         />
 
                         {/* NEW badge */}

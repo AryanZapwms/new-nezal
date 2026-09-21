@@ -220,7 +220,7 @@ export function getWelcomeEmail(name: string) {
           <div class="container">
             <!-- Header -->
             <div class="header">
-              <img src="https://nezalherbocare.com/nezallogo.jpg" alt="Nezal Logo" class="logo">
+              <img src="https://nezalherbocare.com/nezallogo.png" alt="Nezal Logo" class="logo">
               <h1>Welcome to Nezal!</h1>
               <p>Expertly Crafted Skincare Solutions</p>
             </div>
@@ -552,7 +552,7 @@ export function getOrderConfirmationEmail({
           <div class="container">
             <!-- Header -->
             <div class="header">
-              <img src="https://nezalherbocare.com/nezallogo.jpg" alt="Nezal Logo" class="logo">
+              <img src="https://nezalherbocare.com/nezallogo.png" alt="Nezal Logo" class="logo">
               <h1>Order Confirmation</h1>
               <p>Your order has been received!</p>
             </div>
@@ -890,7 +890,7 @@ export function getOrderStatusUpdateEmail({
           <div class="container">
             <!-- Header -->
             <div class="header">
-              <img src="https://nezalherbocare.com/nezallogo.jpg" alt="Nezal Logo" class="logo">
+              <img src="https://nezalherbocare.com/nezallogo.png" alt="Nezal Logo" class="logo">
               <h1>Order Update</h1>
               <p>Your order status has been updated</p>
             </div>
@@ -1432,7 +1432,7 @@ export function getPaymentFailedEmail({
         <div class="email-wrapper">
           <div class="container">
             <div class="header">
-              <img src="https://nezalherbocare.com/nezallogo.jpg" alt="Nezal Logo" class="logo">
+              <img src="https://nezalherbocare.com/nezallogo.png" alt="Nezal Logo" class="logo">
               <h1>Payment Not Completed</h1>
               <p>We couldn't process your payment</p>
             </div>
@@ -1593,7 +1593,7 @@ export function getAbandonedPaymentEmail({
         <div class="email-wrapper">
           <div class="container">
             <div class="header">
-              <img src="https://nezalherbocare.com/nezallogo.jpg" alt="Nezal Logo" class="logo">
+              <img src="https://nezalherbocare.com/nezallogo.png" alt="Nezal Logo" class="logo">
               <h1>Looks like checkout didn't go through</h1>
               <p>Your order is still waiting for payment</p>
             </div>
