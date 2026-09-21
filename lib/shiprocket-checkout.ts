@@ -120,13 +120,8 @@ export async function initiateShiprocketCheckout(
 
   // Same NEXT_PUBLIC_SITE_URL-with-localhost-fallback pattern already used
   // for building an absolute post-payment redirect URL for a third-party
-  // checkout provider — see app/api/ccavenue/initiate/route.ts.
-  //
-  // FLAG: "/checkout/success" does not exist as a page in this app today
-  // (only /order-success/[id], which needs an order id we don't have yet
-  // at initiation time, and /checkout itself). Real customers redirected
-  // here with no redirectPath override will hit a 404 until that page is
-  // built or this default is pointed elsewhere.
+  // checkout provider — see app/api/ccavenue/initiate/route.ts. Default
+  // target is app/checkout/success/page.tsx.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const redirectUrl = `${siteUrl}${redirectPath || "/checkout/success"}`;
 
@@ -144,6 +139,8 @@ export async function initiateShiprocketCheckout(
     timestamp: new Date().toISOString(),
   });
   const signature = computeHmac(rawBody, apiSecret);
+
+  console.log("Shiprocket payload:", rawBody);
 
   const res = await fetch(CHECKOUT_URL, {
     method: "POST",
