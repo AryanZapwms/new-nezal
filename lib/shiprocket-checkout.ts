@@ -22,6 +22,30 @@ import { computeHmac } from "@/lib/shiprocket-hmac";
 
 const CHECKOUT_URL = "https://checkout-api.shiprocket.com/api/v1/access-token/checkout";
 
+// Shiprocket's own 422 error responses show timestamps like
+// "21-09-2026 12:40:13 PM" (DD-MM-YYYY, 12-hour clock) — not ISO 8601, so
+// this matches their format instead of guessing. ASSUMPTION: rendered in
+// IST (Asia/Kolkata) since Shiprocket is an India-based logistics platform
+// and no timezone was specified in their example — verify against a real
+// accepted (non-422) response and adjust if they actually expect
+// server-local time or UTC instead. IST has no daylight saving, so a fixed
+// +5:30 offset is reliable without needing a timezone database.
+function formatShiprocketTimestamp(date: Date): string {
+  const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+  const ist = new Date(date.getTime() + IST_OFFSET_MS);
+
+  const day = String(ist.getUTCDate()).padStart(2, "0");
+  const month = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const year = ist.getUTCFullYear();
+
+  const minutes = String(ist.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(ist.getUTCSeconds()).padStart(2, "0");
+  const period = ist.getUTCHours() >= 12 ? "PM" : "AM";
+  const hours = String(ist.getUTCHours() % 12 || 12).padStart(2, "0");
+
+  return `${day}-${month}-${year} ${hours}:${minutes}:${seconds} ${period}`;
+}
+
 export interface ShiprocketCheckoutCartItem {
   productId: string;
   quantity: number;
@@ -127,16 +151,12 @@ export async function initiateShiprocketCheckout(
 
   const rawBody = JSON.stringify({
     cart_data: { items },
-    redirectUrl,
-    // Shiprocket's 422 flagged "timestamp" as required but we have no
-    // documented format for THIS endpoint specifically — their order
-    // webhook's own example payload used ISO 8601 ("2025-06-30T06:59:32Z"),
-    // but that's a different endpoint/direction (inbound, not this outbound
-    // call). ISO 8601 is the most standard default absent more specific
-    // confirmation — ASSUMPTION, verify against a real non-422 response
-    // once live credentials are in and adjust if Shiprocket actually wants
-    // something else (e.g. unix epoch millis).
-    timestamp: new Date().toISOString(),
+    // Snake_case, matching cart_data/timestamp — Shiprocket rejected the
+    // camelCase "redirectUrl" with "redirectUrl - must not be null" even
+    // though a value was actually being sent, because it wasn't reading
+    // the field under that name at all.
+    redirect_url: redirectUrl,
+    timestamp: formatShiprocketTimestamp(new Date()),
   });
   const signature = computeHmac(rawBody, apiSecret);
 
