@@ -32,10 +32,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "cartItems must be a non-empty array" }, { status: 400 });
   }
 
+  const redirectPath: string | undefined = typeof body?.redirectPath === "string" ? body.redirectPath : undefined;
+
   try {
     await connectDB();
 
-    const result = await initiateShiprocketCheckout(cartItems);
+    const result = await initiateShiprocketCheckout(cartItems, redirectPath);
 
     // Only what the frontend actually needs — not Shiprocket's raw response
     // shape, and definitely not the API secret used to sign the request.

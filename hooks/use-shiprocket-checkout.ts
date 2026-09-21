@@ -74,7 +74,12 @@ export function useShiprocketCheckout() {
         const res = await fetch("/api/shiprocket/initiate-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cartItems: toShiprocketCartItems(cartItems) }),
+          body: JSON.stringify({
+            cartItems: toShiprocketCartItems(cartItems),
+            // Where Shiprocket sends the customer after payment (appending
+            // ?oid=...&ost=SUCCESS) — see app/checkout/success/page.tsx.
+            redirectPath: "/checkout/success",
+          }),
         })
 
         if (!res.ok) {

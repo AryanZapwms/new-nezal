@@ -49,7 +49,13 @@ export interface ShiprocketCheckoutResult {
 export class ShiprocketCheckoutValidationError extends Error {}
 
 export async function initiateShiprocketCheckout(
-  cartItems: ShiprocketCheckoutCartItem[]
+  cartItems: ShiprocketCheckoutCartItem[],
+  // Relative path (e.g. "/order-success/123") Shiprocket redirects the
+  // customer to after successful payment, appending ?oid=...&ost=SUCCESS
+  // per their Success Redirect docs — different call sites (product page
+  // Buy Now vs. cart page checkout) may want different targets, so this is
+  // a parameter rather than hardcoded. Resolved to an absolute URL below.
+  redirectPath?: string
 ): Promise<ShiprocketCheckoutResult> {
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     throw new ShiprocketCheckoutValidationError("Cart is empty");
@@ -112,7 +118,31 @@ export async function initiateShiprocketCheckout(
     });
   }
 
-  const rawBody = JSON.stringify({ cart_data: { items } });
+  // Same NEXT_PUBLIC_SITE_URL-with-localhost-fallback pattern already used
+  // for building an absolute post-payment redirect URL for a third-party
+  // checkout provider — see app/api/ccavenue/initiate/route.ts.
+  //
+  // FLAG: "/checkout/success" does not exist as a page in this app today
+  // (only /order-success/[id], which needs an order id we don't have yet
+  // at initiation time, and /checkout itself). Real customers redirected
+  // here with no redirectPath override will hit a 404 until that page is
+  // built or this default is pointed elsewhere.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const redirectUrl = `${siteUrl}${redirectPath || "/checkout/success"}`;
+
+  const rawBody = JSON.stringify({
+    cart_data: { items },
+    redirectUrl,
+    // Shiprocket's 422 flagged "timestamp" as required but we have no
+    // documented format for THIS endpoint specifically — their order
+    // webhook's own example payload used ISO 8601 ("2025-06-30T06:59:32Z"),
+    // but that's a different endpoint/direction (inbound, not this outbound
+    // call). ISO 8601 is the most standard default absent more specific
+    // confirmation — ASSUMPTION, verify against a real non-422 response
+    // once live credentials are in and adjust if Shiprocket actually wants
+    // something else (e.g. unix epoch millis).
+    timestamp: new Date().toISOString(),
+  });
   const signature = computeHmac(rawBody, apiSecret);
 
   const res = await fetch(CHECKOUT_URL, {
