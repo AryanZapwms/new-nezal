@@ -166,15 +166,20 @@ export async function initiateShiprocketCheckout(
     throw new Error(`Shiprocket checkout initiation returned a non-JSON response (status ${res.status})`);
   }
 
-  if (!res.ok || !data?.ok || !data?.token) {
+  // Success responses wrap the payload in a "result" envelope:
+  //   {"ok":true, "result":{"token":..., "expires_at":..., "data":{"order_id":...}}, "error":null}
+  // so token/expires_at/order_id live under data.result, not at the top level.
+  const result = data?.result;
+
+  if (!res.ok || data?.ok !== true || !result?.token) {
     throw new Error(
       `Shiprocket checkout initiation failed (status ${res.status}): ${JSON.stringify(data)}`
     );
   }
 
   return {
-    token: data.token,
-    expiresAt: data.expires_at ?? null,
-    orderId: data.data?.order_id ?? null,
+    token: result.token,
+    expiresAt: result.expires_at ?? null,
+    orderId: result.data?.order_id ?? null,
   };
 }
