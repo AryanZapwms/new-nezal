@@ -22,28 +22,15 @@ import { computeHmac } from "@/lib/shiprocket-hmac";
 
 const CHECKOUT_URL = "https://checkout-api.shiprocket.com/api/v1/access-token/checkout";
 
-// Shiprocket's own 422 error responses show timestamps like
-// "21-09-2026 12:40:13 PM" (DD-MM-YYYY, 12-hour clock) — not ISO 8601, so
-// this matches their format instead of guessing. ASSUMPTION: rendered in
-// IST (Asia/Kolkata) since Shiprocket is an India-based logistics platform
-// and no timezone was specified in their example — verify against a real
-// accepted (non-422) response and adjust if they actually expect
-// server-local time or UTC instead. IST has no daylight saving, so a fixed
-// +5:30 offset is reliable without needing a timezone database.
+// Shiprocket's checkout-initiation API expects an ISO 8601 UTC timestamp
+// with MICROSECOND precision, e.g. "2026-09-23T11:09:50.553530Z" — confirmed
+// via a direct curl test. Date.toISOString() only gives milliseconds
+// ("...50.553Z"), so the fractional part is padded from 3 to 6 digits
+// ("...50.553000Z"). JS Dates have no sub-millisecond precision, so the
+// last 3 digits are always 0 — that's fine: the timestamp is part of the
+// signed body, so the HMAC covers exactly the string sent either way.
 function formatShiprocketTimestamp(date: Date): string {
-  const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
-  const ist = new Date(date.getTime() + IST_OFFSET_MS);
-
-  const day = String(ist.getUTCDate()).padStart(2, "0");
-  const month = String(ist.getUTCMonth() + 1).padStart(2, "0");
-  const year = ist.getUTCFullYear();
-
-  const minutes = String(ist.getUTCMinutes()).padStart(2, "0");
-  const seconds = String(ist.getUTCSeconds()).padStart(2, "0");
-  const period = ist.getUTCHours() >= 12 ? "PM" : "AM";
-  const hours = String(ist.getUTCHours() % 12 || 12).padStart(2, "0");
-
-  return `${day}-${month}-${year} ${hours}:${minutes}:${seconds} ${period}`;
+  return date.toISOString().replace(/\.(\d{3})Z$/, ".$1000Z");
 }
 
 export interface ShiprocketCheckoutCartItem {
@@ -150,7 +137,7 @@ export async function initiateShiprocketCheckout(
   const redirectUrl = `${siteUrl}${redirectPath || "/checkout/success"}`;
 
   const rawBody = JSON.stringify({
-    cart_data: { items },
+    cart_data: { items, mobile_app: false },
     // Snake_case, matching cart_data/timestamp — Shiprocket rejected the
     // camelCase "redirectUrl" with "redirectUrl - must not be null" even
     // though a value was actually being sent, because it wasn't reading
