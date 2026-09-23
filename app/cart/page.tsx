@@ -9,7 +9,6 @@ import Image from "next/image"
 import { Trash2, Phone, Zap, Sparkles } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
 import {
   Dialog,
   DialogContent,
@@ -23,7 +22,6 @@ import { useShiprocketCheckout } from "@/hooks/use-shiprocket-checkout"
 
 export default function CartPage() {
 const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotalItems } = useCartStore()
- const { status } = useSession()
   const totalPrice = getTotalPrice()
   const router = useRouter()
   const { initiateCheckout } = useShiprocketCheckout()
@@ -440,13 +438,10 @@ const totalGST = items.reduce((sum, item) => {
 
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-5 rounded-xl text-base"
-                  onClick={(event) => {
-                    if (status === "authenticated") {
-                      initiateCheckout(event, items, "/checkout")
-                    } else {
-                      router.push("/auth/login?redirect=/checkout")
-                    }
-                  }}
+                  // Guests can check out too — Shiprocket's checkout collects
+                  // phone/address itself, and /api/shiprocket/initiate-checkout
+                  // accepts logged-in and guest carts alike.
+                  onClick={(event) => initiateCheckout(event, items, "/checkout")}
                 >
                   Proceed to Checkout
                 </Button>
