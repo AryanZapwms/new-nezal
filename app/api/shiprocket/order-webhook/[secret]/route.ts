@@ -82,7 +82,16 @@ export async function POST(
   { params }: { params: Promise<{ secret: string }> }
 ) {
   const { secret } = await params;
-  if (secret !== process.env.SHIPROCKET_ORDER_WEBHOOK_SECRET) {
+
+  // TEMP DEBUG: log every hit, before auth, to confirm whether Shiprocket is
+  // reaching this route at all. Never logs the secret itself — only whether
+  // it matched and whether the env var is set on this deployment.
+  const expectedSecret = process.env.SHIPROCKET_ORDER_WEBHOOK_SECRET;
+  console.log(
+    `[shiprocket-order-webhook] HIT — envSecretSet=${Boolean(expectedSecret)} secretMatch=${secret === expectedSecret} pathSecretLength=${secret?.length ?? 0} ip=${request.headers.get("x-forwarded-for") ?? "?"} ua=${request.headers.get("user-agent") ?? "?"} contentLength=${request.headers.get("content-length") ?? "?"}`
+  );
+
+  if (!expectedSecret || secret !== expectedSecret) {
     console.warn("Shiprocket order webhook: invalid or missing secret");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -91,8 +100,15 @@ export async function POST(
   try {
     payload = await request.json();
   } catch {
+    console.warn("[shiprocket-order-webhook] TEMP DEBUG: body was not valid JSON");
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  // TEMP DEBUG: identifiers + status only, so the log line can be matched to
+  // a ?oid= from /checkout/success without dumping customer PII.
+  console.log(
+    `[shiprocket-order-webhook] TEMP DEBUG payload ids — order_id=${payload?.order_id} platform_order_id=${payload?.platform_order_id} fastrr_order_id=${payload?.fastrr_order_id} payment_status=${payload?.payment_status} keys=${Object.keys(payload ?? {}).join(",")}`
+  );
 
   const platformOrderId: string | null = payload.order_id || payload.platform_order_id || null;
   const fastrrOrderIdNum = Number(payload.fastrr_order_id);
