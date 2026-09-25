@@ -133,6 +133,9 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Whether retrying can help (network/server errors) vs. a permanent
+  // answer from the API (not found, not your order, bad link).
+  const [errorRetryable, setErrorRetryable] = useState(true)
 
   const CANCELLATION_REASONS = [
   "Changed my mind", "Ordered by mistake", "Found a better price elsewhere",
@@ -179,9 +182,27 @@ const canRequestCancellation =
     }
     setLoading(true)
     setError(null)
+    setErrorRetryable(true)
     try {
       const res = await fetch(`/api/orders/${orderId}`)
-      if (!res.ok) throw new Error("Failed to fetch order details")
+      if (!res.ok) {
+        // The API returns { error, code } with a specific reason — see
+        // app/api/orders/[id]/route.ts. Fall back to a status-based message
+        // if the body isn't JSON (e.g. a proxy/HTML error page).
+        const body = await res.json().catch(() => ({}))
+        if (res.status === 401) {
+          router.replace(`/auth/login?redirect=${encodeURIComponent(`/profile/orders/${orderId}`)}`)
+          return
+        }
+        const fallback =
+          res.status === 404 ? "We couldn't find this order."
+          : res.status === 403 ? "This order isn't linked to your account."
+          : res.status === 400 ? "This order link is invalid."
+          : "Something went wrong while loading this order. Please try again."
+        console.error(`Order detail request failed: ${res.status} ${body?.code ?? ""}`, body)
+        setErrorRetryable(res.status >= 500)
+        throw new Error(body?.error || fallback)
+      }
       const data: Record<string, any> = await res.json()
       const normalizedItems: OrderItem[] = Array.isArray(data.items)
         ? data.items.map((item: Record<string, any>) => {
@@ -216,21 +237,21 @@ const canRequestCancellation =
     } catch (fetchError: any) {
       console.error("Error fetching order detail:", fetchError)
       setOrder(null)
-      setError(fetchError?.message ?? "Failed to fetch order details")
+      setError(fetchError?.message ?? "Something went wrong while loading this order. Please try again.")
     } finally {
       setLoading(false)
     }
-  }, [orderId])
+  }, [orderId, router])
 
   useEffect(() => {
     if (status === "loading") return
     if (status === "unauthenticated") {
-      router.replace("/auth/login")
+      router.replace(`/auth/login?redirect=${encodeURIComponent(`/profile/orders/${orderId}`)}`)
       return
     }
     if (!session) return
     fetchOrder()
-  }, [status, session, router, fetchOrder])
+  }, [status, session, router, fetchOrder, orderId])
 
   const statusInfo = useMemo(() => {
     if (!order?.orderStatus) {
@@ -290,12 +311,23 @@ const canRequestCancellation =
           <CardContent className="py-8 text-center space-y-4">
             <CircleX className="h-12 w-12 text-rose-500 mx-auto" />
             <p className="text-[--color-text-heading] font-medium">{error}</p>
-            <Button
-              onClick={fetchOrder}
-              className="bg-[--color-brand-primary] hover:bg-[--color-brand-primary-dark] text-white rounded-xl"
-            >
-              Try Again
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {errorRetryable && (
+                <Button
+                  onClick={fetchOrder}
+                  className="bg-[--color-brand-primary] hover:bg-[--color-brand-primary-dark] text-white rounded-xl"
+                >
+                  Try Again
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => router.push("/profile/orders")}
+                className="rounded-xl"
+              >
+                View all orders
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </main>

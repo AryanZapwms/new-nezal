@@ -15,6 +15,7 @@ import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTok
 import { getActiveFlashSaleMap } from "@/lib/flashSale";
 import { resolveCurrentPrice } from "@/lib/pricing";
 import { validateCouponServerSide, redeemCoupon } from "@/lib/coupon-server";
+import { ownedOrdersFilter } from "@/lib/order-access";
 
 // Strips spaces/dashes/parens/country-code prefixes and returns a clean
 // 10-digit Indian mobile number, or "" if it can't be normalized to one.
@@ -369,7 +370,7 @@ export async function GET(request: NextRequest) {
     }
 
     const orders = await Order.find({
-      user: user._id,
+      ...ownedOrdersFilter(user),
       paymentStatus: { $ne: "failed" }
     })
       .sort({ createdAt: -1 })

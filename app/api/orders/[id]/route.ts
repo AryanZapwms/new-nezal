@@ -7,25 +7,41 @@ import { sendEmail, getOrderStatusUpdateEmail } from "@/lib/email"
 import "@/lib/models/product"
 import "@/lib/models/user"
 import { BRAND } from "@/lib/config"
+import { isOrderOwnedBy } from "@/lib/order-access"
+import mongoose from "mongoose"
 
+
+// Every failure carries a machine-readable `code` alongside the human
+// `error` message so app/profile/orders/[id]/page.tsx can show the customer
+// the actual reason instead of one generic "failed to fetch".
+function orderError(status: number, code: string, error: string) {
+  return NextResponse.json({ error, code }, { status })
+}
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  let id: string | undefined
   try {
-    const { id } = await context.params // await params
+    ;({ id } = await context.params)
 
     const session = await getServerSession()
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return orderError(401, "UNAUTHENTICATED", "Please sign in to view this order.")
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.warn(`[orders/:id] Invalid order id "${id}" requested by ${session.user.email}`)
+      return orderError(400, "INVALID_ORDER_ID", "This order link is invalid.")
     }
 
     await connectDB()
 
     const user = await User.findOne({ email: session.user.email })
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+      console.warn(`[orders/:id] No User record for session email ${session.user.email}`)
+      return orderError(401, "USER_NOT_FOUND", "We couldn't find your account. Please sign in again.")
     }
 
-    const order = await Order.findOne({ _id: id, user: user._id })
+    const order = await Order.findById(id)
       .populate({
         path: "items.product",
         populate: { path: "company", select: "name slug" },
@@ -33,13 +49,25 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       .lean()
 
     if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 })
+      console.warn(`[orders/:id] Order ${id} not found (requested by user ${user._id})`)
+      return orderError(404, "ORDER_NOT_FOUND", "We couldn't find this order.")
+    }
+
+    if (!isOrderOwnedBy(order as any, user)) {
+      console.warn(
+        `[orders/:id] User ${user._id} denied access to order ${id} (order.user=${(order as any).user ?? "none"}, hasGuestEmail=${Boolean((order as any).guestEmail)})`
+      )
+      return orderError(
+        403,
+        "ORDER_FORBIDDEN",
+        "This order isn't linked to your account. Sign in with the email address you used at checkout to view it."
+      )
     }
 
     return NextResponse.json(order)
   } catch (error) {
-    console.error("Error fetching order:", error)
-    return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 })
+    console.error(`[orders/:id] Error fetching order ${id}:`, error)
+    return orderError(500, "SERVER_ERROR", "Something went wrong on our side while loading this order. Please try again.")
   }
 }
 

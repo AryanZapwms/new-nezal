@@ -20,6 +20,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Order } from "@/lib/models/order";
 import { Product } from "@/lib/models/product";
+import { User } from "@/lib/models/user";
 import { getActiveFlashSaleMap } from "@/lib/flashSale";
 import { resolveCurrentPrice } from "@/lib/pricing";
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } from "@/lib/email";
@@ -275,6 +276,17 @@ export async function POST(
       country: addr.country,
     };
 
+    // Link to the customer's account when the checkout email belongs to a
+    // verified user, so the order shows up in /profile/orders like any
+    // order placed on our own checkout. No session exists on this
+    // server-to-server call, so email is the only link available. Orders
+    // left unlinked are still visible to the owner through the guestEmail
+    // match in lib/order-access.ts.
+    const checkoutEmail = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
+    const linkedUser = checkoutEmail
+      ? await User.findOne({ email: checkoutEmail, isVerified: true }).select("_id")
+      : null;
+
     const paymentSucceeded = payload.payment_status === "Success";
     const orderNumber = `ORD-${Date.now()}`;
 
@@ -282,6 +294,7 @@ export async function POST(
 
     const order = await Order.create({
       orderNumber,
+      user: linkedUser?._id,
       guestEmail: payload.email,
       guestName,
       guestPhone: cleanPhone,

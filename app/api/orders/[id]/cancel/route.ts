@@ -4,6 +4,8 @@ import { User } from "@/lib/models/user"
 import { getServerSession } from "next-auth"
 import { type NextRequest, NextResponse } from "next/server"
 import { cancelShiprocketOrder } from "@/lib/shiprocket"
+import { isOrderOwnedBy } from "@/lib/order-access"
+import mongoose from "mongoose"
 
 const VALID_REASONS = [
   "Changed my mind",
@@ -29,8 +31,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       return NextResponse.json({ error: "Please select a valid reason" }, { status: 400 })
     }
 
-    const order = await Order.findOne({ _id: id, user: user._id })
-    if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 })
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 })
+    }
+    const order = await Order.findById(id)
+    if (!order || !isOrderOwnedBy(order as any, user)) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 })
+    }
 
     if (order.orderStatus === "cancelled") {
       return NextResponse.json({ error: "This order is already cancelled" }, { status: 400 })
