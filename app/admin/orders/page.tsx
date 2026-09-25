@@ -102,6 +102,16 @@ interface Order {
 }
 }
 
+// Stored by app/api/shiprocket/order-webhook/[secret]/route.ts.
+const SHIPROCKET_CHECKOUT = "shiprocket_checkout"
+
+function paymentMethodLabel(method: string | undefined, long = false): string {
+  if (method === "cod") return long ? "Cash on Delivery" : "COD"
+  if (method === "ccavenue") return "CCAvenue"
+  if (method === SHIPROCKET_CHECKOUT) return "Shiprocket Checkout"
+  return "Razorpay"
+}
+
 export default function AdminOrdersPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -419,7 +429,7 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
             { label: "Payment pending", value: stats.pending, dot: "bg-amber-500", color: "text-amber-700" },
             { label: "Shipped", value: stats.shipped, dot: "bg-blue-500", color: "text-blue-700" },
             {
-  label: "Fees collected (shipping)",
+  label: "Smart Order + buffer fees",
   value: `₹${stats.feesCollected.toFixed(2)}`,
   dot: "bg-purple-500",
   color: "text-purple-700",
@@ -572,7 +582,7 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
           variant={order.paymentMethod === "cod" ? "secondary" : order.paymentMethod === "ccavenue" ? "outline" : "default"}
           className={order.paymentMethod !== "cod" && order.paymentMethod !== "ccavenue" ? "bg-emerald-700 hover:bg-emerald-700" : ""}
         >
-          {order.paymentMethod === "cod" ? "COD" : order.paymentMethod === "ccavenue" ? "CCAvenue" : "Razorpay"}
+          {paymentMethodLabel(order.paymentMethod)}
         </Badge>
       </td>
       <td className="py-3.5 px-3 text-xs text-gray-500 border-gray-300 border">₹{(order.totalGstAmount ?? 0).toFixed(2)}</td>
@@ -822,10 +832,12 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
     </div>
   )}
   <div className="flex justify-between text-gray-600">
-  <span>Shipping</span>
+  <span>{selectedOrder.paymentMethod === SHIPROCKET_CHECKOUT ? "Shipping (Shiprocket)" : "Shipping"}</span>
   <span>₹{(selectedOrder.shippingAmount ?? 0).toFixed(2)}</span>
 </div>
-{selectedOrder.shippingBreakdown && (
+{/* Shiprocket's webhook only sends one shipping total — the breakdown on
+    these orders is just the schema's zero defaults, so it's not shown. */}
+{selectedOrder.shippingBreakdown && selectedOrder.paymentMethod !== SHIPROCKET_CHECKOUT && (
   <div className="pl-3 space-y-1 text-xs text-gray-400 border-l-2 border-gray-200 ml-1">
     <div className="flex justify-between">
       <span>Courier base rate {selectedOrder.shippingBreakdown.courierNameQuoted ? `(${selectedOrder.shippingBreakdown.courierNameQuoted})` : ""}</span>
@@ -857,7 +869,7 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
                   <div>
                     <p className="text-xs text-gray-600">Payment method</p>
                     <p className="font-medium text-sm text-gray-900">
-                      {selectedOrder.paymentMethod === "cod" ? "Cash on Delivery" : selectedOrder.paymentMethod === "ccavenue" ? "CCAvenue" : "Razorpay"}
+                      {paymentMethodLabel(selectedOrder.paymentMethod, true)}
                     </p>
                   </div>
                   <div>
@@ -1017,7 +1029,7 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
     ) : cancelTarget.paymentMethod === "cod" ? (
       <>This is a COD order — no payment was collected, so no refund is needed.</>
     ) : (
-      <>Payment was already collected via {cancelTarget.paymentMethod}. Cancelling here does <b>not</b> issue a refund automatically — you'll need to refund manually.</>
+      <>Payment was already collected via {paymentMethodLabel(cancelTarget.paymentMethod)}. Cancelling here does <b>not</b> issue a refund automatically — you'll need to refund manually.</>
     )}
   </div>
 )}
