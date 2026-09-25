@@ -2,7 +2,8 @@
 import type React from "react";
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Playfair_Display, Poppins } from "next/font/google";
+import { Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics, GTMNoScript, PageViewTracker } from "@/components/analytics";   // New analytics component
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { StickyHeaderStack } from "@/components/sticky-header-stack";
@@ -17,12 +18,19 @@ import { ProfileCompletionNudge } from "@/components/profile-completion-nudge"
 import NextTopLoader from "nextjs-toploader"
 
 // Load Nezal fonts
-const playfair = Playfair_Display({
-  subsets: ["latin"],
+// Playfair Display is self-hosted rather than loaded via next/font/google:
+// on GitHub Actions, Google Fonts served Playfair URLs that Turbopack's
+// next/font/google loader couldn't parse ("next/font/google queries have
+// exactly one entry"), failing the deploy build. Both files are the latin
+// subset of Google's variable font (v40), so each covers weights 400–900.
+const playfair = localFont({
+  src: [
+    { path: "./fonts/PlayfairDisplay-latin.woff2", weight: "400 900", style: "normal" },
+    { path: "./fonts/PlayfairDisplay-Italic-latin.woff2", weight: "400 900", style: "italic" },
+  ],
   variable: "--font-display",
-  weight: ["400", "700"],
-  style: ["italic", "normal"],
   display: "swap",
+  fallback: ["Georgia", "Times New Roman", "serif"],
 });
 
 const poppins = Poppins({
