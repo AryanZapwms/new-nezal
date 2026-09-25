@@ -110,6 +110,22 @@ export async function POST(
     `[shiprocket-order-webhook] TEMP DEBUG payload ids — order_id=${payload?.order_id} platform_order_id=${payload?.platform_order_id} fastrr_order_id=${payload?.fastrr_order_id} payment_status=${payload?.payment_status} keys=${Object.keys(payload ?? {}).join(",")}`
   );
 
+  // TEMP DEBUG: actual shipping/payment values Shiprocket sent, logged again
+  // around Order.create below so received vs. stored can be compared.
+  const shippingDebugFields = () => ({
+    shipping_charges: payload?.shipping_charges,
+    subtotal_price: payload?.subtotal_price,
+    total_amount_payable: payload?.total_amount_payable,
+    cod_charges: payload?.cod_charges,
+    coupon_discount: payload?.coupon_discount,
+    prepaid_discount: payload?.prepaid_discount,
+    total_discount: payload?.total_discount,
+    shipping_plan: payload?.shipping_plan,
+    payment_type: payload?.payment_type,
+    payment_status: payload?.payment_status,
+  });
+  console.log("[shiprocket-order-webhook] SHIPPING DEBUG (received) —", JSON.stringify(shippingDebugFields()));
+
   const platformOrderId: string | null = payload.order_id || payload.platform_order_id || null;
   const fastrrOrderIdNum = Number(payload.fastrr_order_id);
   const hasFastrrId = Number.isFinite(fastrrOrderIdNum) && fastrrOrderIdNum > 0;
@@ -262,6 +278,8 @@ export async function POST(
     const paymentSucceeded = payload.payment_status === "Success";
     const orderNumber = `ORD-${Date.now()}`;
 
+    console.log("[shiprocket-order-webhook] SHIPPING DEBUG (pre-save payload) —", JSON.stringify(shippingDebugFields()));
+
     const order = await Order.create({
       orderNumber,
       guestEmail: payload.email,
@@ -290,6 +308,21 @@ export async function POST(
 
     console.log(
       `[shiprocket-order-webhook] Created order ${order.orderNumber} (platform order ${platformOrderId})${needsReview ? " — FLAGGED FOR REVIEW" : ""}`
+    );
+
+    // TEMP DEBUG: what actually got stored, to compare with the payload above.
+    console.log(
+      "[shiprocket-order-webhook] SHIPPING DEBUG (stored) —",
+      JSON.stringify({
+        orderNumber: order.orderNumber,
+        shippingAmount: order.shippingAmount,
+        totalAmount: order.totalAmount,
+        codCharge: order.codCharge,
+        discountAmount: order.discountAmount,
+        couponCode: order.couponCode,
+        paymentStatus: order.paymentStatus,
+        shippingBreakdown: order.shippingBreakdown,
+      })
     );
 
     // ── Post-order side effects — only once payment is actually confirmed,
