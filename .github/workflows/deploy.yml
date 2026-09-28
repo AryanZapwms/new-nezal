@@ -52,7 +52,11 @@ jobs:
           du -sh deploy_package/node_modules/* 2>/dev/null | sort -rh | head -15
 
       - name: Package bundle
-        run: tar -czf deploy_package.tar.gz -C deploy_package .
+        run: |
+          tar -czf deploy_package.tar.gz -C deploy_package .
+          # scp prints nothing while transferring in CI, so log the size
+          # being uploaded to tell a slow upload apart from a stuck one.
+          ls -lh deploy_package.tar.gz
 
         
       - name: Set up SSH

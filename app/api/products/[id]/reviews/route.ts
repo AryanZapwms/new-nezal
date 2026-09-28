@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Review } from "@/lib/models/review"
 import { Product } from "@/lib/models/product"
+import { syncProductRating } from "@/lib/syncProductRating"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import "@/lib/models/product"
@@ -43,6 +44,9 @@ function buildSummary(reviews: any[]) {
   }
 }
 
+// Public response shape — never include userEmail (or any email) here.
+// Emails are only exposed through the admin-protected routes under
+// app/api/admin/reviews/**.
 function mapReview(review: any) {
   return {
     id: review._id.toString(),
@@ -52,7 +56,6 @@ function mapReview(review: any) {
     rating: review.rating,
     comment: review.comment,
     userName: review.userName,
-    userEmail: review.userEmail,
     reply: review.reply
       ? {
           message: review.reply.message,
@@ -174,6 +177,10 @@ export async function POST(
       })
       created = true
     }
+
+    // Editing an approved review sends it back to pending, which drops it
+    // from the product's rating until an admin re-approves it.
+    await syncProductRating(productId)
 
     const reviews = await Review.find({ product: productId, status: "approved" }).sort({ createdAt: -1 }).lean()
     const summary = buildSummary(reviews)

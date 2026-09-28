@@ -221,7 +221,6 @@ interface ProductReview {
   rating: number
   comment: string
   userName: string
-  userEmail: string
   reply: { message: string; repliedAt: string; repliedBy: string; repliedByName: string } | null
   createdAt: string
   updatedAt: string
@@ -275,7 +274,6 @@ function parseProductReview(review: any): ProductReview {
     rating: Number(review?.rating) || 0,
     comment: typeof review?.comment === "string" ? review.comment : "",
     userName: typeof review?.userName === "string" ? review.userName : "",
-    userEmail: typeof review?.userEmail === "string" ? review.userEmail : "",
     reply: reply && reply.message ? reply : null,
     createdAt:
       typeof review?.createdAt === "string"

@@ -529,8 +529,8 @@ const amountLeftForFreeShipping =
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            // Recipient is always the signed-in account email (server-enforced).
             type: "payment-failed",
-            to: shippingAddress.email || session?.user?.email,
             subject: "Payment Verification Failed - Nezal",
             data: {
               customerName: shippingAddress.name || session?.user?.name || "Customer",
@@ -559,8 +559,8 @@ const amountLeftForFreeShipping =
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // Recipient is always the signed-in account email (server-enforced).
           type: "payment-failed",
-          to: shippingAddress.email || session?.user?.email,
           subject: "Payment Cancelled - Nezal",
           data: {
             customerName: shippingAddress.name || session?.user?.name || "Customer",

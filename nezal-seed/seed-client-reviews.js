@@ -66,6 +66,7 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "admin"], default: "user" },
     isActive: { type: Boolean, default: true },
     isVerified: { type: Boolean, default: false },
+    isImported: { type: Boolean, default: false },
   },
   { timestamps: true },
 )
@@ -209,6 +210,7 @@ async function findOrCreateReviewerUser(name) {
       role: "user",
       isActive: true,
       isVerified: true,
+      isImported: true, // hidden from user lists/counts — see lib/imported-users.ts
     })
     console.log(`   + created placeholder user for "${name}" (${placeholderEmail})`)
   }

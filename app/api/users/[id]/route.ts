@@ -1,6 +1,9 @@
 // app/api/users/[id]/route.ts
+import mongoose from "mongoose"
 import { connectDB } from "@/lib/db"
 import { User } from "@/lib/models/user"
+import { Review } from "@/lib/models/review"
+import { isImportedUser } from "@/lib/imported-users"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { NextResponse } from "next/server"
@@ -92,6 +95,29 @@ export async function DELETE(
     await connectDB()
 
     const { id } = await params
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Invalid user id" }, { status: 400 })
+    }
+
+    const existing = await User.findById(id).select("email isImported").lean()
+    if (!existing) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Imported reviewers exist only to own their reviews (Review.user is
+    // required) — deleting one would orphan those reviews.
+    if (isImportedUser(existing as any)) {
+      const reviewCount = await Review.countDocuments({ user: id })
+      if (reviewCount > 0) {
+        return NextResponse.json(
+          {
+            error: `This is an imported reviewer account with ${reviewCount} review${reviewCount === 1 ? "" : "s"}. Delete its reviews first (Admin → Reviews), then delete the account.`,
+          },
+          { status: 409 }
+        )
+      }
+    }
 
     const user = await User.findByIdAndDelete(id)
 

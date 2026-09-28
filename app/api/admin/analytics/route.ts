@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db"
 import { Order } from "@/lib/models/order"
 import { Product } from "@/lib/models/product"
 import { User } from "@/lib/models/user"
+import { realUserFilter } from "@/lib/imported-users"
 import { Company } from "@/lib/models/company"
 import { Review } from "@/lib/models/review"
 import "@/lib/models/category"
@@ -90,7 +91,8 @@ export async function GET(request: NextRequest) {
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ])
     const overviewTotalProducts = await Product.countDocuments({ isActive: true })
-    const overviewTotalUsers = await User.countDocuments({ role: "user" })
+    // Review-import placeholder accounts are not customers — see lib/imported-users.ts.
+    const overviewTotalUsers = await User.countDocuments({ role: "user", ...realUserFilter() })
 
     const companyDocs = await Company.find({ isActive: true }).select("name slug logo").lean()
     const companyMap = new Map<string, { name: string; slug: string; logo?: string }>()

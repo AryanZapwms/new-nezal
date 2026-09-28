@@ -7,7 +7,8 @@
     "dev": "next dev --port 3005",
     "lint": "eslint .",
     "start": "next start --port 3005",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:reviews": "node nezal-seed/seed-customer-reviews-xlsx.js"
   },
   "dependencies": {
     "@auth/core": "latest",

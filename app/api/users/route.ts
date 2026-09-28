@@ -3,6 +3,7 @@ import { User } from "@/lib/models/user"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { NextResponse } from "next/server"
+import { importedUserFilter, realUserFilter } from "@/lib/imported-users"
 
 export async function GET(request: Request) {
   try {
@@ -15,9 +16,15 @@ export async function GET(request: Request) {
 
     await connectDB()
 
-    const users = await User.find({}).select("-password").sort({ createdAt: -1 })
+    // Imported review placeholder accounts are hidden unless asked for.
+    const includeImported = new URL(request.url).searchParams.get("includeImported") === "true"
 
-    return NextResponse.json(users)
+    const [users, importedCount] = await Promise.all([
+      User.find(includeImported ? {} : realUserFilter()).select("-password").sort({ createdAt: -1 }),
+      User.countDocuments(importedUserFilter()),
+    ])
+
+    return NextResponse.json(users, { headers: { "X-Imported-User-Count": String(importedCount) } })
   } catch (error) {
     console.error("Error fetching users:", error)
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 })

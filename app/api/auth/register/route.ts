@@ -7,6 +7,7 @@ import { registerSchema } from "@/lib/validation";
 import { type NextRequest, NextResponse } from "next/server";
 import { sendOtpEmail } from "@/lib/EmailOtp";
 import { generateNumericOtp, hashOtp } from "@/lib/otp";
+import { isImportedEmail } from "@/lib/imported-users";
 
 /* ─── 1. Turnstile Verification Helper ─────────────────────── */
 async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
@@ -85,12 +86,19 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = validation.data.email.trim().toLowerCase();
 
+    // Review-import placeholder addresses (lib/imported-users.ts) can never be
+    // registered. Generic message so the reserved domain isn't advertised.
+    if (isImportedEmail(normalizedEmail)) {
+      return NextResponse.json({ error: "Unable to register with this email address." }, { status: 400 });
+    }
+
     const existingVerifiedUser = await User.findOne({ email: normalizedEmail, isVerified: true });
     if (existingVerifiedUser) {
       return NextResponse.json({ error: "User already exists" }, { status: 400 });
     }
 
-    await User.deleteMany({ email: normalizedEmail, isVerified: false });
+    // Clears abandoned unverified sign-ups — never an imported placeholder account.
+    await User.deleteMany({ email: normalizedEmail, isVerified: false, isImported: { $ne: true } });
     await Otp.deleteMany({ email: normalizedEmail });
 
     const hashedPassword = await hashPassword(validation.data.password);

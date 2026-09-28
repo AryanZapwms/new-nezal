@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { connectDB } from "@/lib/db"
 import { Review } from "@/lib/models/review"
+import { syncProductRating } from "@/lib/syncProductRating"
 
 export async function PATCH(
   req: NextRequest,
@@ -37,6 +38,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Review not found" }, { status: 404 })
   }
 
+  await syncProductRating(review.product)
+
   return NextResponse.json({ success: true, review })
 }
 
@@ -60,6 +63,8 @@ export async function DELETE(
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
+
+  await syncProductRating(result.product)
 
   return NextResponse.json({ success: true })
 }

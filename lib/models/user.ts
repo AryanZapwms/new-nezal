@@ -44,6 +44,8 @@ const userSchema = new mongoose.Schema(
       enum: ["credentials", "google"],
       default: "credentials",
     },
+    // Placeholder account created by a review import (see lib/imported-users.ts).
+    isImported: { type: Boolean, default: false, index: true },
     resetOtpHash: { type: String },
     resetOtpExpires: { type: Date },
   },

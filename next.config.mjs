@@ -14,6 +14,24 @@ const bunnyHostname = (() => {
 
 const nextConfig = {
   output: 'standalone',
+  // The process.cwd()-based file serving routes (app/api/serve-files etc.)
+  // make the tracer pull the whole project into .next/standalone. Keep out
+  // what the server never needs at runtime: public/ is copied into the
+  // deploy bundle separately by .github/workflows/deploy.yml (so tracing it
+  // uploaded it twice), and the rest is dev/test-only material.
+  outputFileTracingExcludes: {
+    '*': [
+      'public/**',
+      'tests/**',
+      'nezal-seed/**',
+      'scripts/**',
+      '*.md',
+      'errors.txt',
+      'products_backup.json',
+      'package-lock.json*',
+      'tsconfig.tsbuildinfo',
+    ],
+  },
   serverExternalPackages: ['ioredis'],
   typescript: {
     ignoreBuildErrors: true,

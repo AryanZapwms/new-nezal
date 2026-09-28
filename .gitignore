@@ -140,3 +140,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 *.zip
+
+# Seed source spreadsheets (customer names/emails — never commit)
+data/*.xlsx
+data/*.xls
+data/*.csv
+nezal-seed/data/*.xlsx
+nezal-seed/data/*.xls
+nezal-seed/data/*.csv
+~$*.xlsx

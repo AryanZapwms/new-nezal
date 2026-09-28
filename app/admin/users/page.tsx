@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Trash2, Edit2, Eye, Search, Users, ShieldCheck, UserCheck } from "lucide-react"
+import { Trash2, Edit2, Eye, Search, Users, ShieldCheck, UserCheck, MessageSquareQuote } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,11 @@ interface User {
   isVerified?: boolean
   provider?: "credentials" | "google"
   wishlist?: string[]
+  isImported?: boolean
 }
+
+// Mirrors lib/imported-users.ts — review-import placeholder accounts.
+const isImportedUser = (u: User) => u.isImported === true || /@imported\.nezal$/i.test(u.email)
 
 interface EditForm {
   name: string
@@ -77,6 +81,8 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showImported, setShowImported] = useState(false)
+  const [importedCount, setImportedCount] = useState(0)
   const itemsPerPage = 8
 
   const [viewUser, setViewUser] = useState<User | null>(null)
@@ -88,14 +94,15 @@ export default function UsersPage() {
   useEffect(() => {
     if (!session) { router.push("/auth/login"); return }
     fetchUsers()
-  }, [session, router])
+  }, [session, router, showImported])
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("/api/users")
+      const res = await fetch(showImported ? "/api/users?includeImported=true" : "/api/users")
       if (!res.ok) throw new Error("Failed to fetch users")
       const data = await res.json()
       setUsers(data)
+      setImportedCount(Number(res.headers.get("X-Imported-User-Count")) || 0)
     } catch (error) {
       console.error("Error fetching users:", error)
     } finally {
@@ -154,10 +161,14 @@ export default function UsersPage() {
     setDeletingId(userId)
     try {
       const res = await fetch(`/api/users/${userId}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete user")
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to delete user")
+      }
       await fetchUsers()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error)
+      alert(error?.message || "Failed to delete user")
     } finally {
       setDeletingId(null)
     }
@@ -177,8 +188,10 @@ export default function UsersPage() {
   const startIdx = (currentPage - 1) * itemsPerPage
   const paginatedUsers = filteredUsers.slice(startIdx, startIdx + itemsPerPage)
 
-  const adminCount = users.filter((u) => u.role === "admin").length
-  const activeCount = users.filter((u) => u.isActive).length
+  // Stats always describe real accounts, even while imported reviewers are shown.
+  const realUsers = users.filter((u) => !isImportedUser(u))
+  const adminCount = realUsers.filter((u) => u.role === "admin").length
+  const activeCount = realUsers.filter((u) => u.isActive).length
 
   if (loading) {
     return (
@@ -221,11 +234,12 @@ export default function UsersPage() {
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 32 }}>
           {[
-            { icon: <Users size={15} />, label: "Total Users", value: users.length },
+            { icon: <Users size={15} />, label: "Total Users", value: realUsers.length },
             { icon: <ShieldCheck size={15} />, label: "Admins", value: adminCount },
             { icon: <UserCheck size={15} />, label: "Active", value: activeCount },
+            { icon: <MessageSquareQuote size={15} />, label: "Imported reviewers", value: importedCount },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 12, padding: "18px 22px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7, color: "#a8a29e", marginBottom: 8 }}>
@@ -241,9 +255,19 @@ export default function UsersPage() {
         <div style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 14, overflow: "hidden" }}>
           {/* Table header bar */}
           <div style={{ padding: "18px 24px", borderBottom: "1px solid #f5f5f4", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-            <p style={{ fontSize: 13, fontWeight: 500, color: "#1c1917", margin: 0 }}>
-              {filteredUsers.length} {searchQuery ? "matching" : "total"} users
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#1c1917", margin: 0 }}>
+                {filteredUsers.length} {searchQuery ? "matching" : "total"} users
+              </p>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#78716c", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={showImported}
+                  onChange={(e) => { setShowImported(e.target.checked); setCurrentPage(1) }}
+                />
+                Show imported reviewers
+              </label>
+            </div>
             <div style={{ position: "relative", width: 280 }}>
               <Search size={13} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#a8a29e" }} />
               <input
