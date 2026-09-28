@@ -62,6 +62,16 @@ function monthKey(date: Date) {
   return `${year}-${month}-01`
 }
 
+// Groups orders per customer. Guest orders (e.g. Shiprocket checkout) have no
+// `user`, so they're keyed by their normalized email instead — otherwise every
+// guest collapses into one `_id: null` group.
+const CUSTOMER_KEY = {
+  $ifNull: [
+    "$user",
+    { $concat: ["guest:", { $toLower: { $trim: { input: { $ifNull: ["$guestEmail", "unknown"] } } } }] },
+  ],
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -503,7 +513,7 @@ export async function GET(request: NextRequest) {
       { $match: { createdAt: { $lte: endDate } } },
       {
         $group: {
-          _id: "$user",
+          _id: CUSTOMER_KEY,
           firstOrder: { $min: "$createdAt" },
           totalRevenue: { $sum: "$totalAmount" },
           totalOrders: { $sum: 1 },
@@ -630,7 +640,9 @@ export async function GET(request: NextRequest) {
       { $match: { paymentStatus: "completed" } },
       {
         $group: {
-          _id: "$user",
+          _id: CUSTOMER_KEY,
+          guestName: { $first: { $ifNull: ["$guestName", "$shippingAddress.name"] } },
+          guestEmail: { $first: "$guestEmail" },
           totalRevenue: { $sum: "$totalAmount" },
           totalOrders: { $sum: 1 },
         },
@@ -807,6 +819,16 @@ export async function GET(request: NextRequest) {
       paymentStatusBreakdown,
       topCustomers: await Promise.all(
         topCustomers.map(async (customer) => {
+          // Guest orders are keyed "guest:<email>" (see CUSTOMER_KEY) — no User doc to look up.
+          if (typeof customer._id === "string") {
+            return {
+              userId: customer._id,
+              name: customer.guestName || "Guest",
+              email: customer.guestEmail ?? "",
+              totalRevenue: customer.totalRevenue,
+              totalOrders: customer.totalOrders,
+            }
+          }
           const userDoc = await User.findById(customer._id).select("name email").lean()
           return {
             userId: customer._id.toString(),
