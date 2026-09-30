@@ -34,7 +34,7 @@ export async function PUT(
         minOrderValue: body.minOrderValue !== undefined ? Number(body.minOrderValue) : undefined,
         isActive: body.isActive,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!coupon) {

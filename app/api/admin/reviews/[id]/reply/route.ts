@@ -72,7 +72,7 @@ export async function POST(
           repliedByName: session.user.name || "Admin",
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!review) {

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
           ccavenueTrackingId: tracking_id,
           ccavenueBankRefNo: bank_ref_no,
         },
-        { new: true }
+        { returnDocument: "after" }
       );
 
       if (updatedOrder) {
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       const updatedOrder = await Order.findByIdAndUpdate(
         order_id,
         { paymentStatus: "failed" },
-        { new: true }
+        { returnDocument: "after" }
       ).catch(() => null);
 
       if (updatedOrder) {

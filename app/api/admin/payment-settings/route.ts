@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const settings = await PaymentSettings.findOneAndUpdate(
       {},
       { $setOnInsert: DEFAULT_SETTINGS },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
     );
     return NextResponse.json(settings);
   } catch (error) {
@@ -67,7 +67,7 @@ export async function PUT(request: NextRequest) {
           useRealTimeCodCharge, // ← new
         },
       },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
 
     return NextResponse.json(settings);

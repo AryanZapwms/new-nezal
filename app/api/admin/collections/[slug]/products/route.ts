@@ -56,7 +56,7 @@ export async function POST(
     const product = await Product.findByIdAndUpdate(
       productId,
       { $set: { collectionSlug: slug } },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!product) {
@@ -98,7 +98,7 @@ export async function DELETE(
     const product = await Product.findOneAndUpdate(
       { _id: productId, collectionSlug: slug },
       { $unset: { collectionSlug: "" } },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!product) {

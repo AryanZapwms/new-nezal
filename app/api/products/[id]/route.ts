@@ -100,7 +100,7 @@ export async function PATCH(
     const product = await Product.findByIdAndUpdate(
       id,
       { $set: { isActive } },
-      { new: true }
+      { returnDocument: "after" }
     )
       .populate("company", "name slug")
       .populate("category", "name slug");
@@ -238,7 +238,7 @@ export async function PUT(
     let product = await Product.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!product) {

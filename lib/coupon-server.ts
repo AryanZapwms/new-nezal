@@ -80,7 +80,7 @@ export async function redeemCoupon(
   const coupon = await Coupon.findOneAndUpdate(
     { code, isActive: true, $expr: { $lt: ["$usedCount", "$maxUses"] } },
     { $inc: { usedCount: 1 } },
-    { new: true },
+    { returnDocument: "after" },
   )
   if (!coupon) {
     return {

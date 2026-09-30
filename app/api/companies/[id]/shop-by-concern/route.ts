@@ -175,7 +175,7 @@ export async function POST(request: Request, { params }: ParamType) {
           shopByConcern: newItem,
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     ).populate({
       path: "shopByConcern.product",
       select: "name slug company",

@@ -61,7 +61,7 @@ export async function PUT(
       },
       {
         arrayFilters: [{ "elem.productId": new mongoose.Types.ObjectId(productId) }],
-        new: true,
+        returnDocument: "after",
       }
     );
 
@@ -133,7 +133,7 @@ export async function DELETE(
           },
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (newArrival.image && newArrival.image.startsWith("/")) {

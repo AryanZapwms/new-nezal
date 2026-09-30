@@ -207,4 +207,46 @@ describe("PUT /api/cart", () => {
     expect(stored!.items).toHaveLength(0)
     expect(stored!.status).toBe("active") // still active, just empty — never "abandoned" for being empty
   })
+
+  it("handles concurrent syncs for the same cart without a VersionError", async () => {
+    const product = await Product.create({
+      name: "Aloe Gel",
+      slug: "aloe-gel-concurrent",
+      price: 200,
+      company: new mongoose.Types.ObjectId(),
+      sku: "SKU-ALOE",
+      stock: 50,
+    })
+    await Cart.create({ guestToken: "guest-race", status: "active", items: [{ product: product._id, quantity: 1 }] })
+    const cookie = "nezal-cart-token=guest-race"
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    // Item syncs, pagehide flushes and contact-info syncs all at once — the
+    // mix that used to fail every save() but one with a VersionError.
+    const responses = await Promise.all([
+      ...Array.from({ length: 8 }, (_, i) =>
+        PUT(makePutRequest({ items: [{ product: product._id.toString(), quantity: i + 1 }] }, cookie))
+      ),
+      PUT(makePutRequest({ guestPhone: "9876543210" }, cookie)),
+      PUT(makePutRequest({ whatsappConsent: true }, cookie)),
+    ])
+
+    expect(responses.map((r) => r.status)).toEqual(Array(10).fill(200))
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
+
+    const stored: any = await Cart.findOne({ guestToken: "guest-race" }).lean()
+    expect(stored.items).toHaveLength(1)
+    expect(stored.guestPhone).toBe("9876543210")
+    expect(stored.whatsappConsent).toBe(true)
+    expect(await Cart.countDocuments({ guestToken: "guest-race" })).toBe(1)
+  })
+
+  it("does not write into a cart that converted mid-flight", async () => {
+    const cart = await Cart.create({ guestToken: "guest-conv", status: "converted", items: [] })
+    const res = await PUT(makePutRequest({ items: [] }, "nezal-cart-token=guest-conv"))
+    expect(res.status).toBe(200)
+    const stored: any = await Cart.findById(cart._id).lean()
+    expect(stored.status).toBe("converted")
+  })
 })

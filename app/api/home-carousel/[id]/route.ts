@@ -33,7 +33,7 @@ export async function PATCH(
       if (key in body) update[key] = body[key]
     }
 
-    const banner = await HomeBanner.findByIdAndUpdate(id, update, { new: true })
+    const banner = await HomeBanner.findByIdAndUpdate(id, update, { returnDocument: "after" })
     if (!banner) {
       return NextResponse.json({ error: "Banner not found" }, { status: 404 })
     }

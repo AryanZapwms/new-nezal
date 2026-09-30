@@ -13,6 +13,7 @@
 // silently wipe the shopper's cart.
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
+import { Cart } from "@/lib/models/cart"
 import {
   resolveCartIdentity,
   getOrCreateActiveCart,
@@ -42,8 +43,19 @@ export async function PUT(request: NextRequest) {
     const identity = await resolveCartIdentity(request)
     const { cart, newGuestToken } = await getOrCreateActiveCart(identity)
 
+    // One atomic $set rather than load → mutate → save(). The client fires
+    // several PUTs for the same cart close together (debounced item sync,
+    // pagehide/visibilitychange flushes, contact-info syncs); with save(),
+    // replacing `items` bumps __v and every concurrent save but one failed
+    // with a VersionError. Items were already replaced wholesale, so
+    // last-write-wins is the same semantics without the conflict.
+    const $set: Record<string, unknown> = { lastActivityAt: new Date() }
+    let itemCount = cart.items.length
+
     if (Array.isArray(body?.items)) {
-      cart.items = sanitizeCartItems(body.items) as any
+      const items = sanitizeCartItems(body.items)
+      $set.items = items
+      itemCount = items.length
     }
 
     if (body?.guestPhone !== undefined) {
@@ -51,17 +63,18 @@ export async function PUT(request: NextRequest) {
       // an already-stored phone — same "lightweight validation, ignore
       // garbage" posture as sanitizeCartItems.
       const cleanPhone = sanitizeGuestPhone(body.guestPhone)
-      if (cleanPhone) (cart as any).guestPhone = cleanPhone
+      if (cleanPhone) $set.guestPhone = cleanPhone
     }
 
     if (typeof body?.whatsappConsent === "boolean") {
-      ;(cart as any).whatsappConsent = body.whatsappConsent
+      $set.whatsappConsent = body.whatsappConsent
     }
 
-    cart.lastActivityAt = new Date()
-    await cart.save()
+    // status: "active" guard — if the cart converted/merged in the meantime,
+    // leave that history alone rather than writing into it.
+    await Cart.updateOne({ _id: cart._id, status: "active" }, { $set })
 
-    const res = NextResponse.json({ success: true, itemCount: cart.items.length })
+    const res = NextResponse.json({ success: true, itemCount })
     if (newGuestToken) setCartTokenCookie(res, newGuestToken)
     return res
   } catch (error) {

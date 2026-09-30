@@ -61,7 +61,7 @@ export async function PUT(request: Request) {
           country: "India",
         },
       },
-      { new: true },
+      { returnDocument: "after" },
     )
 
     if (!user) {

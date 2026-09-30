@@ -39,6 +39,12 @@ export type CartIdentity =
  * the guest cart-token cookie, which may not exist yet.
  */
 export async function resolveCartIdentity(request: NextRequest): Promise<CartIdentity> {
+  return resolveCartIdentityFromGuestToken(request.cookies.get(CART_TOKEN_COOKIE)?.value || null)
+}
+
+/** Same as resolveCartIdentity, for callers without a NextRequest (Server
+ *  Components read the cookie via next/headers and pass it in). */
+export async function resolveCartIdentityFromGuestToken(guestToken: string | null): Promise<CartIdentity> {
   const session = await getServerSession()
   if (session?.user?.email) {
     await connectDB()
@@ -48,7 +54,6 @@ export async function resolveCartIdentity(request: NextRequest): Promise<CartIde
     }
   }
 
-  const guestToken = request.cookies.get(CART_TOKEN_COOKIE)?.value || null
   return { kind: "guest", guestToken }
 }
 
@@ -113,6 +118,39 @@ export async function markCartConverted(
   await connectDB()
   await Cart.findOneAndUpdate(
     { _id: cartId, status: "active" }, // no-op if it already converted/isn't active
+    { status: "converted", convertedOrderId: orderId, convertedAt: new Date() },
+  )
+}
+
+/**
+ * Converts the visitor's active cart for an order placed OFF our site
+ * (Shiprocket Custom Checkout), where no order route ever saw the cart. Only
+ * a cart last touched before the order existed (plus a small grace window)
+ * is converted, so revisiting an old success URL can't swallow a cart the
+ * shopper started afterwards.
+ */
+const OFFSITE_CONVERSION_GRACE_MS = 10 * 60 * 1000
+
+export async function convertCartForOffsiteOrder(
+  identity: CartIdentity,
+  orderId: mongoose.Types.ObjectId | string,
+  orderCreatedAt: Date,
+) {
+  const owner =
+    identity.kind === "user"
+      ? { user: identity.userId }
+      : identity.guestToken
+        ? { guestToken: identity.guestToken }
+        : null
+  if (!owner) return
+
+  await connectDB()
+  await Cart.findOneAndUpdate(
+    {
+      ...owner,
+      status: "active",
+      lastActivityAt: { $lte: new Date(new Date(orderCreatedAt).getTime() + OFFSITE_CONVERSION_GRACE_MS) },
+    },
     { status: "converted", convertedOrderId: orderId, convertedAt: new Date() },
   )
 }

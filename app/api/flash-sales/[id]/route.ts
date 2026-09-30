@@ -54,7 +54,7 @@ export async function PUT(
         products: body.products,
         isActive: body.isActive,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!sale) {
@@ -105,7 +105,7 @@ export async function PATCH(
     const sale = await FlashSale.findByIdAndUpdate(
       id,
       { isActive: body.isActive },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!sale) {

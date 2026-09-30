@@ -76,7 +76,7 @@ export async function PUT(
         sortOrder: body.sortOrder,
         isActive: body.isActive,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!concern) {
@@ -126,7 +126,7 @@ export async function PATCH(
     const concern = await Concern.findOneAndUpdate(
       { slug },
       { isActive: body.isActive },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!concern) {

@@ -105,7 +105,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     if (orderStatus) updateData.orderStatus = orderStatus
     if (paymentStatus) updateData.paymentStatus = paymentStatus
 
-    const order = await Order.findByIdAndUpdate(id, updateData, { new: true })
+    const order = await Order.findByIdAndUpdate(id, updateData, { returnDocument: "after" })
       .populate("user")
       .populate("items.product")
 

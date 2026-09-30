@@ -55,7 +55,7 @@ export async function PATCH(
     const heroProduct = await HeroProduct.findByIdAndUpdate(
       id,
       { isActive: body.isActive },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!heroProduct) {

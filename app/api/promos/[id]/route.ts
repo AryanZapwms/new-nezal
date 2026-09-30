@@ -63,7 +63,7 @@ export async function PUT(
         isActive: body.isActive ?? true,
         priority: body.priority || 0,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!promo) {

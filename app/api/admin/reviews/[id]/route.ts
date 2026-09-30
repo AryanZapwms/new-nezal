@@ -31,7 +31,7 @@ export async function PATCH(
   const review = await Review.findByIdAndUpdate(
     id,
     { status: action === "approve" ? "approved" : "rejected" },
-    { new: true }
+    { returnDocument: "after" }
   )
 
   if (!review) {

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         return Company.updateOne(
           { _id: company._id },
           { $set: { position: index } },
-          { new: true }
+          { returnDocument: "after" }
         );
       })
     );

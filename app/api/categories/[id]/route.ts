@@ -70,7 +70,7 @@ export async function PUT(
         parent: parent || null,
         isActive,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!category) {

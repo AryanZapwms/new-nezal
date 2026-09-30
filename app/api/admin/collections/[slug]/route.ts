@@ -78,7 +78,7 @@ export async function PUT(
         sortOrder: body.sortOrder ?? 0,
         isActive: body.isActive ?? true,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!updated) {
@@ -132,7 +132,7 @@ export async function PATCH(
     const updated = await Collection.findOneAndUpdate(
       { slug },
       { $set: body },
-      { new: true }
+      { returnDocument: "after" }
     )
     if (!updated) {
       return NextResponse.json({ error: "Collection not found" }, { status: 404 })

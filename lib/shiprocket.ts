@@ -43,8 +43,14 @@ export async function createShiprocketOrderForOrder(
   const order = await Order.findById(orderId).populate("items.product");
   if (!order) {
     console.error(`Shiprocket: order ${orderId} not found`);
+    console.error(`[SR-ADHOC-DEBUG] createShiprocketOrderForOrder ABORT — order ${orderId} not found`);
     return null;
   }
+
+  // TEMP DEBUG [SR-ADHOC-DEBUG]: proves the shipping-API path was entered at all.
+  console.log(
+    `[SR-ADHOC-DEBUG] createShiprocketOrderForOrder ENTER order=${order._id} orderNumber=${(order as any).orderNumber} paymentMethod=${(order as any).paymentMethod} paymentStatus=${(order as any).paymentStatus} items=${(order as any).items.length} existingShiprocketOrderId=${(order as any).shiprocketOrderId ?? null} existingLogisticsOrderId=${(order as any).shiprocketLogisticsOrderId ?? null}`
+  );
 
   const addr = order.shippingAddress;
   const items = order.items.map((item: any) => {
@@ -83,6 +89,7 @@ export async function createShiprocketOrderForOrder(
     console.error(
       `Shiprocket: order ${order._id} has an invalid phone ("${addr?.phone ?? order.guestPhone}"), skipping creation`
     );
+    console.error(`[SR-ADHOC-DEBUG] createShiprocketOrderForOrder SKIP order=${order._id} — invalid phone, apiv2 NOT called`);
     await Order.findByIdAndUpdate(order._id, {
       shippingStatus: "needs_attention",
       shiprocketError: "Invalid phone number — could not create shipment. Please correct the phone number and retry from admin.",
@@ -125,9 +132,13 @@ export async function createShiprocketOrderForOrder(
       codCharge: order.codCharge ?? 0,
     });
 
+    console.log(`[SR-ADHOC-DEBUG] createShiprocketOrderForOrder OK order=${order._id} result=${JSON.stringify(result)}`);
     return result;
   } catch (err) {
     console.error(`Shiprocket order creation failed for order ${order._id}:`, err);
+    console.error(
+      `[SR-ADHOC-DEBUG] createShiprocketOrderForOrder FAILED order=${order._id} error=${err instanceof Error ? err.message : String(err)}`
+    );
     // Record the failure on the order itself so it's visible in admin
     // rather than only living in the server logs — makes stuck orders
     // (like the recurring billing_phone 422s) easy to find and fix.
@@ -193,8 +204,14 @@ async function getToken(): Promise<string> {
   const now = Date.now();
 
   if (tokenCache && now - tokenCache.fetchedAt < TOKEN_TTL_MS) {
+    console.log(`[SR-ADHOC-DEBUG] getToken using cached token (age ${Math.round((now - tokenCache.fetchedAt) / 60000)} min)`);
     return tokenCache.token;
   }
+
+  // TEMP DEBUG [SR-ADHOC-DEBUG]: presence only — never the values or the token.
+  console.log(
+    `[SR-ADHOC-DEBUG] getToken logging in to ${SHIPROCKET_API}/auth/login — SHIPROCKET_EMAIL set=${Boolean(process.env.SHIPROCKET_EMAIL)} SHIPROCKET_PASSWORD set=${Boolean(process.env.SHIPROCKET_PASSWORD)}`
+  );
 
   const res = await fetch(`${SHIPROCKET_API}/auth/login`, {
     method: "POST",
@@ -204,6 +221,8 @@ async function getToken(): Promise<string> {
       password: process.env.SHIPROCKET_PASSWORD,
     }),
   });
+
+  console.log(`[SR-ADHOC-DEBUG] getToken login response status=${res.status}`);
 
   if (!res.ok) {
     const err = await res.text();
@@ -351,16 +370,37 @@ export async function createShiprocketOrder(
   // ── DEBUG: the full payload right before it's sent to Shiprocket ───────────
   console.log("[Shiprocket:createOrder] Full payload:", JSON.stringify(payload, null, 2));
 
-  const res = await fetch(`${SHIPROCKET_API}/orders/create/adhoc`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  // TEMP DEBUG [SR-ADHOC-DEBUG]: the exact request (Authorization header
+  // deliberately omitted). Contains customer name/phone/address — remove
+  // once diagnosed.
+  console.log(
+    `[SR-ADHOC-DEBUG] REQUEST POST ${SHIPROCKET_API}/orders/create/adhoc order_id=${params.orderId} body=${JSON.stringify(payload)}`
+  );
 
-  const data = await res.json();
+  let res: Response;
+  try {
+    res = await fetch(`${SHIPROCKET_API}/orders/create/adhoc`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (networkErr) {
+    console.error(`[SR-ADHOC-DEBUG] NETWORK ERROR order_id=${params.orderId}:`, networkErr);
+    throw networkErr;
+  }
+
+  const rawText = await res.text();
+  console.log(`[SR-ADHOC-DEBUG] RESPONSE order_id=${params.orderId} status=${res.status} body=${rawText}`);
+
+  let data: any;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(`Shiprocket order creation returned non-JSON (status ${res.status}): ${rawText.slice(0, 500)}`);
+  }
 
   // ── DEBUG: Shiprocket's confirmation response ───────────────────────────────
   console.log("[Shiprocket:createOrder] Response:", JSON.stringify(data, null, 2));
@@ -482,7 +522,9 @@ export async function getShiprocketOrderStatus(shiprocketOrderId: number) {
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(`Shiprocket order status fetch failed: ${JSON.stringify(data)}`);
+    throw new Error(
+      `Shiprocket order status fetch failed for logistics order id ${shiprocketOrderId} (GET /orders/show, status ${res.status}): ${JSON.stringify(data)}`
+    );
   }
   const record = data?.data ?? data;
   return {

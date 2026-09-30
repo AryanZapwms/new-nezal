@@ -208,7 +208,7 @@ const finalOrderTotal = couponDiscrepancy ? razorpayOrder.amount / 100 : realTot
       orderStatus: "processing",
       cartId: existingOrder.cartId ?? orderCart._id,
     },
-    { new: true }
+    { returnDocument: "after" }
   )
 } else {
   const orderNumber = `ORD-${Date.now()}`
@@ -266,7 +266,7 @@ const finalOrderTotal = couponDiscrepancy ? razorpayOrder.amount / 100 : realTot
           const updatedProduct = await Product.findByIdAndUpdate(
             item.product,
             { $inc: { stock: -quantity } },
-            { new: true }
+            { returnDocument: "after" }
           )
             .populate("company", "name")
             .populate("category", "name")

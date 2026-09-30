@@ -67,7 +67,7 @@ export async function PUT(request: Request, { params }: ParamType) {
           shopByConcern: reordered,
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!updatedCompany) {

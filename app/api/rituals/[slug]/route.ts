@@ -63,7 +63,7 @@ export async function PUT(
         sortOrder: body.sortOrder,
         isActive: body.isActive,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!ritual) {
@@ -115,7 +115,7 @@ export async function PATCH(
     const ritual = await Ritual.findOneAndUpdate(
       { slug },
       { isActive: body.isActive },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!ritual) {

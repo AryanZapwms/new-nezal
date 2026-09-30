@@ -116,6 +116,17 @@ ccavenueBankRefNo: { type: String, default: null },
     // this field; they still get their one-and-only Shiprocket order id in
     // shiprocketOrderId as before.
     shiprocketLogisticsOrderId: { type: Number, default: null },
+    // shiprocket_checkout orders only: "cod" or "prepaid", from the payload's
+    // payment_type. paymentStatus stays "pending" for COD (nothing collected
+    // yet), so this is what tells a confirmed COD order apart from an unpaid
+    // prepaid one — see isCheckoutOrderConfirmed in
+    // lib/shiprocket-checkout-order.ts.
+    shiprocketPaymentType: { type: String, enum: ["cod", "prepaid", null], default: null },
+    // shiprocket_checkout orders only: set once stock/shipment/emails have
+    // run, by an atomic claim so the webhook and the success-page fallback
+    // can't both run them. Legacy orders (created before this field existed)
+    // don't have it at all, which the claim treats as "already done".
+    checkoutFinalizedAt: { type: Date },
     shiprocketShipmentId: { type: Number, default: null },
     awbCode:             { type: String, default: null },
     courierName:         { type: String, default: null },
@@ -190,6 +201,24 @@ ccavenueBankRefNo: { type: String, default: null },
   },
   { timestamps: true }   // ← second argument to mongoose.Schema, not a field
 
+)
+
+// One order per Shiprocket Custom Checkout order — what makes the atomic
+// upsert in lib/shiprocket-checkout-order.ts safe when the webhook and the
+// success-page fallback race. Partial so the many orders with a null id are
+// unconstrained, and the numeric one is scoped to shiprocket_checkout since
+// COD/Razorpay/CCAvenue orders reuse shiprocketOrderId for LOGISTICS order
+// ids, a different id space.
+orderSchema.index(
+  { shiprocketPlatformOrderId: 1 },
+  { unique: true, partialFilterExpression: { shiprocketPlatformOrderId: { $type: "string" } } }
+)
+orderSchema.index(
+  { shiprocketOrderId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { paymentMethod: "shiprocket_checkout", shiprocketOrderId: { $type: "number" } },
+  }
 )
 
 

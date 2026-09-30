@@ -16,18 +16,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params
   await connectDB()
-  const order = await Order.findById(id)
+  const order: any = await Order.findById(id)
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 })
   // shiprocketOrderId holds a DIFFERENT Shiprocket product's id (the
   // checkout/fastrr order id) for shiprocket_checkout orders — the real
   // logistics/shipment order lives in shiprocketLogisticsOrderId for those.
   // See lib/models/order.ts for the full explanation.
-  const logisticsId = order.shiprocketLogisticsOrderId || order.shiprocketOrderId
+  // Never fall back to shiprocketOrderId for those: it's the fastrr checkout
+  // id, which the logistics API answers with "404 record not found".
+  const logisticsId =
+    order.paymentMethod === "shiprocket_checkout"
+      ? order.shiprocketLogisticsOrderId
+      : order.shiprocketLogisticsOrderId || order.shiprocketOrderId
   if (!logisticsId) {
-    return NextResponse.json({ error: "No Shiprocket order linked yet" }, { status: 400 })
+    return NextResponse.json({ error: "No Shiprocket logistics shipment linked yet" }, { status: 400 })
   }
 
-  const remote = await getShiprocketOrderStatus(logisticsId)
+  let remote: Awaited<ReturnType<typeof getShiprocketOrderStatus>>
+  try {
+    remote = await getShiprocketOrderStatus(logisticsId)
+  } catch (err) {
+    console.error(`Shiprocket status sync failed for order ${order._id} (logistics id ${logisticsId}):`, err)
+    return NextResponse.json({ error: "Shiprocket status fetch failed", logisticsId }, { status: 502 })
+  }
   console.log(`Shiprocket status for order ${order._id}:`, JSON.stringify(remote.raw))
 
   if (CANCELLED_STATUSES.includes(remote.status) && order.cancellation?.status !== "completed") {

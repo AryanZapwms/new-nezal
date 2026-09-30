@@ -114,6 +114,15 @@ function findOrderDetailsHref(node: ReactNode): string | null {
   if (!isValidElement(node)) return null
   const props = node.props as any
   if (typeof props.href === "string" && props.href.startsWith("/profile/orders/")) return props.href
+  // The page composes plain function components (OrderConfirmed, ...) —
+  // expand those too. Anything that can't be called outside a render
+  // (hooks) just doesn't contribute.
+  if (typeof node.type === "function") {
+    try {
+      const found = findOrderDetailsHref((node.type as (p: any) => ReactNode)(props))
+      if (found) return found
+    } catch {}
+  }
   return findOrderDetailsHref(props.children)
 }
 

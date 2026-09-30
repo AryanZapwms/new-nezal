@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         isPublished,
         company 
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!blog) {

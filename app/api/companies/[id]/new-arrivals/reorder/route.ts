@@ -69,7 +69,7 @@ export async function PUT(
           newArrivals: reorderedArrivals,
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     console.log(

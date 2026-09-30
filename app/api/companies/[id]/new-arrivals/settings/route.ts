@@ -50,7 +50,7 @@ export async function PUT(
     }
 
     const updatedCompany = await Company.findByIdAndUpdate(id, updateData, {
-      new: true,
+      returnDocument: "after",
     });
 
     if (!updatedCompany) {

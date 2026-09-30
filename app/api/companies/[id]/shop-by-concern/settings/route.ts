@@ -42,7 +42,7 @@ export async function PUT(request: Request, { params }: ParamType) {
           },
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!updatedCompany) {
