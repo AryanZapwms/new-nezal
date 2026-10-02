@@ -24,6 +24,42 @@ function sanitizePhone(raw: string | undefined | null): string {
   return digits.length === 10 ? digits : "";
 }
 
+// Which payment_method to tell Shiprocket's logistics API for an order —
+// "COD" makes the courier collect the order value on delivery, "Prepaid"
+// makes them hand it over without collecting anything, so getting this
+// wrong on a COD order means the money is never collected.
+//
+// COD / Razorpay / CCAvenue orders: unchanged — paymentMethod alone decides.
+//
+// Shiprocket Custom Checkout orders are all stored with paymentMethod
+// "shiprocket_checkout" whether the customer chose COD or paid online
+// inside the widget, so paymentMethod can't tell them apart:
+//   1. shiprocketPaymentType ("cod" | "prepaid") — set from the webhook's
+//      payment_type on every order created since that field was added.
+//   2. Orders from before that field existed stored nothing about
+//      payment_type, so fall back to what they do have:
+//        - paymentStatus "completed" → paid online → Prepaid
+//        - codCharge > 0 → Shiprocket only adds cod_charges to a COD order → COD
+//   3. Neither signal (unpaid, no COD fee): null. Guessing "Prepaid" could
+//      ship an unpaid order for free and guessing "COD" could charge a
+//      customer who already paid, so the caller refuses and flags the order
+//      for a human instead.
+export function resolveShiprocketPaymentMethod(order: {
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
+  shiprocketPaymentType?: string | null;
+  codCharge?: number | null;
+}): "COD" | "Prepaid" | null {
+  if (order.paymentMethod !== "shiprocket_checkout") {
+    return order.paymentMethod === "cod" ? "COD" : "Prepaid";
+  }
+  if (order.shiprocketPaymentType === "cod") return "COD";
+  if (order.shiprocketPaymentType === "prepaid") return "Prepaid";
+  if (order.paymentStatus === "completed") return "Prepaid";
+  if ((order.codCharge ?? 0) > 0) return "COD";
+  return null;
+}
+
 // Builds a Shiprocket adhoc-order payload from an existing local Order doc
 // and calls createShiprocketOrder(). Shared by:
 //   - autoCreateShiprocketOrder() below (guarded on shiprocketOrderId,
@@ -97,6 +133,25 @@ export async function createShiprocketOrderForOrder(
     return null;
   }
 
+  const paymentMethod = resolveShiprocketPaymentMethod(order as any);
+  console.log(
+    `[SR-ADHOC-DEBUG] payment_method resolved to ${paymentMethod ?? "UNDETERMINED"} for order=${order._id} (paymentMethod=${(order as any).paymentMethod} shiprocketPaymentType=${(order as any).shiprocketPaymentType ?? null} paymentStatus=${(order as any).paymentStatus} codCharge=${(order as any).codCharge ?? 0})`
+  );
+
+  if (!paymentMethod) {
+    // Same treatment as an invalid phone: don't send Shiprocket something we
+    // know may be wrong — surface it in admin instead.
+    console.error(
+      `Shiprocket: order ${order._id} is a Shiprocket Checkout order with no payment type, no completed payment and no COD charge — can't tell COD from Prepaid, skipping creation`
+    );
+    await Order.findByIdAndUpdate(order._id, {
+      shippingStatus: "needs_attention",
+      shiprocketError:
+        "Could not determine whether this Shiprocket Checkout order is COD or Prepaid — shipment not created. Create it manually in Shiprocket with the correct payment mode.",
+    });
+    return null;
+  }
+
   const shippingAddress = {
     name: addr?.name ?? order.guestName ?? "Customer",
     phone: cleanPhone,
@@ -120,7 +175,7 @@ export async function createShiprocketOrderForOrder(
       items,
       shipping: shippingAddress,
       billing: shippingAddress,
-      paymentMethod: order.paymentMethod === "cod" ? "COD" : "Prepaid",
+      paymentMethod,
       subTotal: goodsTotal,
       shippingCharges: order.shippingAmount ?? 0,
       totalDiscount: order.discountAmount ?? 0,
