@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth"
 import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } from "@/lib/email"
+import { orderSummaryFields } from "@/lib/email-templates"
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket"
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi"
 import { syncUserContactFromOrder } from "@/lib/syncUserContact"
@@ -316,19 +317,19 @@ const finalOrderTotal = couponDiscrepancy ? razorpayOrder.amount / 100 : realTot
 
         const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
 
-        const confirmationEmailHtml = getOrderConfirmationEmail({
+        const confirmationEmail = getOrderConfirmationEmail({
           orderId: order.orderNumber,
           customerName: recipientName,
           items: itemsData,
           total: order.totalAmount,
           orderDate: orderDate,
           paymentStatus: "completed",
+          ...orderSummaryFields(populatedOrder),
         })
 
         await sendEmail({
           to: recipientEmail,
-          subject: `Order Confirmation - ${order.orderNumber}`,
-          html: confirmationEmailHtml,
+          ...confirmationEmail,
         })
 
         const adminEmailHtml = getAdminOrderNotificationEmail({

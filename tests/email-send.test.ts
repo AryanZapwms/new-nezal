@@ -11,8 +11,18 @@ vi.mock("next-auth", () => ({ getServerSession: vi.fn() }))
 vi.mock("@/app/api/auth/[...nextauth]/route", () => ({ authOptions: {} }))
 vi.mock("@/lib/email", () => ({
   sendEmail: vi.fn().mockResolvedValue(true),
-  getOrderConfirmationEmail: vi.fn().mockReturnValue("<order-confirmation/>"),
-  getPaymentFailedEmail: vi.fn().mockReturnValue("<payment-failed/>"),
+  getOrderConfirmationEmail: vi.fn(({ orderId }: { orderId: string }) => ({
+    subject: `confirmation subject for ${orderId}`,
+    html: "<order-confirmation/>",
+    text: "order confirmation",
+    category: "transactional",
+  })),
+  getPaymentFailedEmail: vi.fn(() => ({
+    subject: "payment failed subject",
+    html: "<payment-failed/>",
+    text: "payment failed",
+    category: "transactional",
+  })),
 }))
 import { getServerSession } from "next-auth"
 import { sendEmail, getOrderConfirmationEmail, getPaymentFailedEmail } from "@/lib/email"
@@ -83,7 +93,10 @@ describe("POST /api/email/send — recipient", () => {
   it("accepts `to` when it is the account email (any case / whitespace)", async () => {
     const res = await send({ type: "payment-failed", to: "  ME@Example.com ", data: { totalAmount: 10 } })
     expect(res.status).toBe(200)
-    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: ME.email }))
+    // No subject in the request, so the template's own subject is used.
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: ME.email, subject: "payment failed subject", text: "payment failed" }),
+    )
   })
 
   it("rejects unknown email types", async () => {
@@ -121,7 +134,15 @@ describe("POST /api/email/send — order-confirmation", () => {
         items: [expect.objectContaining({ name: "Rose Soap", quantity: 2, price: 100 })],
       }),
     )
-    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: ME.email, subject: `Order Confirmation - ${order.orderNumber}` }))
+    // Subject, HTML and the plain-text part all come from the template, never the request.
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: ME.email,
+        subject: `confirmation subject for ${order.orderNumber}`,
+        html: "<order-confirmation/>",
+        text: "order confirmation",
+      }),
+    )
   })
 
   it("accepts a guest order whose guestEmail matches the account (lib/order-access.ts)", async () => {

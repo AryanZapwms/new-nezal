@@ -72,8 +72,7 @@ export async function POST(request: NextRequest) {
 
     await sendEmail({
       to: normalizedEmail,
-      subject: "Welcome to Nezal",
-      html: getWelcomeEmail(user.name),
+      ...getWelcomeEmail(user.name),
     });
 
     return NextResponse.json({ message: "Email verified" }, { status: 200 });

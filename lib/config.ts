@@ -1,6 +1,11 @@
 // lib/config.ts
 export const BRAND = {
   name: 'Nezal',
+  // Shown in email footers (lib/email-templates.ts). The address is the one
+  // published on the Terms of Service / Shipping Policy pages.
+  legalName: 'Nezal Herbocare Private Limited',
+  registeredAddress:
+    'S-28, Whispering Palms, Lokhandwala Complex, Akurli Road, Kandivali East, Mumbai 400101, Maharashtra, India',
   domain: 'https://nezalherbocare.com',
   supportEmail: 'info@nezalherbocare.com',
   phone: '+917710076400',

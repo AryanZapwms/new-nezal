@@ -8,6 +8,7 @@
 // client-supplied order data.
 import mongoose from "mongoose"
 import { sendEmail, getOrderConfirmationEmail, getPaymentFailedEmail } from "@/lib/email"
+import { orderSummaryFields, type EmailContent } from "@/lib/email-templates"
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
@@ -37,8 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Emails can only be sent to your own account email." }, { status: 403 })
     }
 
-    let html = ""
-    let finalSubject = cleanText(subject, 150)
+    let email: EmailContent
 
     switch (type) {
       case "order-confirmation": {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         if (!order || !isOrderOwnedBy(order, { _id: userId, email: accountEmail })) {
           return NextResponse.json({ error: "Order not found" }, { status: 404 })
         }
-        html = getOrderConfirmationEmail({
+        email = getOrderConfirmationEmail({
           orderId: order.orderNumber,
           customerName: order.shippingAddress?.name || session.user?.name || "Customer",
           items: (order.items || []).map((item: any) => ({
@@ -66,23 +66,25 @@ export async function POST(request: NextRequest) {
           total: order.totalAmount,
           orderDate: new Date(order.createdAt).toLocaleDateString("en-IN"),
           paymentStatus: order.paymentStatus,
+          ...orderSummaryFields(order),
         })
-        finalSubject = `Order Confirmation - ${order.orderNumber}`
         break
       }
-      case "payment-failed":
-        html = getPaymentFailedEmail({
+      case "payment-failed": {
+        const failedEmail = getPaymentFailedEmail({
           customerName: cleanText(data?.customerName, 100) || session.user?.name || "Customer",
           totalAmount: Number(data?.totalAmount) || 0,
           reason: cleanText(data?.reason, 300) || undefined,
         })
-        finalSubject ||= "Payment Failed - Nezal"
+        // The checkout page names the specific failure in `subject`; fall back to the template's.
+        email = { ...failedEmail, subject: cleanText(subject, 150) || failedEmail.subject }
         break
+      }
       default:
         return NextResponse.json({ error: "Invalid email type" }, { status: 400 })
     }
 
-    const sent = await sendEmail({ to: accountEmail, subject: finalSubject, html })
+    const sent = await sendEmail({ to: accountEmail, ...email })
 
     if (sent) {
       return NextResponse.json({ success: true })

@@ -4,6 +4,7 @@ import { User } from "@/lib/models/user"
 import { getServerSession } from "next-auth"
 import { type NextRequest, NextResponse } from "next/server"
 import { sendEmail, getOrderStatusUpdateEmail } from "@/lib/email"
+import { orderSummaryFields } from "@/lib/email-templates"
 import "@/lib/models/product"
 import "@/lib/models/user"
 import { BRAND } from "@/lib/config"
@@ -124,19 +125,19 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
           selectedSize: item.selectedSize,
         }))
 
-        const emailHtml = getOrderStatusUpdateEmail({
+        const statusEmail = getOrderStatusUpdateEmail({
           orderId: order.orderNumber,
           customerName: userData.name,
           orderStatus: order.orderStatus,
           items: itemsData,
           paymentStatus: order.paymentStatus,
           totalAmount: order.totalAmount,
+          ...orderSummaryFields(order),
         })
 
         await sendEmail({
           to: userData.email,
-          subject: `Order Status Updated - ${order.orderNumber}`,
-          html: emailHtml,
+          ...statusEmail,
         })
       }
     } catch (emailError) {

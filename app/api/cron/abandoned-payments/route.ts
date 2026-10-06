@@ -5,7 +5,7 @@ import { Order } from "@/lib/models/order"
 import { sendEmail, getAbandonedPaymentEmail } from "@/lib/email"
 
 const ABANDONED_THRESHOLD_MS = 30 * 60 * 1000 // 30 minutes
-const SUPPORT_PHONE = process.env.SUPPORT_PHONE || "+91 00000 00000" // ← set your real support number
+const SUPPORT_PHONE = process.env.SUPPORT_PHONE // the template falls back to the brand support number
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     if (!recipientEmail) continue
 
     try {
-      const html = getAbandonedPaymentEmail({
+      const reminderEmail = getAbandonedPaymentEmail({
         customerName: recipientName,
         orderId: order.orderNumber,
         totalAmount: order.totalAmount,
@@ -44,8 +44,7 @@ export async function GET(req: NextRequest) {
 
       const sent = await sendEmail({
         to: recipientEmail,
-        subject: `You left something behind - Order ${order.orderNumber}`,
-        html,
+        ...reminderEmail,
       })
 
       if (sent) {

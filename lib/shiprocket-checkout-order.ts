@@ -21,6 +21,7 @@ import { User } from "@/lib/models/user";
 import { getActiveFlashSaleMap } from "@/lib/flashSale";
 import { resolveCurrentPrice } from "@/lib/pricing";
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } from "@/lib/email";
+import { orderSummaryFields } from "@/lib/email-templates";
 import { notifyProductWebhook } from "@/lib/shiprocket-webhooks";
 import { createShiprocketOrderForOrder } from "@/lib/shiprocket";
 import { SHIPROCKET_VARIANT_ID_MULTIPLIER } from "@/lib/shiprocket-mapper";
@@ -493,14 +494,14 @@ async function finalizeConfirmedOrder(orderId: any) {
     if (itemsData.length > 0 && populatedOrder.guestEmail) {
       await sendEmail({
         to: populatedOrder.guestEmail,
-        subject: `Order Confirmation - ${populatedOrder.orderNumber}`,
-        html: getOrderConfirmationEmail({
+        ...getOrderConfirmationEmail({
           orderId: populatedOrder.orderNumber,
           customerName,
           items: itemsData,
           total: populatedOrder.totalAmount,
           orderDate,
           paymentStatus: populatedOrder.paymentStatus,
+          ...orderSummaryFields(populatedOrder),
         }),
       });
     }

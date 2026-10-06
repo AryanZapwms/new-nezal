@@ -152,13 +152,15 @@ const verifyResponse = await fetch("/api/razorpay/verify-payment", {
 
 ## Email Notifications
 
-All transactional emails leverage helpers in `lib/email.tsx`. Delivery happens via a lazily created Gmail transporter (`nodemailer.createTransport`) that reads `GMAIL_EMAIL` and `GMAIL_APP_PASSWORD` from environment variables. When credentials are missing the helper logs an error and the caller continues, so API routes remain resilient even if email fails.
+Routes import `sendEmail` and the templates from `lib/email.tsx`. The templates themselves live in `lib/email-templates.ts`, and the transport, headers and logging in `lib/mailer.ts`, which is the only place a transport is created. It uses `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` when `SMTP_HOST` is set and otherwise falls back to Gmail (`GMAIL_EMAIL` / `GMAIL_APP_PASSWORD`); `EMAIL_FROM` sets the From address. When mail can't be sent, `sendEmail` logs the reason and returns `false`, so API routes remain resilient even if email fails.
+
+Customer templates return `{ subject, html, text, category }` and are sent with `sendEmail({ to, ...template })`. Run `node scripts/preview-emails.js` to render every template with sample data.
 
 ### Available Templates
-- **`getWelcomeEmail(name)`**: Long-form HTML welcome message sent after OTP verification.
-- **`getOrderConfirmationEmail({...})`**: Customer-facing invoice summary with line items, totals, and payment status tag.
-- **`getAdminOrderNotificationEmail({...})`**: Internal alert summarizing buyer contact info, shipping address, payment method, and cart contents for fulfillment teams.
-- **`getOtpEmail({ otp, name })`** *(from `lib/EmailOtp.ts`)*: Minimal template delivering 6-digit login verification codes.
+- **`getWelcomeEmail(name)`**: Short welcome message sent after OTP verification.
+- **`getOrderConfirmationEmail({...})`**: Customer-facing order summary with line items, shipping, COD charge, total, payment method and shipping address.
+- **`getAdminOrderNotificationEmail({...})`**: Internal alert summarizing buyer contact info, shipping address, payment method, and cart contents for fulfillment teams. Returns HTML only.
+- **`getOtpEmail(name, otp)`**: Minimal template delivering 6-digit verification codes, sent by `sendOtpEmail` in `lib/EmailOtp.ts`.
 
 ### Sending Mechanisms & Trigger Points
 1. **Account Verification (OTP flow)**
@@ -174,7 +176,7 @@ All transactional emails leverage helpers in `lib/email.tsx`. Delivery happens v
    - Sequence:
      1. Order persisted with `paymentStatus: "pending"`.
      2. Order is populated with product details for richer templates.
-     3. `getOrderConfirmationEmail` → `sendEmail` to `user.email` (subject `Order Received - <orderNumber>`).
+     3. `getOrderConfirmationEmail` → `sendEmail` to `user.email` (subject `Your Nezal order <orderNumber> is confirmed`).
      4. `getAdminOrderNotificationEmail` → `sendEmail` to `process.env.GMAIL_EMAIL` fallback `nezal@gmail.com` (subject `🚨 NEW ORDER - <orderNumber>`).
      5. Errors in either delivery are logged but do not fail the API response.
 
@@ -183,7 +185,7 @@ All transactional emails leverage helpers in `lib/email.tsx`. Delivery happens v
    - Sequence:
      1. Payment signature validated.
      2. Pending order either updated or newly created with `paymentStatus: "completed"`.
-     3. After cart items populate, the same pair of emails from steps 3.3–3.4 are sent, but the customer subject changes to `Order Confirmation - <orderNumber>` and the admin template reflects `paymentStatus: "completed"`.
+     3. After cart items populate, the same pair of emails from steps 3.3–3.4 are sent, with the customer email showing the order as paid and the admin template reflecting `paymentStatus: "completed"`.
 
 5. **Order Status Updates**
    - Route: `app/api/orders/[id]/route.ts`

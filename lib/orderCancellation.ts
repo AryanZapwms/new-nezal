@@ -1,24 +1,7 @@
 import { cancelShiprocketOrder } from "@/lib/shiprocket"
 import { refundCCAvenueOrder } from "@/lib/ccavenue"
 import { sendEmail } from "@/lib/email"
-import { BRAND } from "@/lib/config"
-
-function orderCancelledEmail({ customerName, orderNumber, totalAmount, reason, refundInitiated }: {
-  customerName: string; orderNumber: string; totalAmount: number; reason?: string; refundInitiated: boolean
-}) {
-  return `
-    <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
-      <h2 style="color: #b91c1c;">Your order has been cancelled</h2>
-      <p>Hi ${customerName},</p>
-      <p>Your order <b>${orderNumber}</b> has been cancelled${reason ? ` (${reason})` : ""}.</p>
-      ${refundInitiated
-        ? `<p>A refund of <b>₹${totalAmount.toFixed(2)}</b> has been initiated to your original payment method. It typically takes 5–7 business days to reflect, depending on your bank.</p>`
-        : `<p>No payment was collected on this order, so no refund is due.</p>`}
-      <p>You can check the latest status anytime from <a href="${process.env.NEXT_PUBLIC_SITE_URL}/profile/orders">your orders page</a>.</p>
-      <p>Questions? Email us at <a href="mailto:${BRAND.supportEmail}">${BRAND.supportEmail}</a> or call +91 ${BRAND.whatsapp.primary} — we typically respond within 24 hours.</p>
-    </div>
-  `
-}
+import { getOrderCancelledEmail } from "@/lib/email-templates"
 
 interface FinalizeOptions {
   reason: string
@@ -110,8 +93,7 @@ export async function finalizeOrderCancellation(order: any, opts: FinalizeOption
     try {
       await sendEmail({
         to: email,
-        subject: `Order Cancelled - ${order.orderNumber}`,
-        html: orderCancelledEmail({
+        ...getOrderCancelledEmail({
           customerName: name,
           orderNumber: order.orderNumber,
           totalAmount: order.totalAmount,

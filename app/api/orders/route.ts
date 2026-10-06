@@ -5,6 +5,7 @@ import { User } from "@/lib/models/user";
 import { getServerSession } from "next-auth";
 import { type NextRequest, NextResponse } from "next/server";
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } from "@/lib/email";
+import { orderSummaryFields } from "@/lib/email-templates";
 import "@/lib/models/product"
 import "@/lib/models/user"
 import { Product } from "@/lib/models/product";
@@ -295,18 +296,18 @@ const realShippingBreakdown = shippingBreakdown ?? {
 
           const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
 
-          const confirmationEmailHtml = getOrderConfirmationEmail({
+          const confirmationEmail = getOrderConfirmationEmail({
             orderId: order.orderNumber,
             customerName: recipientName,
             items: itemsData,
             total: order.totalAmount,
             orderDate: orderDate,
+            ...orderSummaryFields(populatedOrder),
           });
 
           await sendEmail({
             to: recipientEmail,
-            subject: `Order Received - ${order.orderNumber}`,
-            html: confirmationEmailHtml,
+            ...confirmationEmail,
           });
 
           const adminEmailHtml = getAdminOrderNotificationEmail({

@@ -18,6 +18,7 @@ import { decrypt, parseCCAvenueResponse } from "@/lib/ccavenue";
 import { connectDB } from "@/lib/db";
 import { Order } from "@/lib/models/order";
 import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail, getPaymentFailedEmail } from "@/lib/email";
+import { orderSummaryFields } from "@/lib/email-templates";
 import "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
@@ -153,19 +154,20 @@ export async function POST(req: NextRequest) {
               },
             }).catch((err) => console.error("[meta-capi] CCAvenue purchase event failed:", err));
 
-            const confirmationEmailHtml = getOrderConfirmationEmail({
+            const confirmationEmail = getOrderConfirmationEmail({
               orderId: (populatedOrder as any).orderNumber,
               customerName: recipientName,
               items: itemsData,
               total: (populatedOrder as any).totalAmount,
               orderDate,
+              paymentStatus: (populatedOrder as any).paymentStatus,
+              ...orderSummaryFields(populatedOrder),
             });
 
             if (recipientEmail) {
               await sendEmail({
                 to: recipientEmail,
-                subject: `Order Received - ${(populatedOrder as any).orderNumber}`,
-                html: confirmationEmailHtml,
+                ...confirmationEmail,
               });
             }
 
@@ -214,7 +216,7 @@ export async function POST(req: NextRequest) {
             "Customer";
 
           if (recipientEmail) {
-            const failedEmailHtml = getPaymentFailedEmail({
+            const failedEmail = getPaymentFailedEmail({
               customerName: recipientName,
               orderId: (updatedOrder as any).orderNumber,
               totalAmount: (updatedOrder as any).totalAmount,
@@ -223,8 +225,7 @@ export async function POST(req: NextRequest) {
 
             await sendEmail({
               to: recipientEmail,
-              subject: `Payment Failed - Order ${(updatedOrder as any).orderNumber}`,
-              html: failedEmailHtml,
+              ...failedEmail,
             });
           }
         } catch (emailError) {
