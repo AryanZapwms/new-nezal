@@ -1,7 +1,7 @@
 // The customer emails were landing in Gmail's Spam folder. These pin the
 // properties that keep them out: plain subjects, inline-only HTML with a
 // text alternative, links to our own domain only, and no emoji.
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import {
   getOrderConfirmationEmail,
   getOrderStatusUpdateEmail,
@@ -185,21 +185,114 @@ describe("unsubscribe", () => {
   })
 })
 
+// A COD order whose charges add up: 450 items - 50 discount + 60 shipping + 40 COD charge = 500.
+const adminEmail = (overrides: Partial<Parameters<typeof getAdminOrderNotificationEmail>[0]> = {}) =>
+  getAdminOrderNotificationEmail({
+    ...orderSummaryFields(codOrder),
+    customerName: "Asha Sharma",
+    customerEmail: "asha@example.com",
+    customerPhone: "9000000000",
+    orderId: "ORD-1001",
+    items,
+    totalAmount: 500,
+    paymentStatus: "pending",
+    paymentMethod: "cod",
+    shippingAddress: { ...codOrder.shippingAddress },
+    ...overrides,
+  })
+
+describe("admin order notification", () => {
+  const noCharges = { shippingAmount: 0, codCharge: 0, discountAmount: 0, couponCode: null }
+  let warn: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    warn.mockRestore()
+  })
+
+  it("shows the order's real shipping, COD charge and discount, adding up to the total", () => {
+    const text = htmlToText(adminEmail())
+    expect(text).toContain("Subtotal: ₹450.00")
+    expect(text).toContain("Discount (WELCOME50): -₹50.00")
+    expect(text).toContain("Shipping: ₹60.00")
+    expect(text).toContain("Cash on delivery charge: ₹40.00")
+    expect(text).toContain("TOTAL AMOUNT: ₹500.00")
+    expect(text).not.toContain("Free")
+    expect(text).not.toContain("Other charges")
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it("calls shipping free only when the order records zero shipping, and omits zero charges", () => {
+    const text = htmlToText(adminEmail({ ...noCharges, totalAmount: 450 }))
+    expect(text).toContain("Shipping: Free")
+    expect(text).not.toContain("Cash on delivery charge")
+    expect(text).not.toContain("Discount")
+    expect(text).not.toContain("Other charges")
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it("shows what the order's charges don't account for as Other charges, and logs the order number", () => {
+    // The reported case: ₹83 of items and a ₹183 total, with no shipping or COD charge on the order.
+    const text = htmlToText(
+      adminEmail({ ...noCharges, items: [{ name: "Neem Soap", quantity: 1, price: 83 }], totalAmount: 183 }),
+    )
+    expect(text).toContain("Subtotal: ₹83.00")
+    expect(text).toContain("Other charges: ₹100.00")
+    expect(text).toContain("TOTAL AMOUNT: ₹183.00")
+
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0][0]).toContain("ORD-1001")
+    expect(warn.mock.calls[0][0]).toContain("₹100.00")
+  })
+
+  it("shows the difference when the total is lower than the charges, too", () => {
+    const text = htmlToText(adminEmail({ totalAmount: 480 }))
+    expect(text).toContain("Other charges: -₹20.00")
+    expect(warn).toHaveBeenCalledOnce()
+  })
+
+  it("leaves shipping out, rather than calling it free, when the order has no shipping amount", () => {
+    const text = htmlToText(adminEmail({ ...noCharges, shippingAmount: undefined, totalAmount: 510 }))
+    expect(text).not.toContain("Shipping:")
+    expect(text).not.toContain("Free")
+    expect(text).toContain("Other charges: ₹60.00")
+  })
+
+  it("escapes customer-supplied values", () => {
+    const html = adminEmail({
+      customerName: `<script>alert(1)</script>`,
+      customerEmail: `"><img src=x onerror=alert(1)>@example.com`,
+      customerPhone: `<u>9000000000</u>`,
+      items: [{ name: `Soap <i>&</i>`, quantity: 1, price: 450 }],
+      couponCode: `<s>X</s>`,
+      paymentMethod: `cod<b>!</b>`,
+      shippingAddress: {
+        name: `<a href="https://evil.example">Asha</a>`,
+        phone: `<u>9</u>`,
+        street: `12 <b>Street</b>`,
+        city: `<i>Pune</i>`,
+        state: `<i>MH</i>`,
+        zipCode: `<i>411001</i>`,
+        country: `<i>India</i>`,
+      },
+    })
+    // None of these tags are part of the template itself.
+    expect(html).not.toMatch(/<(script|img|a|b|i|u|s)[\s>]/)
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;")
+    expect(html).toContain("&quot;&gt;&lt;img src=x onerror=alert(1)&gt;@example.com")
+    expect(html).toContain("12 &lt;b&gt;Street&lt;/b&gt;")
+    expect(html).toContain("Soap &lt;i&gt;&amp;&lt;/i&gt;")
+    expect(html).toContain("Discount (&lt;s&gt;X&lt;/s&gt;)")
+    expect(warn).not.toHaveBeenCalled()
+  })
+})
+
 describe("htmlToText", () => {
   it("turns the HTML-only admin notification into readable text", () => {
-    const text = htmlToText(
-      getAdminOrderNotificationEmail({
-        customerName: "Asha Sharma",
-        customerEmail: "asha@example.com",
-        customerPhone: "9000000000",
-        orderId: "ORD-1001",
-        items,
-        totalAmount: 500,
-        paymentStatus: "pending",
-        paymentMethod: "cod",
-        shippingAddress: { ...codOrder.shippingAddress },
-      }),
-    )
+    const text = htmlToText(adminEmail())
     expect(text).not.toMatch(/<[a-z]/i)
     expect(text).not.toContain("box-sizing") // the <style> block is dropped
     expect(text).toContain("Order ID: ORD-1001")

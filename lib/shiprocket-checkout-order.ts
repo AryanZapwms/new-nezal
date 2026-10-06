@@ -512,6 +512,8 @@ async function finalizeConfirmedOrder(orderId: any) {
         ? `⚠️ NEEDS REVIEW - Shiprocket Order - ${populatedOrder.orderNumber}`
         : `🚨 NEW ORDER (Shiprocket) - ${populatedOrder.orderNumber}`,
       html: getAdminOrderNotificationEmail({
+        // Shipping, COD charge and discount; the explicit fields below take precedence.
+        ...orderSummaryFields(populatedOrder),
         customerName,
         customerEmail: populatedOrder.guestEmail || "N/A",
         customerPhone: populatedOrder.guestPhone || "N/A",

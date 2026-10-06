@@ -97,7 +97,8 @@ function esc(value: unknown): string {
 }
 
 function money(amount: unknown): string {
-  return `₹${(Number(amount) || 0).toFixed(2)}`
+  const value = Number(amount) || 0
+  return `${value < 0 ? "-" : ""}₹${Math.abs(value).toFixed(2)}`
 }
 
 function greeting(name?: string | null): string {
@@ -124,6 +125,34 @@ function addressLines(address?: OrderEmailAddress | null): string[] {
 
 function isCashOnDelivery({ paymentMethod, shiprocketPaymentType }: OrderSummaryFields): boolean {
   return paymentMethod === "cod" || (paymentMethod === "shiprocket_checkout" && shiprocketPaymentType === "cod")
+}
+
+type OrderChargeFields = Pick<OrderSummaryFields, "shippingAmount" | "codCharge" | "discountAmount" | "couponCode">
+
+/**
+ * The rows between an order's item subtotal and its total. `other` is the
+ * part of the total those rows don't account for: 0 when
+ * subtotal - discount + shipping + COD charge equals the total.
+ */
+function orderCharges(
+  items: OrderEmailItem[],
+  total: number,
+  fields: OrderChargeFields,
+): { rows: Row[]; other: number } {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  // Negative amounts are never shown as a row, so they are left for `other` to surface.
+  const discount = Math.max(Number(fields.discountAmount) || 0, 0)
+  const shipping = fields.shippingAmount == null ? null : Math.max(Number(fields.shippingAmount) || 0, 0)
+  const codCharge = Math.max(Number(fields.codCharge) || 0, 0)
+
+  const rows: Row[] = [["Subtotal", money(subtotal)]]
+  if (discount > 0) rows.push([fields.couponCode ? `Discount (${fields.couponCode})` : "Discount", money(-discount)])
+  // Shipping the order doesn't record is left out rather than called free.
+  if (shipping != null) rows.push(["Shipping", shipping > 0 ? money(shipping) : "Free"])
+  if (codCharge > 0) rows.push(["Cash on delivery charge", money(codCharge)])
+
+  const accountedFor = subtotal - discount + (shipping ?? 0) + codCharge
+  return { rows, other: Math.round(((Number(total) || 0) - accountedFor) * 100) / 100 }
 }
 
 // ── Layout ─────────────────────────────────────────────────────────────────
@@ -352,17 +381,7 @@ export function getOrderConfirmationEmail({
 } & OrderSummaryFields): EmailContent {
   const lineItems = items || []
   const cashOnDelivery = isCashOnDelivery(summary)
-  const discount = Number(summary.discountAmount) || 0
-  const codCharge = Number(summary.codCharge) || 0
-
-  const totals: Row[] = [["Subtotal", money(lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0))]]
-  if (discount > 0) {
-    totals.push([summary.couponCode ? `Discount (${summary.couponCode})` : "Discount", `-${money(discount)}`])
-  }
-  if (summary.shippingAmount != null) {
-    totals.push(["Shipping", summary.shippingAmount > 0 ? money(summary.shippingAmount) : "Free"])
-  }
-  if (codCharge > 0) totals.push(["Cash on delivery charge", money(codCharge)])
+  const { rows: totals } = orderCharges(lineItems, total, summary)
 
   const details: Row[] = [
     ["Order number", orderId],
@@ -607,8 +626,12 @@ export function getOtpEmail(name: string, otp: string): EmailContent {
 }
 
 // ── Admin notification ─────────────────────────────────────────────────────
-// Internal mail to the store's own inbox; moved here unchanged from
-// lib/email.tsx. Returns HTML only — lib/mailer.ts derives the text part.
+// Internal mail to the store's own inbox. Returns HTML only — lib/mailer.ts
+// derives the text part. Its subject is set by the callers.
+//
+// The price summary must always add up to the total: charges come from the
+// same order fields the customer confirmation uses, and anything they don't
+// account for is shown as "Other charges" and logged, never dropped.
 
 export function getAdminOrderNotificationEmail({
   customerName,
@@ -621,6 +644,7 @@ export function getAdminOrderNotificationEmail({
   paymentMethod,
   shippingAddress,
   orderDate,
+  ...chargeFields
 }: {
   customerName: string
   customerEmail: string
@@ -651,29 +675,45 @@ export function getAdminOrderNotificationEmail({
     country: string
   }
   orderDate?: string
-}) {
+} & OrderChargeFields) {
   const itemsHtml = (items || [])
     .map(
       (item) => `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #ecf0f1;">
-          <div style="color: #2c3e50; font-weight: 500;">${item.name}</div>
+          <div style="color: #2c3e50; font-weight: 500;">${esc(item.name)}</div>
           ${
             item.selectedSize
               ? `<div style="color: #7f8c8d; font-size: 13px; margin-top: 5px;">
-                  Size: ${item.selectedSize.size} (${item.selectedSize.quantity}${item.selectedSize.unit})
+                  Size: ${esc(item.selectedSize.size)} (${esc(item.selectedSize.quantity)}${esc(item.selectedSize.unit)})
                 </div>`
               : ""
           }
         </td>
-        <td style="padding: 12px; border-bottom: 1px solid #ecf0f1; text-align: center; color: #34495e;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #ecf0f1; text-align: center; color: #34495e;">${esc(item.quantity)}</td>
         <td style="padding: 12px; border-bottom: 1px solid #ecf0f1; text-align: right; color: #8B4513; font-weight: 600;">₹${(item.price * item.quantity).toFixed(2)}</td>
       </tr>
     `,
     )
     .join("")
 
-  const itemsSubtotal = (items || []).reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const charges = orderCharges(items || [], totalAmount, chargeFields)
+  if (charges.other !== 0) {
+    console.warn(
+      `[email] Order ${orderId}: total ${money(totalAmount)} does not equal subtotal - discount + shipping + COD charge; ` +
+        `the difference of ${money(charges.other)} is shown as "Other charges" in the admin email`,
+    )
+  }
+  const chargeRows: Row[] = charges.other !== 0 ? [...charges.rows, ["Other charges", money(charges.other)]] : charges.rows
+  const chargeRowsHtml = chargeRows
+    .map(
+      ([label, value]) => `
+                <div class="total-row">
+                  <span>${esc(label)}:</span>
+                  <span>${esc(value)}</span>
+                </div>`,
+    )
+    .join("")
 
   const paymentStatusColor = paymentStatus === 'completed' ? '#27ae60' : '#f39c12'
   const paymentStatusText = paymentStatus === 'completed' ? '✓ PAID' : '⏱ PENDING - COD'
@@ -857,7 +897,7 @@ export function getAdminOrderNotificationEmail({
             <!-- Alert Header -->
             <div class="alert-header">
               <h1>🚨 NEW ORDER RECEIVED</h1>
-              <p>Order ID: ${orderId} | ${orderDate || new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <p>Order ID: ${esc(orderId)} | ${esc(orderDate || new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }))}</p>
             </div>
 
             <!-- Content -->
@@ -867,26 +907,26 @@ export function getAdminOrderNotificationEmail({
               <div class="info-block">
                 <div class="info-row">
                   <span class="info-label">Name:</span>
-                  <span class="info-value">${customerName}</span>
+                  <span class="info-value">${esc(customerName)}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Email:</span>
-                  <span class="info-value"><strong>${customerEmail}</strong></span>
+                  <span class="info-value"><strong>${esc(customerEmail)}</strong></span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Phone:</span>
-                  <span class="info-value"><strong>${customerPhone}</strong></span>
+                  <span class="info-value"><strong>${esc(customerPhone)}</strong></span>
                 </div>
               </div>
 
               <!-- Shipping Address -->
               <div class="section-title">📦 Shipping Address</div>
               <div class="address-box">
-                <p><strong>${shippingAddress.name}</strong></p>
-                <p>${shippingAddress.street}</p>
-                <p>${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zipCode}</p>
-                <p>${shippingAddress.country}</p>
-                <p style="margin-top: 8px; border-top: 1px solid #b3d9e8; padding-top: 8px;">📱 ${shippingAddress.phone}</p>
+                <p><strong>${esc(shippingAddress.name)}</strong></p>
+                <p>${esc(shippingAddress.street)}</p>
+                <p>${esc(shippingAddress.city)}, ${esc(shippingAddress.state)} ${esc(shippingAddress.zipCode)}</p>
+                <p>${esc(shippingAddress.country)}</p>
+                <p style="margin-top: 8px; border-top: 1px solid #b3d9e8; padding-top: 8px;">📱 ${esc(shippingAddress.phone)}</p>
               </div>
 
               <!-- Order Items -->
@@ -905,15 +945,7 @@ export function getAdminOrderNotificationEmail({
               </table>
 
               <!-- Price Summary -->
-              <div class="total-section">
-                <div class="total-row">
-                  <span>Subtotal:</span>
-                  <span>₹${itemsSubtotal.toFixed(2)}</span>
-                </div>
-                <div class="total-row">
-                  <span>Shipping:</span>
-                  <span>Free</span>
-                </div>
+              <div class="total-section">${chargeRowsHtml}
                 <div class="total-row grand-total">
                   <span>TOTAL AMOUNT:</span>
                   <span>₹${totalAmount.toFixed(2)}</span>
@@ -925,7 +957,7 @@ export function getAdminOrderNotificationEmail({
               <div class="info-block">
                 <div class="info-row">
                   <span class="info-label">Payment Method:</span>
-                  <span class="info-value" style="text-transform: uppercase; font-weight: 600;">${paymentMethod}</span>
+                  <span class="info-value" style="text-transform: uppercase; font-weight: 600;">${esc(paymentMethod)}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Payment Status:</span>

@@ -311,6 +311,8 @@ const realShippingBreakdown = shippingBreakdown ?? {
           });
 
           const adminEmailHtml = getAdminOrderNotificationEmail({
+            // Shipping, COD charge and discount; the explicit fields below take precedence.
+            ...orderSummaryFields(populatedOrder),
             customerName: recipientName,
             customerEmail: recipientEmail,
             customerPhone: user?.phone || cleanPhone || "N/A",

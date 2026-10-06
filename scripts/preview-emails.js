@@ -113,26 +113,48 @@ const samples = {
   "verification-code": templates.getOtpEmail(order.customerName, "482913"),
 };
 
-// The admin notification is HTML-only; give it the subject and the derived
-// text part it is actually sent with.
-const adminHtml = templates.getAdminOrderNotificationEmail({
-  customerName: order.customerName,
-  customerEmail: "asha@example.com",
-  customerPhone: address.phone,
-  orderId: order.orderId,
-  items,
+// The admin notification is HTML-only; give each sample the subject and the
+// derived text part it is actually sent with.
+const adminSample = (subject, fields) => {
+  const html = templates.getAdminOrderNotificationEmail({
+    customerName: order.customerName,
+    customerEmail: "asha@example.com",
+    customerPhone: address.phone,
+    orderId: order.orderId,
+    items,
+    shippingAddress: address,
+    orderDate: order.orderDate,
+    ...fields,
+  });
+  return { subject, html, text: templates.htmlToText(html), category: "transactional" };
+};
+
+// COD order with shipping, a COD charge and a coupon discount: 789 - 50 + 60 + 40 = 839.
+samples["admin-new-order-cod"] = adminSample(`🚨 NEW ORDER (Shiprocket) - ${order.orderId}`, {
+  ...codSummary,
   totalAmount: 839,
   paymentStatus: "pending",
-  paymentMethod: "cod",
-  shippingAddress: address,
-  orderDate: order.orderDate,
+  paymentMethod: "shiprocket_checkout (COD)",
 });
-samples["admin-new-order"] = {
-  subject: `🚨 NEW ORDER - ${order.orderId}`,
-  html: adminHtml,
-  text: templates.htmlToText(adminHtml),
-  category: "transactional",
-};
+
+// Paid online with free shipping.
+samples["admin-new-order-prepaid"] = adminSample(`🚨 NEW ORDER - ${order.orderId}`, {
+  ...prepaidSummary,
+  totalAmount: 789,
+  paymentStatus: "completed",
+  paymentMethod: "razorpay",
+});
+
+// A total the order's own charges don't account for: the ₹100 difference is
+// shown as "Other charges". Building this sample logs the template's warning
+// on purpose.
+samples["admin-new-order-unexplained-total"] = adminSample(`🚨 NEW ORDER (Shiprocket) - ${order.orderId}`, {
+  ...prepaidSummary,
+  items: [{ name: "Neem & Tulsi Soap", quantity: 1, price: 83 }],
+  totalAmount: 183,
+  paymentStatus: "pending",
+  paymentMethod: "shiprocket_checkout (COD)",
+});
 
 // ── Write the previews ─────────────────────────────────────────────────────
 const escapeHtml = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

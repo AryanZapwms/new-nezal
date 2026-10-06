@@ -333,6 +333,8 @@ const finalOrderTotal = couponDiscrepancy ? razorpayOrder.amount / 100 : realTot
         })
 
         const adminEmailHtml = getAdminOrderNotificationEmail({
+          // Shipping, COD charge and discount; the explicit fields below take precedence.
+          ...orderSummaryFields(populatedOrder),
           customerName: recipientName,
           customerEmail: recipientEmail,
           customerPhone: user?.phone || shippingAddress.phone || "N/A",

@@ -172,6 +172,8 @@ export async function POST(req: NextRequest) {
             }
 
             const adminEmailHtml = getAdminOrderNotificationEmail({
+              // Shipping, COD charge and discount; the explicit fields below take precedence.
+              ...orderSummaryFields(populatedOrder),
               customerName: recipientName,
               customerEmail: recipientEmail,
               customerPhone: (populatedOrder as any).shippingAddress?.phone || "N/A",
