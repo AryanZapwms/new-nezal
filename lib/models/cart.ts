@@ -63,8 +63,14 @@ const cartSchema = new mongoose.Schema(
 
     // ── WhatsApp abandoned-cart reminders (app/api/cron/abandoned-cart-whatsapp) ──
     // Per-cart: fine here, since a reminder is tied to one specific
-    // abandonment instance, not the phone number in general.
+    // abandonment instance, not the phone number in general. Set BEFORE the
+    // send, as the cron's claim on the cart — whichever run flips it from
+    // null is the only one allowed to send. So it means "a send was
+    // attempted", not "delivered"; lib/models/whatsapp-message-log.ts has
+    // the outcome. Cleared again only when ScaleChat refused the request
+    // outright and attempts remain.
     whatsappReminderSentAt: { type: Date, default: null },
+    whatsappReminderAttempts: { type: Number, default: 0 },
 
     // Phone confirmed (and consent given) at checkout, before an order
     // exists — separate from any phone on the User record, and from the

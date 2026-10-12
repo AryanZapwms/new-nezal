@@ -9,31 +9,68 @@ if (!SCALECHAT_API_KEY) {
   console.warn("[whatsapp] SCALECHAT_API_KEY is not set — WhatsApp sends will fail.");
 }
 
-type ScaleChatResponse<T = unknown> =
-  | { success: true; data: T }
-  | { success: false; message: string };
+// A hung request would otherwise stall a whole cron run.
+const SCALECHAT_TIMEOUT_MS = 15_000;
+
+// Thrown for every failed ScaleChat call. `rejected` tells the caller
+// whether a retry is safe: true when ScaleChat answered and refused the
+// request (a 4xx, or a 2xx body with success: false), so nothing was sent;
+// false when there was no clear answer (timeout, network error, 5xx) and
+// the message may or may not have gone out.
+export class ScaleChatError extends Error {
+  constructor(
+    message: string,
+    public readonly rejected: boolean
+  ) {
+    super(message);
+    this.name = "ScaleChatError";
+  }
+}
 
 async function scalechatRequest<T = unknown>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
-  const res = await fetch(`${SCALECHAT_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "X-API-Key": SCALECHAT_API_KEY,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
-  });
-
-  const json = (await res.json()) as ScaleChatResponse<T>;
-
-  if (!res.ok || !json.success) {
-    const message = !json.success ? json.message : `HTTP ${res.status}`;
-    throw new Error(`[whatsapp] ScaleChat API error (${path}): ${message}`);
+  let res: Response;
+  try {
+    res = await fetch(`${SCALECHAT_BASE_URL}${path}`, {
+      ...init,
+      signal: AbortSignal.timeout(SCALECHAT_TIMEOUT_MS),
+      headers: {
+        "X-API-Key": SCALECHAT_API_KEY,
+        "Content-Type": "application/json",
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new ScaleChatError(`[whatsapp] ScaleChat request failed (${path}): ${reason}`, false);
   }
 
-  return json.data;
+  // A proxy error page isn't JSON — keep the HTTP status rather than dying
+  // on the parse.
+  const json = await res.json().catch(() => null);
+
+  // A 2xx counts as accepted unless the body explicitly says otherwise:
+  // treating an unfamiliar success shape as a failure would report (and
+  // possibly retry) a message that was actually delivered.
+  if (!res.ok || json?.success === false) {
+    const message = json?.message || `HTTP ${res.status}`;
+    const rejected = (res.status >= 400 && res.status < 500) || res.ok;
+    throw new ScaleChatError(`[whatsapp] ScaleChat API error (${path}): ${message}`, rejected);
+  }
+
+  return (json?.data ?? json) as T;
+}
+
+// Test mode is the default: until WHATSAPP_REMINDER_MODE is exactly "live",
+// WHATSAPP_TEST_PHONE is the only number anything may be sent to. testPhone
+// is its last 10 digits, or "" when unset.
+export function getWhatsAppTestMode(): { testMode: boolean; testPhone: string } {
+  return {
+    testMode: process.env.WHATSAPP_REMINDER_MODE !== "live",
+    testPhone: (process.env.WHATSAPP_TEST_PHONE ?? "").replace(/\D/g, "").slice(-10),
+  };
 }
 
 // Normalizes an Indian 10-digit number, or passes through an already

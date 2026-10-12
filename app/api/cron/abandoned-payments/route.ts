@@ -8,8 +8,10 @@ const ABANDONED_THRESHOLD_MS = 30 * 60 * 1000 // 30 minutes
 const SUPPORT_PHONE = process.env.SUPPORT_PHONE // the template falls back to the brand support number
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // `!cronSecret` matters: with CRON_SECRET unset, the comparison alone
+  // would accept the literal header "Bearer undefined".
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret || req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
