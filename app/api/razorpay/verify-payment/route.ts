@@ -16,6 +16,7 @@ import { getActiveFlashSaleMap } from "@/lib/flashSale"
 import { resolveCurrentPrice } from "@/lib/pricing"
 import { validateCouponServerSide, redeemCoupon } from "@/lib/coupon-server"
 import { notifyProductWebhook } from "@/lib/shiprocket-webhooks"
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order"
 import Razorpay from "razorpay"
 
 
@@ -301,6 +302,9 @@ const finalOrderTotal = couponDiscrepancy ? razorpayOrder.amount / 100 : realTot
         fbc,
       },
     }).catch((err) => console.error("[meta-capi] Razorpay purchase event failed:", err))
+
+    // Not awaited — it never throws, and ScaleChat must not hold up the order.
+    void sendOrderConfirmationWhatsApp(order._id)
 
     try {
       const populatedOrder = await Order.findById(order._id)

@@ -24,6 +24,7 @@ import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 import { markCartConverted } from "@/lib/cart-server";
 import { redeemCoupon } from "@/lib/coupon-server";
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order";
 
 export async function POST(req: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -102,6 +103,11 @@ export async function POST(req: NextRequest) {
         await markCartConverted((updatedOrder as any).cartId, updatedOrder._id);
 
         await autoCreateShiprocketOrder(order_id);
+
+        // Not awaited — it never throws, and ScaleChat must not hold up the
+        // redirect. Sends once per order, so a repeated callback is harmless.
+        void sendOrderConfirmationWhatsApp(updatedOrder._id);
+
         try {
           const populatedOrder = await Order.findById(updatedOrder._id)
             .populate("items.product")

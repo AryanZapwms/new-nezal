@@ -27,6 +27,7 @@ vi.mock("@/lib/meta-capi", () => ({
   sendCapiPurchaseEvent: vi.fn().mockResolvedValue(undefined),
 }))
 vi.mock("@/lib/syncUserContact", () => ({ syncUserContactFromOrder: vi.fn().mockResolvedValue(undefined) }))
+vi.mock("@/lib/whatsapp-order", () => ({ sendOrderConfirmationWhatsApp: vi.fn().mockResolvedValue(undefined) }))
 
 const ordersFetch = vi.fn()
 vi.mock("razorpay", () => {
@@ -37,6 +38,7 @@ vi.mock("razorpay", () => {
 })
 
 import { getServerSession } from "next-auth"
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order"
 
 let verifyPOST: typeof import("@/app/api/razorpay/verify-payment/route").POST
 
@@ -54,6 +56,7 @@ beforeEach(async () => {
   vi.mocked(getServerSession).mockReset()
   vi.mocked(getServerSession).mockResolvedValue(null)
   ordersFetch.mockReset()
+  vi.mocked(sendOrderConfirmationWhatsApp).mockClear()
 })
 
 function signature(orderId: string, paymentId: string) {
@@ -114,6 +117,7 @@ describe("Razorpay verify-payment: cart conversion", () => {
     const cart = await Cart.findById(order!.cartId)
     expect(cart!.status).toBe("converted")
     expect(cart!.convertedOrderId!.toString()).toBe(order!._id.toString())
+    expect(vi.mocked(sendOrderConfirmationWhatsApp).mock.calls.map(([id]) => String(id))).toEqual([data.orderId])
   })
 
   it("converts the logged-in user's existing cart, not a guest cart", async () => {
@@ -184,6 +188,7 @@ describe("Razorpay verify-payment: cart conversion", () => {
 
     expect(res.status).toBe(400)
     expect(await Order.countDocuments({})).toBe(0)
+    expect(sendOrderConfirmationWhatsApp).not.toHaveBeenCalled()
 
     const unchangedCart = await Cart.findById(cart._id)
     expect(unchangedCart!.status).toBe("active")

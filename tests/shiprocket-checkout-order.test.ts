@@ -20,11 +20,13 @@ vi.mock("@/lib/shiprocket", () => ({
   createShiprocketOrderForOrder: vi.fn().mockResolvedValue({ shiprocketOrderId: 777, shiprocketShipmentId: 888 }),
 }))
 vi.mock("@/lib/shiprocket-webhooks", () => ({ notifyProductWebhook: vi.fn().mockResolvedValue(undefined) }))
+vi.mock("@/lib/whatsapp-order", () => ({ sendOrderConfirmationWhatsApp: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/components/clear-cart-on-success", () => ({ ClearCartOnSuccess: () => null }))
 vi.mock("next-auth", () => ({ getServerSession: vi.fn().mockResolvedValue(null) }))
 
 import { createShiprocketOrderForOrder } from "@/lib/shiprocket"
 import { sendEmail } from "@/lib/email"
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order"
 import {
   upsertShiprocketCheckoutOrder,
   syncShiprocketCheckoutOrderFromApi,
@@ -53,6 +55,7 @@ beforeEach(async () => {
   await Promise.all([Order.deleteMany({}), Product.deleteMany({})])
   vi.mocked(createShiprocketOrderForOrder).mockClear()
   vi.mocked(sendEmail).mockClear()
+  vi.mocked(sendOrderConfirmationWhatsApp).mockClear()
   process.env.SHIPROCKET_ORDER_WEBHOOK_SECRET = "test-secret-value"
   process.env.SHIPROCKET_CHECKOUT_API_KEY = "k"
   process.env.SHIPROCKET_CHECKOUT_API_SECRET = "s"
@@ -122,6 +125,7 @@ describe("upsertShiprocketCheckoutOrder", () => {
     expect(isCheckoutOrderConfirmed(order)).toBe(true)
     expect(await sizeStock(1)).toBe(8)
     expect(createShiprocketOrderForOrder).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(sendOrderConfirmationWhatsApp).mock.calls.map(([id]) => String(id))).toEqual([String(order._id)])
   })
 
   it("is idempotent across repeated deliveries", async () => {
@@ -132,6 +136,7 @@ describe("upsertShiprocketCheckoutOrder", () => {
     expect(await Order.countDocuments({})).toBe(1)
     expect(await sizeStock(1)).toBe(8)
     expect(createShiprocketOrderForOrder).toHaveBeenCalledTimes(1)
+    expect(sendOrderConfirmationWhatsApp).toHaveBeenCalledTimes(1)
   })
 
   it("creates exactly one order when the webhook and success page race", async () => {
@@ -146,6 +151,7 @@ describe("upsertShiprocketCheckoutOrder", () => {
     expect(await Order.countDocuments({})).toBe(1)
     expect(await sizeStock(1)).toBe(8)
     expect(createShiprocketOrderForOrder).toHaveBeenCalledTimes(1)
+    expect(sendOrderConfirmationWhatsApp).toHaveBeenCalledTimes(1)
   })
 
   it("confirms and fulfils a COD order even though payment is still pending", async () => {
@@ -161,6 +167,7 @@ describe("upsertShiprocketCheckoutOrder", () => {
     expect(isCheckoutOrderConfirmed(order)).toBe(true)
     expect(await sizeStock(1)).toBe(8)
     expect(createShiprocketOrderForOrder).toHaveBeenCalledTimes(1)
+    expect(sendOrderConfirmationWhatsApp).toHaveBeenCalledTimes(1)
   })
 
   it("holds a pending prepaid order, then finalizes it when SUCCESS arrives", async () => {
@@ -168,6 +175,7 @@ describe("upsertShiprocketCheckoutOrder", () => {
     expect(isCheckoutOrderConfirmed(first.order)).toBe(false)
     expect(await sizeStock(1)).toBe(10)
     expect(createShiprocketOrderForOrder).not.toHaveBeenCalled()
+    expect(sendOrderConfirmationWhatsApp).not.toHaveBeenCalled()
 
     const second = await upsertShiprocketCheckoutOrder(payload({ payment_status: "SUCCESS" }), "webhook")
     expect(second.created).toBe(false)
@@ -175,6 +183,7 @@ describe("upsertShiprocketCheckoutOrder", () => {
     expect(isCheckoutOrderConfirmed(second.order)).toBe(true)
     expect(await sizeStock(1)).toBe(8)
     expect(createShiprocketOrderForOrder).toHaveBeenCalledTimes(1)
+    expect(sendOrderConfirmationWhatsApp).toHaveBeenCalledTimes(1)
     expect(await Order.countDocuments({})).toBe(1)
   })
 
@@ -201,6 +210,7 @@ describe("upsertShiprocketCheckoutOrder", () => {
 
     expect(created).toBe(false)
     expect(createShiprocketOrderForOrder).not.toHaveBeenCalled()
+    expect(sendOrderConfirmationWhatsApp).not.toHaveBeenCalled()
     expect(await sizeStock(1)).toBe(10)
   })
 })
