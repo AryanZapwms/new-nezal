@@ -50,6 +50,12 @@ const orderSchema = new mongoose.Schema(
 
     abandonedEmailSentAt: { type: Date, default: null },
 
+    // Set BEFORE the WhatsApp order confirmation goes out, as the claim that
+    // keeps it to one per order — see lib/whatsapp-order.ts. So it means "a
+    // send was attempted", not "delivered"; lib/models/whatsapp-message-log.ts
+    // has the outcome.
+    whatsappConfirmationSentAt: { type: Date, default: null },
+
     // Snapshot of which server-side Cart (lib/models/cart.ts) this order came
     // from, captured at order-creation time. Read-only fetches would work for
     // COD/Razorpay (same-origin requests, session/guest cookies present) but

@@ -24,6 +24,7 @@ import { sendEmail, getOrderConfirmationEmail, getAdminOrderNotificationEmail } 
 import { orderSummaryFields } from "@/lib/email-templates";
 import { notifyProductWebhook } from "@/lib/shiprocket-webhooks";
 import { createShiprocketOrderForOrder } from "@/lib/shiprocket";
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order";
 import { SHIPROCKET_VARIANT_ID_MULTIPLIER } from "@/lib/shiprocket-mapper";
 import { computeHmac } from "@/lib/shiprocket-hmac";
 
@@ -469,6 +470,11 @@ async function finalizeConfirmedOrder(orderId: any) {
     console.error(`[shiprocket-checkout-order] Unexpected error creating logistics shipment for order ${order._id}:`, shipmentError);
     await flagForReview(order._id, "Shiprocket logistics shipment creation threw an unexpected error — see server logs.");
   }
+
+  // ── WhatsApp confirmation ──────────────────────────────────────────────
+  // Not awaited — it never throws, and ScaleChat must not hold up the
+  // webhook response.
+  void sendOrderConfirmationWhatsApp(order._id);
 
   // ── Emails ─────────────────────────────────────────────────────────────
   try {

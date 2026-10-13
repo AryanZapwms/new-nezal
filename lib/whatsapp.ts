@@ -63,12 +63,15 @@ async function scalechatRequest<T = unknown>(
   return (json?.data ?? json) as T;
 }
 
-// Test mode is the default: until WHATSAPP_REMINDER_MODE is exactly "live",
+// Test mode is the default: until the mode variable is exactly "live",
 // WHATSAPP_TEST_PHONE is the only number anything may be sent to. testPhone
-// is its last 10 digits, or "" when unset.
-export function getWhatsAppTestMode(): { testMode: boolean; testPhone: string } {
+// is its last 10 digits, or "" when unset. Cart reminders and order
+// messages each have their own switch, so one can go live without the other.
+export function getWhatsAppTestMode(
+  modeVariable: "WHATSAPP_REMINDER_MODE" | "WHATSAPP_ORDER_MODE" = "WHATSAPP_REMINDER_MODE"
+): { testMode: boolean; testPhone: string } {
   return {
-    testMode: process.env.WHATSAPP_REMINDER_MODE !== "live",
+    testMode: process.env[modeVariable] !== "live",
     testPhone: (process.env.WHATSAPP_TEST_PHONE ?? "").replace(/\D/g, "").slice(-10),
   };
 }

@@ -38,9 +38,11 @@ vi.mock("@/lib/ccavenue", () => ({
   decrypt: vi.fn((s: string) => s),
   parseCCAvenueResponse: vi.fn(),
 }))
+vi.mock("@/lib/whatsapp-order", () => ({ sendOrderConfirmationWhatsApp: vi.fn().mockResolvedValue(undefined) }))
 
 import { getServerSession } from "next-auth"
 import { parseCCAvenueResponse } from "@/lib/ccavenue"
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order"
 
 let ordersPOST: typeof import("@/app/api/orders/route").POST
 let ccavenueResponsePOST: typeof import("@/app/api/ccavenue/response/route").POST
@@ -66,6 +68,7 @@ beforeEach(async () => {
   ])
   vi.mocked(getServerSession).mockReset()
   vi.mocked(getServerSession).mockResolvedValue(null)
+  vi.mocked(sendOrderConfirmationWhatsApp).mockClear()
 })
 
 async function makeProduct(overrides: Partial<any> = {}) {
@@ -129,6 +132,9 @@ describe("COD order creation converts the cart immediately", () => {
     const cart = await Cart.findOne({ guestToken })
     expect(cart!.status).toBe("converted")
     expect(cart!.convertedOrderId).toBeTruthy()
+
+    // COD is confirmed on creation, so the WhatsApp confirmation is asked for here.
+    expect(vi.mocked(sendOrderConfirmationWhatsApp).mock.calls.map(([id]) => String(id))).toEqual([String(cart!.convertedOrderId)])
   })
 
   it("converts a logged-in user's cart on a successful COD order", async () => {
@@ -170,6 +176,7 @@ describe("CCAvenue: order creation does NOT convert; only a successful callback 
     const order = await Order.findById(orderId)
     expect(order!.paymentStatus).toBe("pending")
     expect(order!.cartId).toBeTruthy()
+    expect(sendOrderConfirmationWhatsApp).not.toHaveBeenCalled()
 
     const cart = await Cart.findById(order!.cartId)
     expect(cart!.status).toBe("active") // not converted yet — payment hasn't happened
@@ -207,6 +214,7 @@ describe("CCAvenue: order creation does NOT convert; only a successful callback 
     const cart = await Cart.findById(order!.cartId)
     expect(cart!.status).toBe("converted")
     expect(cart!.convertedOrderId!.toString()).toBe(orderId)
+    expect(vi.mocked(sendOrderConfirmationWhatsApp).mock.calls.map(([id]) => String(id))).toEqual([orderId])
   })
 
   it("leaves the cart active (available for abandoned-cart tracking) when the callback reports failure", async () => {
@@ -240,6 +248,7 @@ describe("CCAvenue: order creation does NOT convert; only a successful callback 
 
     const updatedOrder = await Order.findById(orderId)
     expect(updatedOrder!.paymentStatus).toBe("failed")
+    expect(sendOrderConfirmationWhatsApp).not.toHaveBeenCalled()
 
     const cart = await Cart.findById(order!.cartId)
     expect(cart!.status).toBe("active") // untouched — still visible to admin as an active/abandoned cart

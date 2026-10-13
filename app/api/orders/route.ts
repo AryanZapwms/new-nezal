@@ -12,6 +12,7 @@ import { Product } from "@/lib/models/product";
 import { autoCreateShiprocketOrder } from "@/lib/shiprocket";
 import { sendCapiPurchaseEvent, getRequestMeta } from "@/lib/meta-capi";
 import { syncUserContactFromOrder } from "@/lib/syncUserContact";
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order";
 import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTokenCookie, type CartIdentity } from "@/lib/cart-server";
 import { getActiveFlashSaleMap } from "@/lib/flashSale";
 import { resolveCurrentPrice } from "@/lib/pricing";
@@ -280,6 +281,9 @@ const realShippingBreakdown = shippingBreakdown ?? {
           fbc,
         },
       }).catch((err) => console.error("[meta-capi] COD purchase event failed:", err));
+
+      // Not awaited — it never throws, and ScaleChat must not hold up the order.
+      void sendOrderConfirmationWhatsApp(order._id);
 
       try {
         const populatedOrder = await Order.findById(order._id)
