@@ -3,10 +3,33 @@ import { useLoadingStore } from "@/lib/store/loading-store"
 const MUTATION_METHODS = ["POST", "PUT", "DELETE", "PATCH"]
 
 // Routes you want to show loader on even for GET
+// (/api/users/profile is deliberately not here: components/profile-completion-nudge.tsx
+// and the checkout page fetch it in the background on page load)
 const WATCHED_GET_ROUTES: string[] = [
   "/api/orders/",         // loading a specific order
-  "/api/users/profile",   // profile fetch
 ]
+
+// Background requests that must never put up the full-screen overlay — they're
+// silent by design or already show their own inline loading state. Placing
+// orders, payments and form submits aren't listed here, so they keep the overlay.
+// Matched against the exact path so e.g. /api/cart/claim-discount still shows it.
+const SILENT_REQUESTS: { method: string; path: RegExp }[] = [
+  { method: "PUT",  path: /^\/api\/cart$/ },                             // cart mirror sync (lib/store/cart-sync.ts)
+  { method: "POST", path: /^\/api\/cart\/merge$/ },                      // cart reconcile on load (components/cart-hydrator.tsx)
+  { method: "POST", path: /^\/api\/orders\/[^/]+\/check-abandonment$/ }, // checkout background check
+  { method: "POST", path: /^\/api\/shipping-rate$/ },                    // checkout shows an inline spinner
+  { method: "POST", path: /^\/api\/coupons\/validate$/ },                // Apply button shows its own state
+]
+
+function isSilentRequest(url: string, method: string): boolean {
+  let pathname: string
+  try {
+    pathname = new URL(url, window.location.origin).pathname
+  } catch {
+    return false
+  }
+  return SILENT_REQUESTS.some((r) => r.method === method && r.path.test(pathname))
+}
 
 // Routes to always skip (background/analytics/silent)
 const IGNORED_ROUTES: string[] = [
@@ -27,6 +50,7 @@ function shouldShowLoader(url: string, method: string): boolean {
 
   // Always skip ignored routes
   if (IGNORED_ROUTES.some((route) => url.includes(route))) return false
+  if (isSilentRequest(url, upperMethod)) return false
 
   // Show for all mutations
   if (MUTATION_METHODS.includes(upperMethod)) return true
