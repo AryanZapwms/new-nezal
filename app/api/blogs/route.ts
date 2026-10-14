@@ -15,10 +15,16 @@ export async function GET(request: NextRequest) {
 
     await connectDB()
 
-    const session = await getServerSession()
-    const user = session?.user?.email ? await User.findOne({ email: session.user.email }) : null
+    // Only the admin list (?all=true) depends on who's asking — public
+    // requests skip the session + user lookups entirely.
+    let isAdmin = false
+    if (all) {
+      const session = await getServerSession()
+      const user = session?.user?.email ? await User.findOne({ email: session.user.email }) : null
+      isAdmin = user?.role === "admin"
+    }
 
-    const query: any = all && user?.role === "admin" ? {} : { isPublished: true }
+    const query: any = isAdmin ? {} : { isPublished: true }
 
     if (company) {
       query.company = company
@@ -28,10 +34,14 @@ export async function GET(request: NextRequest) {
       query.tags = tag
     }
 
-    const blogs = await Blog.find(query)
+    const blogsQuery = Blog.find(query)
       .sort({ createdAt: -1 })
       .populate("author", "name")
       .populate("company", "name slug")
+
+    // Public callers only list posts — leave out every post's full HTML body
+    // (~80% of the response). The admin list keeps the full documents.
+    const blogs = isAdmin ? await blogsQuery : await blogsQuery.select("-content").lean()
 
     return NextResponse.json(blogs)
   } catch (error) {
