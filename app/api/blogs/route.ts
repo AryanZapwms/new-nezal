@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db"
 import { Blog } from "@/lib/models/blog"
 import { User } from "@/lib/models/user"
 import { getServerSession } from "next-auth"
+import { revalidatePath } from "next/cache"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -87,6 +88,10 @@ export async function POST(request: Request) {
     })
 
     console.log("Created blog with image:", blog.image)
+
+    // The public blog pages are server-rendered and cached (revalidate = 300)
+    revalidatePath("/blog")
+    revalidatePath(`/blog/${blog.slug}`)
 
     return NextResponse.json(blog)
   } catch (error) {

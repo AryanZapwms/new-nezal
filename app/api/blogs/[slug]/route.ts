@@ -5,6 +5,7 @@ import { User } from "@/lib/models/user"
 import {Company } from "@/lib/models/company"
 
 import { getServerSession } from "next-auth"
+import { revalidatePath } from "next/cache"
 import { type NextRequest, NextResponse } from "next/server"
 import fs from "fs/promises"
 import path from "path"
@@ -81,6 +82,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     console.log("Updated blog with image:", blog.image)
 
+    // The public blog pages are server-rendered and cached (revalidate = 300)
+    revalidatePath("/blog")
+    revalidatePath(`/blog/${slug}`)
+
     return NextResponse.json(blog)
   } catch (error) {
     console.error("Error updating blog:", error)
@@ -139,6 +144,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         }
       }
     }
+
+    revalidatePath("/blog")
+    revalidatePath(`/blog/${slug}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {
