@@ -5,9 +5,16 @@
 import type { Metadata } from "next"
 import type React from "react"
 import { NOINDEX_METADATA } from "@/lib/seo"
+import { ShiprocketCheckoutAssets } from "@/components/shiprocket-checkout-assets"
 
 export const metadata: Metadata = NOINDEX_METADATA
 
 export default function CartLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return (
+    <>
+      {/* Checkout button opens the Shiprocket widget (hooks/use-shiprocket-checkout.ts) */}
+      <ShiprocketCheckoutAssets />
+      {children}
+    </>
+  )
 }

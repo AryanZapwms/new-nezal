@@ -4,8 +4,8 @@
 //
 // Starts a Shiprocket Custom Checkout session in place of navigating to our
 // own /checkout page. Calls our /api/shiprocket/initiate-checkout, then
-// window.HeadlessCheckout.addToCart() (loaded globally by the <Script> tag
-// in app/layout.tsx). Never lets checkout dead-end for the customer: any
+// window.HeadlessCheckout.addToCart() (loaded on the cart and product routes
+// by components/shiprocket-checkout-assets.tsx). Never lets checkout dead-end for the customer: any
 // failure — our API erroring, or the widget script not being loaded yet —
 // falls back to a plain router.push(fallbackPath) to our own checkout page.
 
