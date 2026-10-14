@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
@@ -101,10 +102,12 @@ export function ShopByConcern() {
                 >
                   <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
                     {concern.heroImage ? (
-                      <img
+                      <Image
                         src={concern.heroImage}
                         alt={concern.label}
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        fill
+                        sizes="(min-width: 1024px) 17vw, (min-width: 640px) 33vw, 50vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-gray-400 px-2 text-center">

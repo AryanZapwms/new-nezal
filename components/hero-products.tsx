@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { getCachedSync, fetchWithCache, invalidateCache } from "@/lib/cacheClient"
 import { ChevronLeft, ChevronRight, ArrowRight, Loader2, Star, Flame, ShoppingCart } from "lucide-react"
 import { useCartStore } from "@/lib/store/cart-store"
@@ -276,12 +277,17 @@ export function HeroProducts() {
                           </div>
                         )}
 
-                        <img
+                        <Image
                           src={p.productId.image || "/nezallogo.png"}
                           alt={p.productId.name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          fill
+                          sizes="270px"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
                           onError={(e) => {
-                            ;(e.target as HTMLImageElement).src = "/nezallogo.png"
+                            // clear srcset too, or the browser keeps picking the broken candidates
+                            const img = e.currentTarget
+                            img.srcset = ""
+                            img.src = "/nezallogo.png"
                           }}
                         />
                         <div

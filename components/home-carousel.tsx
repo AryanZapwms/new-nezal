@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Image from "next/image"
+import { getImageProps } from "next/image"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -64,8 +64,8 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
   }
 
   const currentImage = carouselImages[currentIndex]
-  const isDataUrl = currentImage?.url?.startsWith("data:")
   const isClickable = Boolean(currentImage?.link)
+  const alt = currentImage?.title || "Carousel image"
 
   // Mobile falls back to the desktop image when no mobile-specific image has been
   // set for this slide in the admin panel. The dedicated mobile image is purpose-shot
@@ -75,9 +75,25 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
   // into a portrait/short box cuts off headings and product shots.
   const hasMobileImage = Boolean(currentImage?.mobileUrl)
   const mobileSrc = currentImage?.mobileUrl || currentImage?.url
-  const mobileIsDataUrl = mobileSrc?.startsWith("data:")
   const mobileAspectClass = hasMobileImage ? "aspect-[4/5]" : "aspect-[1000/384]"
   const mobileObjectFitClass = hasMobileImage ? "object-cover" : "object-contain"
+
+  // One <picture> rather than a desktop <Image> and a mobile <Image> with one
+  // hidden by CSS — both were priority-loaded, so every device downloaded two
+  // hero banners. The browser now fetches only the source matching its width.
+  // (data: URLs come back as-is; local /public files skip the loader.)
+  const bannerProps = (src: string) =>
+    getImageProps({
+      src,
+      alt,
+      fill: true,
+      sizes: "100vw",
+      loading: "eager",
+      fetchPriority: "high",
+      unoptimized: src.startsWith("/"),
+    }).props
+  const desktopBanner = currentImage ? bannerProps(currentImage.url) : null
+  const mobileBanner = mobileSrc ? bannerProps(mobileSrc) : null
 
   return (
     <div
@@ -101,102 +117,47 @@ export function HomeCarousel({ images }: HomeCarouselProps) {
       aria-label="Featured products carousel"
     >
       <div className="relative w-full">
-        {currentImage && (
-          <>
-            {/* Desktop / tablet — landscape banner (unchanged) */}
-            <div
-              className={`relative w-full hidden md:block aspect-[1000/384] ${isClickable ? "cursor-pointer" : ""}`}
-              style={{ minHeight: 200 }}
-              onClick={handleImageClick}
-            >
-              {isDataUrl ? (
-                <img
-                  src={currentImage.url}
-                  alt={currentImage.title || "Carousel image"}
-                  className="w-full h-full object-cover object-center"
-                />
-              ) : (
-                <Image
-                  src={currentImage.url}
-                  alt={currentImage.title || "Carousel image"}
-                  fill
-                  className="object-cover object-center transition-opacity duration-500"
-                  sizes="100vw"
-                  priority
-                  unoptimized={
-                    currentImage.url.startsWith("/") || currentImage.url.startsWith("/public")
-                  }
-                />
-              )}
+        {currentImage && desktopBanner && mobileBanner && (
+          // Mobile frame: mobileUrl if set in admin (square/portrait), else the desktop
+          // image letterboxed. From md up: the landscape banner, cropped to fill.
+          <div
+            className={`relative w-full ${mobileAspectClass} md:aspect-[1000/384] ${isClickable ? "cursor-pointer" : ""}`}
+            style={{ minHeight: 200 }}
+            onClick={handleImageClick}
+          >
+            <picture>
+              <source
+                media="(min-width: 768px)"
+                srcSet={desktopBanner.srcSet ?? desktopBanner.src}
+                sizes={desktopBanner.sizes}
+              />
+              <img
+                {...mobileBanner}
+                alt={alt}
+                className={`object-center transition-opacity duration-500 ${mobileObjectFitClass} md:object-cover`}
+              />
+            </picture>
 
-              {(currentImage.title || currentImage.description) && (
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end pointer-events-none">
-                  <div className="p-6 sm:p-10 text-white">
-                    {currentImage.title && (
-                      <h2
-                        className="font-display text-2xl sm:text-4xl font-bold mb-2 leading-tight"
-                        style={{ fontFamily: "var(--font-display)" }}
-                      >
-                        {currentImage.title}
-                      </h2>
-                    )}
-                    {currentImage.description && (
-                      <p className="text-sm sm:text-base text-white/85 max-w-lg">
-                        {currentImage.description}
-                      </p>
-                    )}
-                  </div>
+            {(currentImage.title || currentImage.description) && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end pointer-events-none">
+                <div className="p-5 md:p-10 text-white">
+                  {currentImage.title && (
+                    <h2
+                      className="font-display text-xl md:text-4xl font-bold mb-1.5 md:mb-2 leading-tight"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {currentImage.title}
+                    </h2>
+                  )}
+                  {currentImage.description && (
+                    <p className="text-xs md:text-base text-white/85 max-w-xs md:max-w-lg">
+                      {currentImage.description}
+                    </p>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Mobile — mobileUrl if set in admin (square/portrait), else falls back to the desktop image */}
-            <div
-              className={`relative w-full block md:hidden ${mobileAspectClass} ${isClickable ? "cursor-pointer" : ""}`}
-              style={{ minHeight: 200 }}
-              onClick={handleImageClick}
-            >
-              {mobileIsDataUrl ? (
-                <img
-                  src={mobileSrc}
-                  alt={currentImage.title || "Carousel image"}
-                  className={`w-full h-full object-center ${mobileObjectFitClass}`}
-                />
-              ) : (
-                <Image
-                  src={mobileSrc}
-                  alt={currentImage.title || "Carousel image"}
-                  fill
-                  className={`object-center transition-opacity duration-500 ${mobileObjectFitClass}`}
-                  sizes="100vw"
-                  priority
-                  unoptimized={
-                    mobileSrc.startsWith("/") || mobileSrc.startsWith("/public")
-                  }
-                />
-              )}
-
-              {(currentImage.title || currentImage.description) && (
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end pointer-events-none">
-                  <div className="p-5 text-white">
-                    {currentImage.title && (
-                      <h2
-                        className="font-display text-xl font-bold mb-1.5 leading-tight"
-                        style={{ fontFamily: "var(--font-display)" }}
-                      >
-                        {currentImage.title}
-                      </h2>
-                    )}
-                    {currentImage.description && (
-                      <p className="text-xs text-white/85 max-w-xs">
-                        {currentImage.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
+              </div>
+            )}
+          </div>
         )}
 
         {carouselImages.length > 1 && (

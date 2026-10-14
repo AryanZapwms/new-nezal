@@ -1,9 +1,8 @@
 // next.config.mjs
 
-// Images are served from Bunny.net's pull zone (see lib/bunny.ts). Doesn't
-// error right now because unoptimized:true skips domain validation, but
-// derive it from the same env var anyway for when optimization is turned
-// back on, rather than hardcoding the hostname.
+// Images are served from Bunny.net's pull zone (see lib/bunny.ts) and resized
+// there by Bunny Optimizer through the custom loader in lib/image-loader.ts,
+// which reads this hostname (inlined below as NEXT_PUBLIC_BUNNY_HOSTNAME).
 const bunnyHostname = (() => {
   try {
     return process.env.BUNNY_PULL_ZONE_URL ? new URL(process.env.BUNNY_PULL_ZONE_URL).hostname : null
@@ -36,8 +35,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  env: {
+    NEXT_PUBLIC_BUNNY_HOSTNAME: bunnyHostname ?? '',
+  },
   images: {
-    unoptimized: true,
+    // Resizing happens at the CDN edge (Bunny Optimizer), not on this server.
+    loader: 'custom',
+    loaderFile: './lib/image-loader.ts',
     qualities: [75, 90],   // ← added: allow both 75 (default) and 90
     remotePatterns: [
       {

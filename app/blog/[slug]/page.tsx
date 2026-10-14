@@ -1,62 +1,53 @@
-"use client"
+// app/blog/[slug]/page.tsx
+//
+// Server Component — the article is rendered into the HTML (no client fetch,
+// no "Loading blog..." screen, and the text is visible to search engines).
+// The post query is shared with generateMetadata in ./layout.tsx via cache().
 
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
 import Link from "next/link"
-import { Share2, ArrowLeft, Calendar, User } from "lucide-react"
+import { ArrowLeft, Calendar, User } from "lucide-react"
+import { getPublishedBlog } from "@/lib/blog-data"
+import { BlogFeaturedImage, BlogShareButton } from "@/components/blog-post-client"
 
-interface Blog {
-  _id: string
-  title: string
-  slug: string
-  content: string
-  excerpt: string
-  image: string
-  author: { name: string; email: string }
-  company: { name: string; slug: string }
-  tags: string[]
-  createdAt: string
+// Posts aren't pre-rendered at build time; each is rendered on its first
+// visit and then cached, re-rendered at most every 5 minutes. The admin blog
+// routes also call revalidatePath() on update/delete so edits show immediately.
+export const revalidate = 300
+
+export function generateStaticParams() {
+  return []
 }
 
-export default function BlogDetailPage() {
-  const params = useParams()
-  const slug = params.slug as string
-  const [blog, setBlog] = useState<Blog | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [imageError, setImageError] = useState(false)
-
-  useEffect(() => {
-    const fetchBlog = async () => {
-      try {
-        const res = await fetch(`/api/blogs/${slug}`)
-        if (!res.ok) throw new Error("Failed to fetch blog")
-        const data = await res.json()
-        setBlog(data)
-      } catch (error) {
-        console.error("Error fetching blog:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchBlog()
-  }, [slug])
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: blog?.title, text: blog?.excerpt, url: window.location.href })
-    } else {
-      navigator.clipboard.writeText(window.location.href)
-      alert("Link copied to clipboard!")
-    }
+// Was a styled-jsx global block; styled-jsx only works in Client Components.
+const BLOG_CONTENT_CSS = `
+  .blog-content h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a3a2a;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
   }
-
-  if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center" style={{ background: "#f4f9f4" }}>
-        <p style={{ color: "#6b7c6b" }}>Loading blog...</p>
-      </main>
-    )
+  .blog-content p {
+    margin-bottom: 1.25rem;
   }
+  .blog-content ul,
+  .blog-content ol {
+    margin-bottom: 1.25rem;
+    padding-left: 1.5rem;
+  }
+  .blog-content li {
+    margin-bottom: 0.5rem;
+  }
+  .blog-content a {
+    color: #2d6a4f;
+    text-decoration: underline;
+  }
+`
+
+export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const blog = await getPublishedBlog(slug)
 
   if (!blog) {
     return (
@@ -96,7 +87,12 @@ export default function BlogDetailPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
-              {new Date(blog.createdAt).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
+              {new Date(blog.createdAt).toLocaleDateString("en-IN", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                timeZone: "Asia/Kolkata",
+              })}
             </span>
             <span
               className="text-[11px] font-semibold tracking-wide uppercase px-2.5 py-1 rounded-full"
@@ -130,27 +126,11 @@ export default function BlogDetailPage() {
                 ))}
               </div>
             )}
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full transition-colors hover:opacity-80"
-              style={{ background: "#fff", color: "#1a3a2a", border: "1px solid #d4e8d0" }}
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              Share
-            </button>
+            <BlogShareButton title={blog.title} excerpt={blog.excerpt} />
           </div>
 
           {/* Featured image */}
-          {blog.image && !imageError ? (
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-10" style={{ background: "#e8f2e4" }}>
-              <img
-                src={blog.image}
-                alt={blog.title}
-                className="w-full h-full object-cover"
-                onError={() => setImageError(true)}
-              />
-            </div>
-          ) : null}
+          {blog.image ? <BlogFeaturedImage src={blog.image} alt={blog.title} /> : null}
 
           {/* Content — rendered as HTML, not literal text */}
           <div
@@ -158,31 +138,7 @@ export default function BlogDetailPage() {
             style={{ color: "#3d5c45", fontSize: "1.05rem", lineHeight: 1.8 }}
             dangerouslySetInnerHTML={{ __html: blog.content }}
           />
-          <style jsx global>{`
-            .blog-content h2 {
-              font-size: 1.5rem;
-              font-weight: 700;
-              color: #1a3a2a;
-              margin-top: 2rem;
-              margin-bottom: 0.75rem;
-              letter-spacing: -0.01em;
-            }
-            .blog-content p {
-              margin-bottom: 1.25rem;
-            }
-            .blog-content ul,
-            .blog-content ol {
-              margin-bottom: 1.25rem;
-              padding-left: 1.5rem;
-            }
-            .blog-content li {
-              margin-bottom: 0.5rem;
-            }
-            .blog-content a {
-              color: #2d6a4f;
-              text-decoration: underline;
-            }
-          `}</style>
+          <style>{BLOG_CONTENT_CSS}</style>
 
           {/* Author card */}
           <div

@@ -1,12 +1,10 @@
 // app/blog/[slug]/layout.tsx
 //
-// page.tsx here is a Client Component, which can't export metadata itself
-// — this server layout fetches the post directly (mirrors the query in
-// app/api/blogs/[slug]/route.ts) and builds per-post SEO tags from it.
+// Builds per-post SEO tags. getPublishedBlog is wrapped in cache(), so this
+// and page.tsx share a single query per request.
 import type { Metadata } from "next"
 import type React from "react"
-import { connectDB } from "@/lib/db"
-import { Blog } from "@/lib/models/blog"
+import { getPublishedBlog } from "@/lib/blog-data"
 import { pageMetadata } from "@/lib/seo"
 
 function stripHtml(html: string, maxLength = 160) {
@@ -21,13 +19,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
 
-  await connectDB()
-  const blog = await Blog.findOne({ slug, isPublished: true }).lean<{
-    title: string
-    excerpt?: string
-    content: string
-    image?: string
-  }>()
+  const blog = await getPublishedBlog(slug)
 
   if (!blog) {
     return pageMetadata({
