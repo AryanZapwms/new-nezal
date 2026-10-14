@@ -356,6 +356,8 @@ const initialReviews = null
   const [isZooming, setIsZooming] = useState(false)
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 })
   const imageContainerRef = useRef<HTMLDivElement>(null)
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const thumbStripRef = useRef<HTMLDivElement>(null)
 
   const reviewsFetchRef = useRef(false)
 
@@ -363,11 +365,40 @@ const initialReviews = null
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
   const container = imageContainerRef.current
   if (!container) return
+  // Pause the zoom while the cursor is over a prev/next arrow so the slide change stays visible
+  setIsZooming(!(e.target as Element).closest("button"))
   const rect = container.getBoundingClientRect()
   const x = ((e.clientX - rect.left) / rect.width) * 100
   const y = ((e.clientY - rect.top) / rect.height) * 100
   setZoomPosition({ x, y })
 }
+
+  // ── Image slider ───────────────────────────────────────
+  // The slider's scroll position is the source of truth: swipes, arrows and
+  // thumbnail clicks all scroll it, and handleSliderScroll derives the index.
+  const scrollToImage = (idx: number) => {
+    const slider = sliderRef.current
+    if (!slider) return
+    const target = Math.max(0, Math.min(idx, slider.children.length - 1))
+    slider.scrollTo({ left: target * slider.clientWidth, behavior: "smooth" })
+  }
+
+  const handleSliderScroll = () => {
+    const slider = sliderRef.current
+    if (!slider || !slider.clientWidth) return
+    setSelectedImage(Math.round(slider.scrollLeft / slider.clientWidth))
+  }
+
+  // Keep the active thumbnail centred in the strip (scrolls the strip only, never the page)
+  useEffect(() => {
+    const strip = thumbStripRef.current
+    const thumb = strip?.children[selectedImage] as HTMLElement | undefined
+    if (!strip || !thumb) return
+    strip.scrollTo({
+      left: thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2,
+      behavior: "smooth",
+    })
+  }, [selectedImage])
 
 
 
@@ -749,15 +780,27 @@ const currentImage =
     </div>
   )}
 
-  {currentImage ? (
-    <Image
-      src={`${currentImage}?v=${product._id.slice(-6)}`}
-      alt={product.name}
-      fill
-      sizes="(max-width: 1024px) 100vw, (max-width: 1280px) 50vw, 640px"
-      className="object-contain p-8"
-      priority
-    />
+  {allImages.length > 0 ? (
+    // Swipeable track (native scroll-snap). The badges, zoom overlay and arrows are
+    // siblings of this track, so they stay fixed on top while the slides scroll.
+    <div
+      ref={sliderRef}
+      onScroll={handleSliderScroll}
+      className="scrollbar-hide absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+    >
+      {allImages.map((img, idx) => (
+        <div key={idx} className="relative h-full min-w-full snap-center">
+          <Image
+            src={`${img}?v=${product._id.slice(-6)}`}
+            alt={product.name}
+            fill
+            sizes="(max-width: 1024px) 100vw, (max-width: 1280px) 50vw, 640px"
+            className="object-contain p-8"
+            priority={idx === 0} // first slide eager; the rest lazy-load (next/image default)
+          />
+        </div>
+      ))}
+    </div>
   ) : (
     <div className="flex h-full items-center justify-center text-gray-400">
       No image available
@@ -779,36 +822,36 @@ const currentImage =
     />
   )}
 
-  {/* Prev / Next arrows for mobile — unchanged */}
-  {allImages.length > 1 && (
-    <>
-      <button
-        onClick={() => setSelectedImage((i) => (i - 1 + allImages.length) % allImages.length)}
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 border flex items-center justify-center lg:hidden"
-        style={{ borderColor: "#dde8de" }}
-        aria-label="Previous image"
-      >
-        <ChevronLeft className="w-4 h-4" style={{ color: "#1e3a28" }} />
-      </button>
-      <button
-        onClick={() => setSelectedImage((i) => (i + 1) % allImages.length)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 border flex items-center justify-center lg:hidden"
-        style={{ borderColor: "#dde8de" }}
-        aria-label="Next image"
-      >
-        <ChevronRight className="w-4 h-4" style={{ color: "#1e3a28" }} />
-      </button>
-    </>
+  {/* Prev / Next arrows — hidden on the first / last image (so never shown for a single image) */}
+  {selectedImage > 0 && (
+    <button
+      onClick={() => scrollToImage(selectedImage - 1)}
+      className="absolute left-3 top-1/2 z-20 -translate-y-1/2 w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white/90 hover:bg-white border shadow-sm flex items-center justify-center cursor-pointer transition-colors"
+      style={{ borderColor: "#dde8de" }}
+      aria-label="Previous image"
+    >
+      <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" style={{ color: "#1e3a28" }} />
+    </button>
+  )}
+  {selectedImage < allImages.length - 1 && (
+    <button
+      onClick={() => scrollToImage(selectedImage + 1)}
+      className="absolute right-3 top-1/2 z-20 -translate-y-1/2 w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white/90 hover:bg-white border shadow-sm flex items-center justify-center cursor-pointer transition-colors"
+      style={{ borderColor: "#dde8de" }}
+      aria-label="Next image"
+    >
+      <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" style={{ color: "#1e3a28" }} />
+    </button>
   )}
 </div>
 
             {/* Thumbnails */}
             {allImages.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-1">
+              <div ref={thumbStripRef} className="relative flex gap-3 overflow-x-auto pb-1">
                 {allImages.filter(Boolean).map((img, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setSelectedImage(idx)}
+                    onClick={() => scrollToImage(idx)}
                     className="relative flex-shrink-0 w-14 h-14 sm:w-20 sm:h-20 rounded-xl border-2 overflow-hidden transition-all duration-150"
                     style={{
                       backgroundColor: "#ffffff",
