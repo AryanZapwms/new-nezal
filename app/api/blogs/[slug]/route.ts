@@ -17,8 +17,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Await params before accessing slug
     const { slug } = await params
 
+    // Public endpoint — the author's name only, never their email
     const blog = await Blog.findOne({ slug, isPublished: true })
-      .populate("author", "name email")
+      .populate("author", "name")
       .populate("company", "name slug")
 
     if (!blog) {
