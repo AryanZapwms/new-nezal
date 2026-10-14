@@ -3,6 +3,7 @@
 // No skeleton flash, no client-side waterfall, no 100-product fetch.
 
 import { Suspense } from "react"
+import Image from "next/image"
 import { HomeCarousel } from "@/components/home-carousel"
 import { ShopByCategory } from "@/components/shop-by-category"
 import WhyChoose from "@/components/why-choose"
@@ -126,11 +127,12 @@ function PromoBannerGrid() {
               <div className="relative w-full aspect-square overflow-hidden rounded-2xl bg-white border border-[var(--color-border)] shadow-sm transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(42,122,91,0.10),transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-                <img
+                <Image
                   src={banner.image}
                   alt={banner.label}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover scale-105 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-[1.5deg]"
+                  fill
+                  sizes="(min-width: 768px) 33vw, 50vw"
+                  className="object-cover scale-105 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-[1.5deg]"
                 />
               </div>
               <div className="text-center transition-all duration-300 group-hover:-translate-y-1">
