@@ -1,6 +1,7 @@
 // app/api/categories/route.ts
 import { connectDB } from "@/lib/db";
 import { Category } from "@/lib/models/category";
+import { findCategories, toCategoryTree } from "@/lib/product-listing";
 import { Company } from "@/lib/models/company";
 import { User } from "@/lib/models/user";
 import { NextResponse, type NextRequest } from "next/server";
@@ -16,45 +17,14 @@ export async function GET(request: NextRequest) {
     const all = searchParams.get("all");
     const flat = searchParams.get("flat") === "true";
 
-    let query: any = { isActive: true };
-
-    if (company) {
-  const mongoose = require('mongoose');
-  if (mongoose.Types.ObjectId.isValid(company)) {
-    query.company = company;
-  } else {
-    const companyDoc = await Company.findOne({ slug: company });
-    if (companyDoc) query.company = companyDoc._id;
-  }
-}
-
-    if (all === "true") {
-      query = {};
-    }
-
-    const categories = await Category.find(query)
-      .populate("company", "name slug")
-      .populate("parent", "name slug _id")
-      .sort({ createdAt: -1 })
-      .lean();
+    // Shared with the server-rendered category page — see lib/product-listing.ts
+    const categories = await findCategories({ company, all: all === "true" });
 
     if (flat) {
       return NextResponse.json(categories);
     }
 
-    const mainCategories = categories.filter((cat: any) => !cat.parent);
-    const subCategories = categories.filter((cat: any) => cat.parent);
-
-    const hierarchical = mainCategories.map((main: any) => ({
-      ...main,
-      subCategories: subCategories.filter(
-        (sub: any) =>
-          sub.parent &&
-          sub.parent._id.toString() === main._id.toString()
-      ),
-    }));
-
-    return NextResponse.json(hierarchical);
+    return NextResponse.json(toCategoryTree(categories));
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json(

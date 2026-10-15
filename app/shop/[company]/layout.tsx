@@ -1,12 +1,11 @@
 // app/shop/[company]/layout.tsx
 //
-// page.tsx here is a Client Component, which can't export metadata itself
-// — this server layout fetches the company/brand directly and builds SEO
-// tags. Route param is named "company" but stores the brand's slug.
+// Builds the brand's SEO tags. getActiveCompanyBySlug is wrapped in cache(),
+// so this and page.tsx share one query per request. Route param is named
+// "company" but stores the brand's slug.
 import type { Metadata } from "next"
 import type React from "react"
-import { connectDB } from "@/lib/db"
-import { Company } from "@/lib/models/company"
+import { getActiveCompanyBySlug } from "@/lib/product-listing"
 import { pageMetadata } from "@/lib/seo"
 
 export async function generateMetadata({
@@ -16,13 +15,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { company: companySlug } = await params
 
-  await connectDB()
-  const company = await Company.findOne({ slug: companySlug, isActive: true }).lean<{
+  const company: {
     name: string
     description?: string
     banner?: string
     logo?: string
-  }>()
+  } | null = await getActiveCompanyBySlug(companySlug)
 
   if (!company) {
     return pageMetadata({
