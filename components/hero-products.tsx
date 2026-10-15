@@ -45,7 +45,22 @@ export function invalidateHeroProductsCache() {
   invalidateCache(CACHE_KEY)
 }
 
-export function HeroProducts() {
+function toEntries(heroProducts: any[]): HeroProductEntry[] {
+  return heroProducts
+    .map((item: any) => {
+      const product = item.productId
+      if (!product || !product.company) return null
+      return { _id: item._id, productId: product }
+    })
+    .filter(Boolean) as HeroProductEntry[]
+}
+
+/**
+ * `initialHeroProducts` is the /api/hero-products list, loaded by the home page
+ * on the server so the section is in the first HTML. Without it (e.g. that
+ * server read failed) the section fetches on the client as before.
+ */
+export function HeroProducts({ initialHeroProducts }: { initialHeroProducts?: any[] }) {
   const router = useRouter()
   const { toast } = useToast()
   const addItem = useCartStore((state) => state.addItem)
@@ -55,14 +70,17 @@ export function HeroProducts() {
     []
   )
 
-  const [products, setProducts] = useState<HeroProductEntry[]>([])
-  const [loading, setLoading] = useState(!initialData)
+  const [products, setProducts] = useState<HeroProductEntry[]>(
+    initialHeroProducts ? toEntries(initialHeroProducts) : []
+  )
+  const [loading, setLoading] = useState(!initialHeroProducts && !initialData)
   const [navigatingId, setNavigatingId] = useState<string | null>(null)
   const [addingId, setAddingId] = useState<string | null>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
 
   useEffect(() => {
+    if (initialHeroProducts) return
     let mounted = true
     async function load() {
       setLoading(true)
@@ -74,15 +92,7 @@ export function HeroProducts() {
         )
         if (!mounted) return
         if (Array.isArray(data.heroProducts) && data.heroProducts.length > 0) {
-          setProducts(
-            data.heroProducts
-              .map((item: any) => {
-                const product = item.productId
-                if (!product || !product.company) return null
-                return { _id: item._id, productId: product }
-              })
-              .filter(Boolean) as HeroProductEntry[]
-          )
+          setProducts(toEntries(data.heroProducts))
         } else {
           setProducts([])
         }

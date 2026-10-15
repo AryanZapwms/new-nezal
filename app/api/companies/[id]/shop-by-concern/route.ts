@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { Company } from "@/lib/models/company";
 import { Product } from "@/lib/models/product";
+import { getShopByConcern } from "@/lib/home-sections";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -30,80 +31,8 @@ export async function GET(request: Request, { params }: ParamType) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
-    const settings = company.shopByConcernSettings || {
-      isVisible: true,
-      limit: 6,
-    };
-
-    if (!showAll && !settings.isVisible) {
-      return NextResponse.json({ items: [], settings });
-    }
-
-    const concerns = (company.shopByConcern || [])
-      .filter((item: any) => (showAll ? true : item.isActive !== false))
-      .sort((a: any, b: any) => (a.priority ?? 0) - (b.priority ?? 0));
-
-    const limit = settings.limit ?? 6;
-
-    const items = concerns
-      .slice(0, showAll ? concerns.length : limit)
-      .map((item: any) => ({
-        _id: item._id,
-        title: item.title,
-        image: item.image,
-        description: item.description,
-        isActive: item.isActive ?? true,
-        priority: item.priority ?? 0,
-        product: item.product,
-      }));
-
-    const productIds = items
-      .map((item) =>
-        item.product && typeof item.product === "object"
-          ? item.product
-          : item.product?.toString()
-      )
-      .filter(Boolean);
-
-    let productsById: Record<string, any> = {};
-
-    if (productIds.length > 0) {
-      const products = await Product.find({
-        _id: { $in: productIds },
-        company: id,
-      }).select("name slug company");
-
-      productsById = products.reduce(
-        (acc: Record<string, any>, product: any) => {
-          acc[product._id.toString()] = product;
-          return acc;
-        },
-        {}
-      );
-    }
-
-    const populatedItems = items.map((item) => {
-      const productId =
-        typeof item.product === "object"
-          ? item.product._id?.toString()
-          : item.product?.toString();
-
-      const product = productId ? productsById[productId] : undefined;
-
-      return {
-        ...item,
-        product: product
-          ? {
-              _id: product._id,
-              name: product.name,
-              slug: product.slug,
-              company: product.company,
-            }
-          : undefined,
-      };
-    });
-
-    return NextResponse.json({ items: populatedItems, settings });
+    // Shared with the home page's server render — see lib/home-sections.ts
+    return NextResponse.json(await getShopByConcern(company, { showAll }));
   } catch (error) {
     console.error("Error fetching shop by concern items:", error);
     return NextResponse.json(

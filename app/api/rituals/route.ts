@@ -6,18 +6,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Ritual } from "@/lib/models/ritual"
+import { getRituals } from "@/lib/home-sections"
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB()
 
     const includeInactive = req.nextUrl.searchParams.get("all") === "true"
-    const filter = includeInactive ? {} : { isActive: true }
-
-    const rituals = await Ritual.find(filter)
-      .sort({ sortOrder: 1, createdAt: -1 })
-      .select("name slug tagline heroImage color sortOrder isActive")
-      .lean()
+    // Shared with the home page's server render — see lib/home-sections.ts
+    const rituals = await getRituals({ includeInactive })
 
     return NextResponse.json({ rituals })
   } catch (error) {

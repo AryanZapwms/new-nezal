@@ -24,12 +24,18 @@ interface RitualCard {
 
 const HOMEPAGE_PREVIEW_COUNT = 6
 
-export function DiscoverRituals() {
-  const [rituals, setRituals] = useState<RitualCard[]>([])
-  const [totalCount, setTotalCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+/**
+ * `initialRituals` is the /api/rituals list, loaded by the home page on the
+ * server so the section is in the first HTML. Without it (e.g. that server
+ * read failed) the section fetches on the client as before.
+ */
+export function DiscoverRituals({ initialRituals }: { initialRituals?: RitualCard[] }) {
+  const [rituals, setRituals] = useState<RitualCard[]>(initialRituals?.slice(0, HOMEPAGE_PREVIEW_COUNT) ?? [])
+  const [totalCount, setTotalCount] = useState(initialRituals?.length ?? 0)
+  const [loading, setLoading] = useState(!initialRituals)
 
   useEffect(() => {
+    if (initialRituals) return
     let mounted = true
     async function load() {
       try {
