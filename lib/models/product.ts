@@ -276,5 +276,10 @@ gstPercent: {
 
 )
 
+// Listing queries (lib/product-listing.ts): brand and category pages with the
+// default "featured"/manual sort (sortOrder, then newest).
+productSchema.index({ isActive: 1, company: 1, sortOrder: 1, createdAt: -1 })
+productSchema.index({ isActive: 1, category: 1, sortOrder: 1, createdAt: -1 })
+
 export const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema)
