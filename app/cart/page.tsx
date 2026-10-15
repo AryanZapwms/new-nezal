@@ -19,6 +19,31 @@ import {
 import { BULK_ORDER_LIMIT } from "@/lib/config"
 import { WhatsAppDiscountPopup } from "@/components/whatsapp-discount-popup"
 import { useShiprocketCheckout } from "@/hooks/use-shiprocket-checkout"
+import { useCartHydrated } from "@/hooks/use-cart-hydrated"
+import { useLiveCartPrices, cartItemKey } from "@/hooks/use-live-cart-prices"
+import { PriceUpdatedNote } from "@/components/price-updated-note"
+
+// Shown until the saved cart (localStorage) has been read — the server can't
+// see it, so without this the page would flash "Your cart is empty" first.
+function CartSkeleton() {
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="container-nezal py-6 sm:py-8 lg:py-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-8">Shopping Cart</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8" aria-busy="true">
+          <div className="lg:col-span-2 space-y-4">
+            {[0, 1].map((i) => (
+              <div key={i} className="h-32 sm:h-36 rounded-2xl border border-border bg-muted/60 animate-pulse" />
+            ))}
+          </div>
+          <div className="lg:col-span-1">
+            <div className="h-80 rounded-2xl border border-border bg-muted/60 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
 
 export default function CartPage() {
 const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotalItems } = useCartStore()
@@ -26,7 +51,9 @@ const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotal
   const router = useRouter()
   const { initiateCheckout } = useShiprocketCheckout()
   const [showBulkOrderModal, setShowBulkOrderModal] = useState(false)
-  const [gstMap, setGstMap] = useState<Record<string, number>>({})
+  const hydrated = useCartHydrated()
+  // Live prices + GST from the database; changed lines get a "price updated" note
+  const { gstMap, priceChanges } = useLiveCartPrices()
 
   // ── Free shipping ──────────────────────────────
   const [freeShipping, setFreeShipping] = useState<{ enabled: boolean; threshold: number } | null>(null)
@@ -54,21 +81,6 @@ const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotal
       : 0
 
 
-  useEffect(() => {
-  if (items.length === 0) { setGstMap({}); return }
-  const ids = items.map((i) => i.productId).join(",")
-  fetch(`/api/products?ids=${ids}`)
-    .then((res) => (res.ok ? res.json() : { products: [] }))
-    .then((data) => {
-      const map: Record<string, number> = {}
-      ;(data.products || []).forEach((p: any) => {
-        if (typeof p.gstPercent === "number") map[p._id] = p.gstPercent
-      })
-      setGstMap(map)
-    })
-    .catch(() => {})
-}, [items.map((i) => i.productId).join(",")])
-
 const totalGST = items.reduce((sum, item) => {
   const rate = gstMap[item.productId]
   if (!rate) return sum
@@ -85,6 +97,8 @@ const totalGST = items.reduce((sum, item) => {
   const hasFlashSaleItem = items.some((item) => !!item.flashSale)
 
 
+
+  if (!hydrated) return <CartSkeleton />
 
   // ===== Empty cart state =====
   if (items.length === 0) {
@@ -164,6 +178,8 @@ const totalGST = items.reduce((sum, item) => {
                       <span className="font-medium">Size:</span> {item.selectedSize.size} ({item.selectedSize.quantity}{item.selectedSize.unit})
                     </p>
                   )}
+
+                  <PriceUpdatedNote change={priceChanges[cartItemKey(item)]} className="mt-1" />
 
                   {item.flashSale && item.discountPrice && (
                     <div
@@ -282,6 +298,8 @@ const totalGST = items.reduce((sum, item) => {
                         <span className="font-medium">Size:</span> {item.selectedSize.size} ({item.selectedSize.quantity}{item.selectedSize.unit})
                       </p>
                     )}
+
+                    <PriceUpdatedNote change={priceChanges[cartItemKey(item)]} className="mt-1" />
 
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center border border-border rounded-lg overflow-hidden">
