@@ -16,6 +16,7 @@ import { connectDB } from "@/lib/db"
 import HomeClient from "@/components/HomeClient"
 import FlashDeal from "@/components/FlashDeal"
 import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale"
+import { getHeroProducts, getConcerns, getRituals, getShopByConcern } from "@/lib/home-sections"
 import { TrustBar } from "@/components/TrustBar"
 import { HeroProducts } from "@/components/hero-products"
 
@@ -41,7 +42,13 @@ async function getHomeData() {
 
     const now = new Date()
 
-    const [companiesRaw, productsRaw, reviewsRaw, flashSalesRaw, bannersRaw] = await Promise.all([
+    // Shared by the 8 products below and the hero products section
+    const flashSaleMapPromise = getActiveFlashSaleMap()
+
+    const [
+      companiesRaw, productsRaw, reviewsRaw, flashSalesRaw, bannersRaw,
+      flashSaleMap, heroProductsRaw, concernsRaw, ritualsRaw,
+    ] = await Promise.all([
   Company.find({}).sort({ name: 1 }).lean(),
 
   Product.find({ isActive: true })
@@ -70,6 +77,13 @@ async function getHomeData() {
     .lean(),
 
   HomeBanner.find({ isActive: true }).sort({ order: 1, createdAt: 1 }).lean(),
+
+  flashSaleMapPromise,
+
+  // Home sections (lib/home-sections.ts — same reads as their API routes)
+  optionalSection(getHeroProducts({ flashSaleMap: flashSaleMapPromise })),
+  optionalSection(getConcerns()),
+  optionalSection(getRituals()),
 ])
     const s = (obj: any) => JSON.parse(JSON.stringify(obj))
 
@@ -81,7 +95,6 @@ async function getHomeData() {
     // ── Merge in flash-sale pricing so these 8 products carry the same
     //    discountPrice / flashSale data as every other listing, in case
     //    they get rendered (see note in chat — they currently aren't). ──
-    const flashSaleMap = await getActiveFlashSaleMap()
     const products = applyFlashSaleToList(s(productsRaw), flashSaleMap)
 
     const nezalCompany =
@@ -90,11 +103,31 @@ async function getHomeData() {
 
     const activeSale = flashSales.find((s: any) => s.products?.length > 0) ?? null
 
-    return { companies, products, reviews, nezalCompany, activeSale, banners }
+    // Needs the company loaded above, so it's the one read after the batch
+    const shopByConcernRaw = nezalCompany ? await optionalSection(getShopByConcern(nezalCompany)) : undefined
+
+    const sections = {
+      heroProducts:  heroProductsRaw  ? s(heroProductsRaw)  : undefined,
+      concerns:      concernsRaw      ? s(concernsRaw)      : undefined,
+      rituals:       ritualsRaw       ? s(ritualsRaw)       : undefined,
+      shopByConcern: shopByConcernRaw ? s(shopByConcernRaw) : undefined,
+    }
+
+    return { companies, products, reviews, nezalCompany, activeSale, banners, sections }
  } catch (err) {
   console.error("Home page data fetch error:", err)
-  return { companies: [], products: [], reviews: [], nezalCompany: null, activeSale: null, banners: [] }
+  // sections undefined → each section falls back to its own client fetch
+  return { companies: [], products: [], reviews: [], nezalCompany: null, activeSale: null, banners: [], sections: {} as Record<string, undefined> }
 }
+}
+
+// A failed section read leaves that section's prop undefined, so it falls back
+// to fetching on the client — it never blanks the rest of the home page.
+function optionalSection<T>(read: Promise<T>): Promise<T | undefined> {
+  return read.catch((err) => {
+    console.error("Home section fetch error:", err)
+    return undefined
+  })
 }
 
 // ── Promo banners (static, no fetch needed) ───────────────────────────────────
@@ -154,7 +187,7 @@ function PromoBannerGrid() {
 
 // ── Page (Server Component) ───────────────────────────────────────────────────
 export default async function Home() {
-const { companies, products, reviews, nezalCompany, activeSale, banners } = await getHomeData()
+const { companies, products, reviews, nezalCompany, activeSale, banners, sections } = await getHomeData()
 
 const testimonials = reviews.slice(0, 8).map((r: any) => ({
   id:      r._id,
@@ -190,17 +223,17 @@ const testimonials = reviews.slice(0, 8).map((r: any) => ({
       {activeSale && <FlashDeal sale={activeSale} />}
 
       {/* Hero Products */}
-          <HeroProducts />
+          <HeroProducts initialHeroProducts={sections.heroProducts} />
 
           {/* Shop By Concern */}
-      <ShopByConcern />
+      <ShopByConcern initialConcerns={sections.concerns} />
 
       {/* Discover Rituals */}
-      <DiscoverRituals />
+      <DiscoverRituals initialRituals={sections.rituals} />
 
       {/* Shop By Category */}
       {nezalCompany && (
-        <ShopByCategory companyId={nezalCompany._id} companySlug={nezalCompany.slug} />
+        <ShopByCategory companyId={nezalCompany._id} companySlug={nezalCompany.slug} initialData={sections.shopByConcern} />
       )}
 
 

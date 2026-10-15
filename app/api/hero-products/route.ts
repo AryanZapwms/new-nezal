@@ -16,82 +16,15 @@ import { HeroProduct } from "@/lib/models/heroProduct"
 import { Product } from "@/lib/models/product"
 import { Company } from "@/lib/models/company"
 import { Review } from "@/lib/models/review"
-import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale"
+import { getHeroProducts } from "@/lib/home-sections"
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB()
 
     const includeInactive = req.nextUrl.searchParams.get("all") === "true"
-    const filter = includeInactive ? {} : { isActive: true }
-
-    const heroProductsRaw = await HeroProduct.find(filter)
-      .sort({ sortOrder: 1, createdAt: -1 })
-      .populate({
-        path: "productId",
-        // ── added: sizes (for sizeLabel), keyIngredients ──
-        select: "name slug price discountPrice image company stock sizes keyIngredients",
-        populate: { path: "company", select: "name slug" },
-      })
-      .lean()
-
-    // ── Merge in flash-sale pricing so hero products match every other
-    //    surface (shop grid, new arrivals, etc.) ──────────────────────
-    const flashSaleMap = await getActiveFlashSaleMap()
-    const productsWithSale = applyFlashSaleToList(
-      heroProductsRaw.map((h: any) => h.productId).filter(Boolean),
-      flashSaleMap
-    )
-    const saleMap = new Map(productsWithSale.map((p: any) => [p._id.toString(), p]))
-
-    // ── Aggregate rating + review count for every hero product in one query.
-    //    Note: Review model uses `product` (not `productId`) and
-    //    `status: "approved"` (not a boolean isApproved flag). ──────────────
-    const productIds = heroProductsRaw
-      .map((h: any) => h.productId?._id)
-      .filter(Boolean)
-
-    const ratingAgg = productIds.length
-      ? await Review.aggregate([
-          { $match: { product: { $in: productIds }, status: "approved" } },
-          {
-            $group: {
-              _id: "$product",
-              averageRating: { $avg: "$rating" },
-              reviewCount: { $sum: 1 },
-            },
-          },
-        ])
-      : []
-
-    const ratingMap = new Map(
-      ratingAgg.map((r: any) => [r._id.toString(), { rating: r.averageRating, reviewCount: r.reviewCount }])
-    )
-
-    const heroProducts = heroProductsRaw
-      .map((h: any) => {
-        if (!h.productId) return null
-        const productId = h.productId._id.toString()
-        const product = saleMap.get(productId) || h.productId
-        const ratingInfo = ratingMap.get(productId)
-
-        // Derive a simple size label from the first size variant, if any
-        const firstSize = product.sizes?.[0]
-        const sizeLabel = firstSize ? `${firstSize.size}${firstSize.unit}` : undefined
-
-        return {
-          ...h,
-          productId: {
-            ...product,
-            sizeLabel,
-            keyIngredients: (product.keyIngredients || []).map((k: any) => k.name),
-            rating: ratingInfo?.rating,
-            reviewCount: ratingInfo?.reviewCount,
-            isBestSeller: h.isBestSeller,
-          },
-        }
-      })
-      .filter(Boolean) // drop entries whose product was deleted
+    // Shared with the home page's server render — see lib/home-sections.ts
+    const heroProducts = await getHeroProducts({ includeInactive })
 
     return NextResponse.json({ heroProducts })
   } catch (error) {

@@ -31,5 +31,9 @@ const reviewSchema = new mongoose.Schema(
 )
 
 reviewSchema.index({ product: 1, user: 1 }, { unique: true })
+// Home page testimonials: approved reviews, best first (app/page.tsx)
+reviewSchema.index({ status: 1, rating: -1, createdAt: -1 })
+// Product page reviews: one product's approved reviews, newest first
+reviewSchema.index({ product: 1, status: 1, createdAt: -1 })
 
 export const Review = mongoose.models.Review || mongoose.model("Review", reviewSchema)

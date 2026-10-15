@@ -43,6 +43,7 @@ interface ShopByCategorySettings {
 interface ShopByCategoryProps {
   companyId: string;
   companySlug: string;
+  initialData?: { items: any[]; settings?: ShopByCategorySettings };
 }
 
 // ── Map title → /collections?category= slug ───────────
@@ -141,14 +142,53 @@ const getCategoryImage = (title: string): string => {
 };
 
 // ── Main Component ─────────────────────────────────────
-export function ShopByCategory({ companyId, companySlug }: ShopByCategoryProps) {
-  const [items, setItems] = useState<ShopByCategoryItem[]>([]);
-  const [settings, setSettings] = useState<ShopByCategorySettings>({ isVisible: true, limit: 6 });
-  const [loading, setLoading] = useState(true);
+function transformItems(rawItems: any[], companyId: string, companySlug: string): ShopByCategoryItem[] {
+  return rawItems
+    .map((item: any): ShopByCategoryItem | null => {
+      if (!item) return null;
+      const product = item.product || item.productId;
+      return {
+        _id: item._id,
+        title: item.title,
+        image: item.image,
+        description: item.description,
+        isActive: item.isActive ?? true,
+        priority: item.priority ?? 0,
+        product:
+          product && typeof product === "object"
+            ? {
+                _id: product._id,
+                name: product.name,
+                slug: product.slug,
+                price: product.price,
+                discountPrice: product.discountPrice,
+                image: product.image,
+                company: product.company || { _id: companyId, slug: companySlug, name: "" },
+              }
+            : undefined,
+      };
+    })
+    .filter((item: ShopByCategoryItem | null): item is ShopByCategoryItem => item !== null);
+}
+
+/**
+ * `initialData` is the /api/companies/[id]/shop-by-concern response, loaded by
+ * the home page on the server so the section is in the first HTML. Without it
+ * (e.g. that server read failed) the section fetches on the client as before.
+ */
+export function ShopByCategory({ companyId, companySlug, initialData }: ShopByCategoryProps) {
+  const [items, setItems] = useState<ShopByCategoryItem[]>(() =>
+    Array.isArray(initialData?.items) ? transformItems(initialData.items, companyId, companySlug) : []
+  );
+  const [settings, setSettings] = useState<ShopByCategorySettings>(
+    initialData?.settings || { isVisible: true, limit: 6 }
+  );
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    if (initialData) return;
     const fetchCategories = async () => {
       try {
         setLoading(true);
@@ -158,33 +198,7 @@ export function ShopByCategory({ companyId, companySlug }: ShopByCategoryProps) 
         const data = await response.json();
         setSettings(data.settings || { isVisible: true, limit: 6 });
         if (Array.isArray(data.items)) {
-          const transformed = data.items
-            .map((item: any) => {
-              if (!item) return null;
-              const product = item.product || item.productId;
-              return {
-                _id: item._id,
-                title: item.title,
-                image: item.image,
-                description: item.description,
-                isActive: item.isActive ?? true,
-                priority: item.priority ?? 0,
-                product:
-                  product && typeof product === "object"
-                    ? {
-                        _id: product._id,
-                        name: product.name,
-                        slug: product.slug,
-                        price: product.price,
-                        discountPrice: product.discountPrice,
-                        image: product.image,
-                        company: product.company || { _id: companyId, slug: companySlug, name: "" },
-                      }
-                    : undefined,
-              };
-            })
-            .filter((item: ShopByCategoryItem | null): item is ShopByCategoryItem => item !== null);
-          setItems(transformed);
+          setItems(transformItems(data.items, companyId, companySlug));
         }
       } catch (err) {
         console.error("Error fetching category data:", err);

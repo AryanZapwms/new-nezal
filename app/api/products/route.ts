@@ -11,27 +11,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getActiveFlashSaleMap, applyFlashSaleToList } from "@/lib/flashSale";
 import { computeEffectiveSale } from "@/lib/sale";
 import { notifyProductWebhook } from "@/lib/shiprocket-webhooks";
-import Fuse from "fuse.js";
-
-// Simple in-memory cache for API responses
-const apiCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = process.env.NODE_ENV === "development" ? 0 : 1000 * 60 * 2; // 2 minutes
-
-function getCacheKey(params: Record<string, string>) {
-  return JSON.stringify(params);
-}
-
-function getCachedResponse(key: string) {
-  const cached = apiCache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
-  return null;
-}
-
-function setCachedResponse(key: string, data: any) {
-  apiCache.set(key, { data, timestamp: Date.now() });
-}
+import { listProducts } from "@/lib/product-listing";
 
 // ── FIX: normalize any value (string with commas/newlines, or array) → string[] ──
 function normalizeStringArray(val: any): string[] {
@@ -50,25 +30,6 @@ function normalizeStringArray(val: any): string[] {
   return [];
 }
 
-function getSortStage(sort: string): Record<string, 1 | -1> {
-  switch (sort) {
-    case "price_asc":
-      return { price: 1 };
-    case "price_desc":
-      return { price: -1 };
-    case "name_asc":
-      return { name: 1 };
-    case "newest":
-      return { createdAt: -1 };
-    case "manual":
-    default:
-      // Falls back to createdAt for any products that share the same
-      // (default) sortOrder, so nothing on the live site changes until
-      // an admin actually drags something — at that point sortOrder
-      // values diverge and take precedence.
-      return { sortOrder: 1, createdAt: -1 };
-  }
-}
 
 
 export async function GET(request: NextRequest) {
@@ -118,126 +79,10 @@ export async function GET(request: NextRequest) {
       includeInactive = !!session?.user && session.user.role === "admin";
     }
 
-    const cacheKey = getCacheKey({ company, category, search, page, limit, exclude, sort, includeInactive: String(includeInactive) });
-    const cachedResponse = getCachedResponse(cacheKey);
-    if (cachedResponse) {
-      return NextResponse.json(cachedResponse);
-    }
-
-    const query: any = includeInactive ? {} : { isActive: true };
-
-    const [companyDoc, categoryDoc] = await Promise.all([
-      company ? Company.findOne({ slug: company, isActive: true }).select("_id") : null,
-      category ? Category.findOne({ slug: category, isActive: true }).select("_id parent") : null,
-    ]);
-
-    if (companyDoc) {
-      query.company = companyDoc._id;
-    }
-
-    if (categoryDoc) {
-      if (!categoryDoc.parent) {
-        const subCategories = await Category.find({
-          parent: categoryDoc._id,
-          isActive: true,
-        }).select("_id");
-        const categoryIds = [
-          categoryDoc._id,
-          ...subCategories.map((sub) => sub._id),
-        ];
-        query.category = { $in: categoryIds };
-      } else {
-        query.category = categoryDoc._id;
-      }
-    }
-
-    
-if (exclude) {
-  const excludeIds = exclude
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => mongoose.Types.ObjectId.isValid(s));
-  if (excludeIds.length) {
-    query._id = { $nin: excludeIds };
-  }
-}
-    
-
-    const skip = (page - 1) * limit;
-
-
-      let products: any[];
-      let total: number;
-
-    if (search) {
-  // Typo-tolerant search: pull everything matching the other filters,
-  // then let Fuse.js rank by closeness so "sleo vera" still finds "Aloe Vera".
-  const candidates = await Product.find(query)
-    .populate("company", "name slug")
-    .populate("category", "name slug")
-    .select("name slug price discountPrice salePercentage image images stock sizes company category isActive createdAt isBestSeller rating reviewCount")
-    .sort({ createdAt: -1 })
-    .lean();  
-
-  const fuse = new Fuse(candidates, {
-    keys: [
-      { name: "name", weight: 0.7 },
-      { name: "company.name", weight: 0.3 },
-    ],
-    threshold: 0.4,        // 0 = exact only, 1 = match almost anything
-    ignoreLocation: true,  // typo can be anywhere in the word, not just start
-    minMatchCharLength: 2,
-  });
-
-  const fuzzyResults = fuse.search(search).map((r) => r.item);
-
-  if (sort === "price_asc") {
-  fuzzyResults.sort((a: any, b: any) => (a.price ?? 0) - (b.price ?? 0));
-} else if (sort === "price_desc") {
-  fuzzyResults.sort((a: any, b: any) => (b.price ?? 0) - (a.price ?? 0));
-} else if (sort === "name_asc") {
-  fuzzyResults.sort((a: any, b: any) => a.name.localeCompare(b.name));
-}
-
-
-  total = fuzzyResults.length;
-  products = fuzzyResults.slice(skip, skip + limit);
-} else {
-  [products, total] = await Promise.all([
-    Product.find(query)
-      .populate("company", "name slug")
-      .populate("category", "name slug")
-      .select("name slug price discountPrice salePercentage image images stock sizes company category isActive createdAt isBestSeller rating reviewCount")
-      .skip(skip)
-      .limit(limit)
-       .sort(getSortStage(sort))
-      .lean(),
-    Product.countDocuments(query),
-  ]);
-}
-
-    // ── Merge in flash-sale pricing so every listing (shop, search, home, etc.)
-    //    reflects an active sale automatically ──────────────────────────────
-    const flashSaleMap = await getActiveFlashSaleMap();
-    const productsWithSales = applyFlashSaleToList(products, flashSaleMap);
-
-    const responseData = {
-      products: productsWithSales,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      },
-    };
-
-    // Note: flash sales are time-boxed to the minute, so caching this for
-    // the full 2-minute TTL is fine — worst case a sale's start/end is off
-    // by up to CACHE_TTL. If that's too loose, drop the cache write when
-    // flashSaleMap.size > 0, or shorten CACHE_TTL.
-    setCachedResponse(cacheKey, responseData);
-
-    return NextResponse.json(responseData);
+    // Shared with the server-rendered shop pages — see lib/product-listing.ts
+    return NextResponse.json(
+      await listProducts({ company, category, search, page, limit, exclude, sort, includeInactive })
+    );
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json(

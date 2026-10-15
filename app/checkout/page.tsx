@@ -12,6 +12,9 @@ import { Zap } from "lucide-react"
 import Image from "next/image"
 import { Tag, Truck, ShoppingBag } from "lucide-react"
 import { useCheckoutStore } from "@/lib/store/checkout-store"
+import { useCartHydrated } from "@/hooks/use-cart-hydrated"
+import { useLiveCartPrices, cartItemKey } from "@/hooks/use-live-cart-prices"
+import { PriceUpdatedNote } from "@/components/price-updated-note"
 
 
 declare global {
@@ -66,24 +69,41 @@ function FullPageLoader({ message = "Processing your request..." }: { message?: 
   )
 }
 
-export default function CheckoutPage() {
+// Form-shaped placeholders while the cart (localStorage) and the checkout
+// data (payment settings + profile) load — instead of a full-page spinner.
+function FormSkeleton() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen bg-[--color-bg-page] flex items-center justify-center">
-        <div className="text-lg text-[--color-text-muted] flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-[--color-text-muted] border-t-[--color-brand-primary] rounded-full animate-spin" />
-          Loading checkout...
-        </div>
-      </main>
-    }>
-      <CheckoutPageInner />
-    </Suspense>
+    <div className="space-y-4" aria-busy="true">
+      <div className="h-80 rounded-2xl border border-border bg-muted/60 animate-pulse" />
+      <div className="h-40 rounded-2xl border border-border bg-muted/60 animate-pulse" />
+    </div>
   )
+}
+
+function SummarySkeleton() {
+  return <div className="h-96 rounded-2xl border border-[#2d8116]/30 bg-muted/60 animate-pulse" aria-busy="true" />
+}
+
+// Surface CCAvenue failure/cancel redirects (?error=...) as a visible message.
+// Its own component (and Suspense boundary) because useSearchParams() would
+// otherwise hold the whole page behind a fallback.
+function CheckoutErrorFromUrl({ onError }: { onError: (message: string) => void }) {
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const error = searchParams?.get("error")
+    if (error) {
+      onError(decodeURIComponent(error.replace(/_/g, " ")))
+    }
+  }, [searchParams, onError])
+  return null
+}
+
+export default function CheckoutPage() {
+  return <CheckoutPageInner />
 }
 
 function CheckoutPageInner() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { data: session, status } = useSession()
   const { items, getTotalPrice, clearCart } = useCartStore()
   const [isLoading, setIsLoading] = useState(false)
@@ -109,7 +129,9 @@ function CheckoutPageInner() {
     discountValue: number
     discountAmount: number
   } | null>(null)
-  const [gstMap, setGstMap] = useState<Record<string, number>>({})
+  const cartHydrated = useCartHydrated()
+  // Live prices + GST from the database; changed lines get a "price updated" note
+  const { gstMap, priceChanges } = useLiveCartPrices()
 
   const [shippingBreakdown, setShippingBreakdown] = useState<any>(null)
   const [shippingCodCharge, setShippingCodCharge] = useState<number>(0)
@@ -117,21 +139,6 @@ function CheckoutPageInner() {
   // finished (success or failure) — guards against submitting the order
   // while shippingRate/shippingCodCharge are still at their 0/null defaults.
   const [shippingRateResolved, setShippingRateResolved] = useState(false)
-
-      useEffect(() => {
-        if (items.length === 0) { setGstMap({}); return }
-        const ids = items.map((i) => i.productId).join(",")
-        fetch(`/api/products?ids=${ids}`)
-          .then((res) => (res.ok ? res.json() : { products: [] }))
-          .then((data) => {
-            const map: Record<string, number> = {}
-            ;(data.products || []).forEach((p: any) => {
-              if (typeof p.gstPercent === "number") map[p._id] = p.gstPercent
-            })
-            setGstMap(map)
-          })
-          .catch(() => {})
-      }, [items.map((i) => i.productId).join(",")])
 
       const totalGST = items.reduce((sum, item) => {
         const rate = gstMap[item.productId]
@@ -190,42 +197,26 @@ function CheckoutPageInner() {
   }
 }, [pendingOrder])
 
-  // Surface CCAvenue failure/cancel redirects (?error=...) as a visible message
+  // Payment settings and profile load in parallel (they used to run one after
+  // the other). Each falls back on its own: settings to the defaults, profile
+  // to nothing (guests).
   useEffect(() => {
-    const error = searchParams?.get("error")
-    if (error) {
-      setCheckoutError(decodeURIComponent(error.replace(/_/g, " ")))
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const settingsRes = await fetch("/api/admin/payment-settings")
-        if (settingsRes.ok) {
-          const data = await settingsRes.json()
-          setPaymentSettings(data)
-        } else {
-          setPaymentSettings({ enableCOD: true, enableRazorpay: false, enableCCAvenue: true })
-        }
-
-        const profileRes = await fetch("/api/users/profile")
-        if (profileRes.ok) {
-          const profileData = await profileRes.json()
-          setUserData(profileData)
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        setPaymentSettings({ enableCOD: true, enableRazorpay: false, enableCCAvenue: true })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
+    const readJson = (url: string) => fetch(url).then((res) => (res.ok ? res.json() : null))
+    Promise.allSettled([readJson("/api/admin/payment-settings"), readJson("/api/users/profile")])
+      .then(([settings, profile]) => {
+        if (settings.status === "rejected") console.error("Error fetching payment settings:", settings.reason)
+        setPaymentSettings(
+          settings.status === "fulfilled" && settings.value ? settings.value : { enableCOD: true, enableRazorpay: false, enableCCAvenue: true }
+        )
+        if (profile.status === "fulfilled" && profile.value) setUserData(profile.value)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
+  // Razorpay's checkout script only when Razorpay is actually enabled
+  const razorpayEnabled = !!paymentSettings?.enableRazorpay
   useEffect(() => {
+    if (!razorpayEnabled) return
     const script = document.createElement("script")
     script.src = "https://checkout.razorpay.com/v1/checkout.js"
     script.async = true
@@ -236,7 +227,7 @@ function CheckoutPageInner() {
         document.body.removeChild(script)
       } catch (e) {}
     }
-  }, [])
+  }, [razorpayEnabled])
 
 const fetchShippingRate = async (pincode: string) => {
   if (items.length === 0) return
@@ -602,22 +593,19 @@ const amountLeftForFreeShipping =
   }
 
   // ===== Loading states =====
-  if (status === "loading" || loading) {
-    return (
-      <main className="min-h-screen bg-[--color-bg-page] flex items-center justify-center">
-        <div className="text-lg text-[--color-text-muted] flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-[--color-text-muted] border-t-[--color-brand-primary] rounded-full animate-spin" />
-          Loading checkout...
-        </div>
-      </main>
-    )
-  }
+  // The page shell renders straight away. The form waits for the session and
+  // checkout data (it reads its initial values and payment methods once, on
+  // mount); the order summary waits for the saved cart to be read.
+  const formReady = cartHydrated && status !== "loading" && !loading
 
   const availablePaymentMethods = getAvailablePaymentMethods()
 
   return (
     <main className="min-h-screen bg-[--color-bg-page] ">
       <TopProgressBar visible={isLoading} />
+      <Suspense fallback={null}>
+        <CheckoutErrorFromUrl onError={setCheckoutError} />
+      </Suspense>
 
       <div className="container-nezal py-6 sm:py-8 lg:py-10">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[--color-text-heading] mb-8">Checkout</h1>
@@ -631,6 +619,7 @@ const amountLeftForFreeShipping =
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Checkout Form – 2/3 */}
           <div className="lg:col-span-2">
+            {!formReady ? <FormSkeleton /> : (
             <CheckoutForm
               totalAmount={finalTotal}
               onSubmit={handleCheckout}
@@ -650,10 +639,12 @@ const amountLeftForFreeShipping =
               isSubmitting={isLoading}
               shippingReady={shippingRateResolved || !currentPincode}
             />
+            )}
           </div>
 
          {/* Order Summary – 1/3 */}
 <div className="lg:col-span-1">
+  {!cartHydrated ? <SummarySkeleton /> : (
   <Card className="sticky top-20 border border-[#2d8116] rounded-2xl shadow-sm bg-white overflow-hidden">
     <CardHeader className="pb-4 flex-row items-center gap-3">
       <div className="w-8 h-8 rounded-lg bg-[#2d8116]/10 flex items-center justify-center text-[#2d8116] flex-shrink-0">
@@ -708,6 +699,8 @@ const amountLeftForFreeShipping =
             {item.selectedSize.unit}
           </p>
         )}
+
+        <PriceUpdatedNote change={priceChanges[cartItemKey(item)]} className="mt-1" />
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {item.ritual && (
@@ -902,6 +895,7 @@ const amountLeftForFreeShipping =
 
     </CardContent>
   </Card>
+  )}
 </div>
 
         </div>

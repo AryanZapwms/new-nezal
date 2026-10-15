@@ -25,29 +25,38 @@ interface ConcernCard {
 
 const HOMEPAGE_PREVIEW_COUNT = 6
 
-export function ShopByConcern() {
-  const [concerns, setConcerns] = useState<ConcernCard[]>([])
-  const [totalCount, setTotalCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+// The API currently returns concerns newest-first (e.g. sorted by
+// createdAt descending), which makes the grid render upside down —
+// the concern created first (Acne) ends up last instead of first.
+// If every item has an explicit `order` field, respect that;
+// otherwise fall back to reversing so the oldest/first-created
+// concern shows first, matching the intended display order.
+function arrangeConcerns(list: ConcernCard[]) {
+  return list.every((c) => typeof c.order === "number")
+    ? [...list].sort((a, b) => (a.order as number) - (b.order as number))
+    : [...list].reverse()
+}
+
+/**
+ * `initialConcerns` is the /api/concerns list, loaded by the home page on the
+ * server so the section is in the first HTML. Without it (e.g. that server
+ * read failed) the section fetches on the client as before.
+ */
+export function ShopByConcern({ initialConcerns }: { initialConcerns?: ConcernCard[] }) {
+  const initial = initialConcerns ? arrangeConcerns(initialConcerns) : null
+  const [concerns, setConcerns] = useState<ConcernCard[]>(initial?.slice(0, HOMEPAGE_PREVIEW_COUNT) ?? [])
+  const [totalCount, setTotalCount] = useState(initial?.length ?? 0)
+  const [loading, setLoading] = useState(!initial)
 
   useEffect(() => {
+    if (initialConcerns) return
     let mounted = true
     async function load() {
       try {
         const res = await fetch("/api/concerns")
         if (!res.ok) throw new Error("Failed")
         const data = await res.json()
-        const list: ConcernCard[] = data.concerns || []
-
-        // The API currently returns concerns newest-first (e.g. sorted by
-        // createdAt descending), which makes the grid render upside down —
-        // the concern created first (Acne) ends up last instead of first.
-        // If every item has an explicit `order` field, respect that;
-        // otherwise fall back to reversing so the oldest/first-created
-        // concern shows first, matching the intended display order.
-        const sorted = list.every((c) => typeof c.order === "number")
-          ? [...list].sort((a, b) => (a.order as number) - (b.order as number))
-          : [...list].reverse()
+        const sorted = arrangeConcerns(data.concerns || [])
 
         if (mounted) {
           setTotalCount(sorted.length)

@@ -6,18 +6,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Concern } from "@/lib/models/concern"
+import { getConcerns } from "@/lib/home-sections"
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB()
 
     const includeInactive = req.nextUrl.searchParams.get("all") === "true"
-    const filter = includeInactive ? {} : { isActive: true }
-
-    const concerns = await Concern.find(filter)
-      .sort({ sortOrder: 1, createdAt: -1 })
-      .select("label slug headline heroImage color sortOrder isActive")
-      .lean()
+    // Shared with the home page's server render — see lib/home-sections.ts
+    const concerns = await getConcerns({ includeInactive })
 
     return NextResponse.json({ concerns })
   } catch (error) {
