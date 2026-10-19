@@ -156,6 +156,9 @@ export async function sendCapiEvent(params: CapiEventParams): Promise<void> {
   const { eventName, eventId, eventSourceUrl, user, customData } = params
   const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
   const accessToken = process.env.META_CAPI_ACCESS_TOKEN
+  // Set temporarily to the code shown in Events Manager → Test Events: server
+  // events only appear there when they carry it. Remove it after testing.
+  const testEventCode = process.env.META_CAPI_TEST_EVENT_CODE
 
   if (!pixelId || !accessToken) {
     console.error(
@@ -178,6 +181,7 @@ export async function sendCapiEvent(params: CapiEventParams): Promise<void> {
           custom_data: customData,
         },
       ],
+      ...(testEventCode && { test_event_code: testEventCode }),
       access_token: accessToken,
     }
 

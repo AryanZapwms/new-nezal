@@ -198,6 +198,15 @@ describe("events sent to Meta", () => {
     })
   })
 
+  it("adds Meta's test event code only when META_CAPI_TEST_EVENT_CODE is set", async () => {
+    await sendCapiPurchaseEvent({ eventId: "o1", value: 100, contents, user: {} })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toHaveProperty("test_event_code")
+
+    vi.stubEnv("META_CAPI_TEST_EVENT_CODE", "TEST12345")
+    await sendCapiPurchaseEvent({ eventId: "o2", value: 100, contents, user: {} })
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).test_event_code).toBe("TEST12345")
+  })
+
   it("sends nothing when the access token isn't configured", async () => {
     vi.stubEnv("META_CAPI_ACCESS_TOKEN", "")
     await sendCapiPurchaseEvent({ eventId: "o1", value: 100, contents, user: {} })
