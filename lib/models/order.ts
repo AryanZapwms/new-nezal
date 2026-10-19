@@ -133,6 +133,11 @@ ccavenueBankRefNo: { type: String, default: null },
     // can't both run them. Legacy orders (created before this field existed)
     // don't have it at all, which the claim treats as "already done".
     checkoutFinalizedAt: { type: Date },
+    // shiprocket_checkout orders only: set when the server-side Meta Purchase
+    // event is sent, by an atomic claim (sendCheckoutPurchaseOnce in
+    // lib/shiprocket-checkout-order.ts), so reloading /checkout/success can't
+    // send it twice.
+    metaPurchaseSentAt: { type: Date, default: null },
     shiprocketShipmentId: { type: Number, default: null },
     awbCode:             { type: String, default: null },
     courierName:         { type: String, default: null },
