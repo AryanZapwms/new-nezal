@@ -285,8 +285,11 @@ const finalOrderTotal = couponDiscrepancy ? razorpayOrder.amount / 100 : realTot
     sendCapiPurchaseEvent({
       eventId: order._id.toString(),
       value: order.totalAmount,
-      contentIds: verifiedItems.map((item) => item.product.toString()),
-      numItems: verifiedItems.length,
+      contents: verifiedItems.map((item) => ({
+        id: item.product.toString(),
+        quantity: item.quantity,
+        item_price: item.price,
+      })),
       eventSourceUrl,
       user: {
         email: recipientEmail,

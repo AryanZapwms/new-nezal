@@ -28,7 +28,9 @@ export function Analytics() {
         `}
       </Script>
 
-      {/* Facebook / Meta Pixel — kept as direct code since it's a separate platform from GTM */}
+      {/* Facebook / Meta Pixel — kept as direct code since it's a separate platform from GTM.
+          While /checkout/success waits for an order it reloads itself every few seconds with
+          ?attempt=2, 3, …; only the first load of that wait counts as a PageView. */}
       <Script id="facebook-pixel" strategy="afterInteractive">
         {`!function(f,b,e,v,n,t,s)
         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -39,7 +41,9 @@ export function Analytics() {
         s.parentNode.insertBefore(t,s)}(window, document,'script',
         'https://connect.facebook.net/en_US/fbevents.js');
         fbq('init', '${META_PIXEL_ID}');
-        fbq('track', 'PageView');`}
+        if (!(location.pathname === '/checkout/success' && /[?&]attempt=/.test(location.search))) {
+          fbq('track', 'PageView');
+        }`}
       </Script>
       <noscript>
         <img

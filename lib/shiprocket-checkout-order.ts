@@ -27,6 +27,8 @@ import { createShiprocketOrderForOrder } from "@/lib/shiprocket";
 import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order";
 import { SHIPROCKET_VARIANT_ID_MULTIPLIER } from "@/lib/shiprocket-mapper";
 import { computeHmac } from "@/lib/shiprocket-hmac";
+import { sendCapiPurchaseEvent, type RequestMeta } from "@/lib/meta-capi";
+import { isWithinPurchaseTrackingWindow, purchaseTrackingData } from "@/lib/meta-purchase";
 
 // Duplicated in app/api/orders/route.ts and lib/shiprocket.ts too — kept as
 // a local copy rather than a shared import since each of those call sites
@@ -537,8 +539,54 @@ async function finalizeConfirmedOrder(orderId: any) {
     console.error("[shiprocket-checkout-order] Failed to send order emails:", emailError);
   }
 
-  // NOT calling sendCapiPurchaseEvent() — there's no customer request
-  // context (IP/user-agent) on this path to attribute it to.
+  // The server-side Meta Purchase isn't sent from here: this usually runs in
+  // the webhook, whose request comes from Shiprocket's servers, and Meta
+  // requires the customer's own user agent for website events. The customer's
+  // request to /checkout/success sends it instead — sendCheckoutPurchaseOnce.
+}
+
+/**
+ * Server-side Meta Purchase for a confirmed Shiprocket checkout order, sent at
+ * most once. Called from /checkout/success, the only request in this flow
+ * that comes from the customer's browser and so carries the IP, user agent
+ * and _fbp/_fbc Meta matches on. The atomic claim on metaPurchaseSentAt stops
+ * page reloads (or two tabs) from sending it twice; the event_id is the order
+ * _id, the same eventID as the browser Purchase that page renders. The claim
+ * comes first, so a failed request is logged rather than retried. Returns
+ * whether this call sent the event.
+ */
+export async function sendCheckoutPurchaseOnce(order: any, requestMeta: RequestMeta, now = Date.now()): Promise<boolean> {
+  if (!isCheckoutOrderConfirmed(order) || !isWithinPurchaseTrackingWindow(order, now)) return false;
+
+  await connectDB();
+  const claimed: any = await Order.findOneAndUpdate(
+    { _id: order._id, paymentMethod: "shiprocket_checkout", metaPurchaseSentAt: null },
+    { $set: { metaPurchaseSentAt: new Date() } },
+    { returnDocument: "after" }
+  ).lean();
+  if (!claimed) return false;
+
+  const { eventId, value, contents } = purchaseTrackingData(claimed);
+  await sendCapiPurchaseEvent({
+    eventId,
+    value,
+    contents,
+    eventSourceUrl: requestMeta.eventSourceUrl,
+    user: {
+      email: claimed.guestEmail,
+      phone: claimed.guestPhone || claimed.shippingAddress?.phone,
+      fullName: claimed.guestName,
+      city: claimed.shippingAddress?.city,
+      state: claimed.shippingAddress?.state,
+      zip: claimed.shippingAddress?.zipCode,
+      country: claimed.shippingAddress?.country,
+      clientIp: requestMeta.clientIp,
+      userAgent: requestMeta.userAgent,
+      fbp: requestMeta.fbp,
+      fbc: requestMeta.fbc,
+    },
+  });
+  return true;
 }
 
 // ── Pull an order from Shiprocket's Checkout API ───────────────────────────

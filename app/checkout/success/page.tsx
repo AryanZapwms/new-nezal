@@ -29,8 +29,16 @@ import { Order } from "@/lib/models/order"
 import "@/lib/models/product"
 import { BRAND } from "@/lib/config"
 import { ClearCartOnSuccess } from "@/components/clear-cart-on-success"
-import { isCheckoutOrderConfirmed, syncShiprocketCheckoutOrderFromApi } from "@/lib/shiprocket-checkout-order"
-import { cookies } from "next/headers"
+import { MetaPurchaseTracker } from "@/components/meta-purchase-tracker"
+import {
+  isCheckoutOrderConfirmed,
+  sendCheckoutPurchaseOnce,
+  syncShiprocketCheckoutOrderFromApi,
+} from "@/lib/shiprocket-checkout-order"
+import { getRequestMetaFrom } from "@/lib/meta-capi"
+import { isWithinPurchaseTrackingWindow, purchaseTrackingData } from "@/lib/meta-purchase"
+import { cookies, headers } from "next/headers"
+import { after } from "next/server"
 import { CART_TOKEN_COOKIE, convertCartForOffsiteOrder, resolveCartIdentityFromGuestToken } from "@/lib/cart-server"
 
 export const dynamic = "force-dynamic"
@@ -85,6 +93,17 @@ export default async function CheckoutSuccessPage({
     } catch (err) {
       console.error("[checkout-success] Failed to convert server cart:", err)
     }
+
+    // Meta Purchase: OrderConfirmed renders the browser event, and the server
+    // event goes out after the response, once per order. Both use the order
+    // _id as event id, so Meta keeps one. Request data is read here because
+    // after() callbacks can't read headers or cookies.
+    const requestMeta = getRequestMetaFrom(await headers(), await cookies())
+    after(() =>
+      sendCheckoutPurchaseOnce(order, { ...requestMeta, eventSourceUrl: `${BRAND.domain}/checkout/success` }).catch(
+        (err) => console.error("[checkout-success] Meta Purchase event failed:", err)
+      )
+    )
     return <OrderConfirmed order={order} />
   }
 
@@ -230,6 +249,7 @@ function OrderConfirmed({ order }: { order: any }) {
   return (
     <main className="min-h-screen py-10 lg:py-16 px-4" style={PAGE_BG}>
       <ClearCartOnSuccess />
+      {isWithinPurchaseTrackingWindow(order) && <MetaPurchaseTracker {...purchaseTrackingData(order)} />}
       <div className="max-w-2xl mx-auto">
         {/* ── Success header ─────────────────────────────── */}
         <div className="text-center mb-8">

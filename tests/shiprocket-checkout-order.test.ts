@@ -24,6 +24,22 @@ vi.mock("@/lib/whatsapp-order", () => ({ sendOrderConfirmationWhatsApp: vi.fn().
 vi.mock("@/components/clear-cart-on-success", () => ({ ClearCartOnSuccess: () => null }))
 vi.mock("next-auth", () => ({ getServerSession: vi.fn().mockResolvedValue(null) }))
 
+// The success page reads the customer's request for Meta and schedules the
+// server-side Purchase with after(); outside a real request both need
+// stand-ins. Scheduled callbacks are collected so a test can run them.
+const { afterCallbacks } = vi.hoisted(() => ({ afterCallbacks: [] as (() => unknown)[] }))
+vi.mock("next/headers", () => ({
+  headers: async () => new Headers({ "user-agent": "Mozilla/5.0 (test)", "x-forwarded-for": "203.0.113.7" }),
+  cookies: async () => new Map([["_fbp", { value: "fb.1.1700000000000.123" }]]),
+}))
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: (callback: () => unknown) => {
+    afterCallbacks.push(callback)
+  },
+}))
+
+import { MetaPurchaseTracker } from "@/components/meta-purchase-tracker"
 import { createShiprocketOrderForOrder } from "@/lib/shiprocket"
 import { sendEmail } from "@/lib/email"
 import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp-order"
@@ -78,6 +94,8 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+  afterCallbacks.length = 0
 })
 
 function payload(overrides: Record<string, unknown> = {}) {
@@ -323,5 +341,82 @@ describe("/checkout/success page state", () => {
   it("keeps waiting on an order that exists but is still pending prepaid", async () => {
     await upsertShiprocketCheckoutOrder(payload({ order_id: "page-oid-5", payment_status: "Pending" }), "webhook")
     expect(await render({ oid: "page-oid-5", ost: "SUCCESS" })).toBe("Confirming")
+    // No Meta Purchase until the order is confirmed
+    expect(afterCallbacks).toHaveLength(0)
+  })
+
+  describe("Meta Purchase", () => {
+    // OrderConfirmed is a plain function component, so its output can be searched directly.
+    function findElement(node: any, type: unknown): any {
+      if (!node || typeof node !== "object") return null
+      if (Array.isArray(node)) {
+        for (const child of node) {
+          const found = findElement(child, type)
+          if (found) return found
+        }
+        return null
+      }
+      if (node.type === type) return node
+      return findElement(node.props?.children, type)
+    }
+
+    async function renderConfirmed(oid: string) {
+      const el: any = await SuccessPage({ searchParams: Promise.resolve({ oid, ost: "SUCCESS" }) })
+      expect(el.type.name).toBe("OrderConfirmed")
+      return el.type(el.props)
+    }
+
+    function stubMeta() {
+      vi.stubEnv("NEXT_PUBLIC_META_PIXEL_ID", "1546800325689461")
+      vi.stubEnv("META_CAPI_ACCESS_TOKEN", "test-token")
+      vi.spyOn(console, "log").mockImplementation(() => {})
+      const fetchMock = vi.fn().mockResolvedValue(new Response('{"events_received":1}', { status: 200 }))
+      vi.stubGlobal("fetch", fetchMock)
+      return () => fetchMock.mock.calls.filter(([url]) => String(url).startsWith("https://graph.facebook.com/"))
+    }
+
+    it("renders the browser event and sends the server event once, with the same event id", async () => {
+      const { order } = await upsertShiprocketCheckoutOrder(payload({ order_id: "page-oid-6" }), "webhook")
+      const metaCalls = stubMeta()
+
+      // Viewed twice, as on a reload: the browser tracker renders each time,
+      // but the server event goes out once.
+      const tree = await renderConfirmed("page-oid-6")
+      await renderConfirmed("page-oid-6")
+      expect(afterCallbacks).toHaveLength(2)
+      await Promise.all(afterCallbacks.map((callback) => callback()))
+
+      const eventId = String(order._id)
+      const contents = [{ id: String(productId), quantity: 2, item_price: 500 }]
+      expect(findElement(tree, MetaPurchaseTracker)?.props).toEqual({ eventId, value: 690, contents })
+
+      expect(metaCalls()).toHaveLength(1)
+      const event = JSON.parse(metaCalls()[0][1].body).data[0]
+      expect(event).toMatchObject({
+        event_name: "Purchase",
+        event_id: eventId,
+        event_source_url: "https://nezalherbocare.com/checkout/success",
+        user_data: {
+          client_user_agent: "Mozilla/5.0 (test)",
+          client_ip_address: "203.0.113.7",
+          fbp: "fb.1.1700000000000.123",
+        },
+        custom_data: { currency: "INR", value: 690, contents },
+      })
+      expect(event.user_data.em).toHaveLength(1)
+      expect(event.user_data.ph).toHaveLength(1)
+    })
+
+    it("sends nothing for an order placed more than 24 hours ago", async () => {
+      const { order } = await upsertShiprocketCheckoutOrder(payload({ order_id: "page-oid-7" }), "webhook")
+      await Order.collection.updateOne({ _id: order._id }, { $set: { createdAt: new Date(Date.now() - 25 * 3600_000) } })
+      const metaCalls = stubMeta()
+
+      const tree = await renderConfirmed("page-oid-7")
+      await Promise.all(afterCallbacks.map((callback) => callback()))
+
+      expect(findElement(tree, MetaPurchaseTracker)).toBeNull()
+      expect(metaCalls()).toHaveLength(0)
+    })
   })
 })

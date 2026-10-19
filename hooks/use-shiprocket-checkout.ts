@@ -13,6 +13,7 @@ import { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import type { CartItem } from "@/lib/store/cart-store"
+import { trackInitiateCheckout, type PixelContent } from "@/lib/facebook-pixel"
 
 declare global {
   interface Window {
@@ -30,6 +31,13 @@ declare global {
 // either the full Zustand cart-store items or a synthesized one-off array
 // (e.g. a "Buy Now" item added to the store immediately beforehand).
 export type ShiprocketCheckoutInputItem = Pick<CartItem, "productId" | "quantity" | "selectedSize">
+
+// Event id shared with the server-side InitiateCheckout so Meta can dedupe
+// the two. randomUUID() needs a secure context and a 2022+ browser; without
+// it only the browser event is sent.
+function newMetaEventId(): string | undefined {
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : undefined
+}
 
 // Maps our cart-item shape to what /api/shiprocket/initiate-checkout
 // expects — size label + sku, the SAME convention app/api/orders/route.ts
@@ -70,6 +78,8 @@ export function useShiprocketCheckout() {
         return
       }
 
+      const metaEventId = newMetaEventId()
+
       try {
         const res = await fetch("/api/shiprocket/initiate-checkout", {
           method: "POST",
@@ -79,6 +89,7 @@ export function useShiprocketCheckout() {
             // Where Shiprocket sends the customer after payment (appending
             // ?oid=...&ost=SUCCESS) — see app/checkout/success/page.tsx.
             redirectPath: "/checkout/success",
+            metaEventId,
           }),
         })
 
@@ -90,6 +101,14 @@ export function useShiprocketCheckout() {
         const data = await res.json()
         if (!data?.token) {
           throw new Error("No checkout token returned")
+        }
+
+        // Only once checkout has really started: if it fails, the fallback
+        // /checkout page fires its own InitiateCheckout. Value and contents
+        // come from the server, the same numbers its copy of the event sends.
+        if (data.tracking) {
+          const tracking: { value: number; contents: PixelContent[] } = data.tracking
+          trackInitiateCheckout(tracking.value, tracking.contents, metaEventId)
         }
 
         window.HeadlessCheckout.addToCart(event, data.token, {
