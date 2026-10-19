@@ -75,7 +75,8 @@ export interface FeedProduct {
 // Meta's field limits
 const TITLE_MAX_LENGTH = 200
 const DESCRIPTION_MAX_LENGTH = 9999
-const ADDITIONAL_IMAGES_MAX = 20
+// Gallery images listed per item after the main one, in gallery order
+const ADDITIONAL_IMAGES_MAX = 10
 
 /** Turns line breaks and runs of spaces into single spaces. */
 function collapseWhitespace(text: string): string {

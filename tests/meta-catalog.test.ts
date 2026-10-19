@@ -205,6 +205,12 @@ describe("buildMetaFeedRow", () => {
     expect(row?.additional_image_link).toBe(`${CDN}/a%2Cb.jpg`)
   })
 
+  it("lists at most 10 additional images, in gallery order", () => {
+    const gallery = Array.from({ length: 14 }, (_, i) => `${CDN}/photo-${i}.jpg`)
+    const row = buildMetaFeedRow(feedProduct({ image: gallery[0], images: gallery }), noFlashSales, SITE)
+    expect(row?.additional_image_link.split(",")).toEqual(gallery.slice(1, 11))
+  })
+
   it("maps categories to Google product categories and leaves unknown ones blank", () => {
     const soap = buildMetaFeedRow(feedProduct({ category: { name: "Soaps", slug: "soaps" } }), noFlashSales, SITE)
     expect(soap).toMatchObject({ google_product_category: "2503", product_type: "Soaps" })
