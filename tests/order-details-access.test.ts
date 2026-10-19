@@ -31,6 +31,13 @@ vi.mock("@/lib/shiprocket", () => ({
 }))
 vi.mock("@/lib/shiprocket-webhooks", () => ({ notifyProductWebhook: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/components/clear-cart-on-success", () => ({ ClearCartOnSuccess: () => null }))
+// The success page reads request headers/cookies and schedules the Meta
+// Purchase with after(), which all need a real request; not under test here.
+vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => new Map() }))
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: () => {},
+}))
 
 import { getServerSession } from "next-auth"
 
