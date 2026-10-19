@@ -140,10 +140,13 @@ export async function POST(req: NextRequest) {
             sendCapiPurchaseEvent({
               eventId: (populatedOrder as any)._id.toString(),
               value: (populatedOrder as any).totalAmount,
-              contentIds: (populatedOrder as any).items.map((item: any) =>
-                (item.product?._id ?? item.product).toString()
-              ),
-              numItems: (populatedOrder as any).items.length,
+              contents: (populatedOrder as any).items
+                .filter((item: any) => item.product)
+                .map((item: any) => ({
+                  id: (item.product._id ?? item.product).toString(),
+                  quantity: item.quantity,
+                  item_price: item.price,
+                })),
               eventSourceUrl,
               user: {
                 email: recipientEmail || undefined,
