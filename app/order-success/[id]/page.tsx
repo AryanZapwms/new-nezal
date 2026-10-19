@@ -8,7 +8,6 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Package, Truck, Mail, ArrowRight, Copy, Check } from "lucide-react"
 import { trackPurchase } from "@/lib/facebook-pixel"
-import { useSession } from "next-auth/react"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useCheckoutStore } from "@/lib/store/checkout-store"
 
@@ -40,7 +39,6 @@ interface OrderData {
 export default function OrderSuccessPage() {
   const params = useParams()
   const orderId = params.id as string
-  const { data: session } = useSession()
   const [orderData, setOrderData] = useState<OrderData | null>(null)
   const [copied, setCopied] = useState(false)
   const { clearCart } = useCartStore()
@@ -71,13 +69,16 @@ export default function OrderSuccessPage() {
 
           const trackedKey = `fb_purchase_tracked_${orderId}`
           if (data?.items && data?.totalAmount && !sessionStorage.getItem(trackedKey)) {
-            const productIds = data.items.map((item: any) => item.product?._id || item.product)
             trackPurchase(
               orderId,
               data.totalAmount,
-              data.items.length,
-              productIds,
-              session?.user?.email ?? undefined
+              data.items
+                .filter((item: any) => item.product)
+                .map((item: any) => ({
+                  id: String(item.product._id || item.product),
+                  quantity: item.quantity ?? 1,
+                  item_price: item.price ?? 0,
+                }))
             )
             sessionStorage.setItem(trackedKey, "1")
           }
@@ -90,7 +91,7 @@ export default function OrderSuccessPage() {
     if (orderId) {
       fetchOrderData()
     }
-  }, [orderId, session?.user?.email])
+  }, [orderId])
 
   const handleCopyOrderId = () => {
     navigator.clipboard.writeText(orderId)

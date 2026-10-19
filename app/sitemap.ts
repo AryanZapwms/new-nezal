@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { BRAND } from "@/lib/config";
 import { Blog } from "@/lib/models/blog";
 import { Product } from "@/lib/models/product";
 import type { MetadataRoute } from "next";
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic"; // 👈 prevents static export error
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connectDB();
 
-  const baseUrl = "https://nezal.com"; // 👈 no trailing slash — routes below add their own leading slash
+  const baseUrl = BRAND.domain; // 👈 no trailing slash — routes below add their own leading slash
 
   const staticRoutes = [
     {
