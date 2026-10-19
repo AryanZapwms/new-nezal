@@ -7,7 +7,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Package, Truck, Mail, ArrowRight, Copy, Check } from "lucide-react"
-import { trackPurchase } from "@/lib/facebook-pixel"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useCheckoutStore } from "@/lib/store/checkout-store"
 
@@ -66,22 +65,7 @@ export default function OrderSuccessPage() {
         if (res.ok) {
           const data = await res.json()
           setOrderData(data)
-
-          const trackedKey = `fb_purchase_tracked_${orderId}`
-          if (data?.items && data?.totalAmount && !sessionStorage.getItem(trackedKey)) {
-            trackPurchase(
-              orderId,
-              data.totalAmount,
-              data.items
-                .filter((item: any) => item.product)
-                .map((item: any) => ({
-                  id: String(item.product._id || item.product),
-                  quantity: item.quantity ?? 1,
-                  item_price: item.price ?? 0,
-                }))
-            )
-            sessionStorage.setItem(trackedKey, "1")
-          }
+          // The Meta Purchase event is rendered by layout.tsx, which also works for guests.
         }
       } catch (error) {
         console.error('Error fetching order data:', error)
