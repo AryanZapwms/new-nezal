@@ -19,6 +19,8 @@
 import { Product } from "@/lib/models/product";
 import { computeVariantId } from "@/lib/shiprocket-mapper";
 import { computeHmac } from "@/lib/shiprocket-hmac";
+import { getActiveFlashSaleMap } from "@/lib/flashSale";
+import { resolveCurrentPrice } from "@/lib/pricing";
 
 const CHECKOUT_URL = "https://checkout-api.shiprocket.com/api/v1/access-token/checkout";
 
@@ -46,10 +48,19 @@ export interface ShiprocketCheckoutCartItem {
   selectedSize?: { size: string; sku?: string };
 }
 
+// One validated cart line, priced the way the order will be
+// (lib/shiprocket-checkout-order.ts) — used for the Meta InitiateCheckout event.
+export interface ShiprocketCheckoutLine {
+  productId: string;
+  quantity: number;
+  price: number;
+}
+
 export interface ShiprocketCheckoutResult {
   token: string;
   expiresAt: string | null;
   orderId: string | null;
+  lines: ShiprocketCheckoutLine[];
 }
 
 // Thrown for problems with the CART ITSELF (bad product/size id, out of
@@ -81,6 +92,8 @@ export async function initiateShiprocketCheckout(
   }
 
   const items: { variant_id: string; quantity: number }[] = [];
+  const lines: ShiprocketCheckoutLine[] = [];
+  const flashSaleMap = await getActiveFlashSaleMap();
 
   for (const cartItem of cartItems) {
     const quantity = Number(cartItem.quantity);
@@ -102,6 +115,7 @@ export async function initiateShiprocketCheckout(
     }
 
     let sizeIndex: number | null = null;
+    let selectedSize: any = null;
     let availableStock: number = (product as any).stock ?? 0;
 
     if (cartItem.selectedSize?.size) {
@@ -114,7 +128,8 @@ export async function initiateShiprocketCheckout(
         );
       }
       sizeIndex = idx;
-      availableStock = sizes[idx].stock ?? 0;
+      selectedSize = sizes[idx];
+      availableStock = selectedSize.stock ?? 0;
     }
 
     if (availableStock < quantity) {
@@ -126,6 +141,13 @@ export async function initiateShiprocketCheckout(
     items.push({
       variant_id: String(computeVariantId((product as any).numericId, sizeIndex)),
       quantity,
+    });
+
+    const resolvedPrice = resolveCurrentPrice(product as any, flashSaleMap, selectedSize);
+    lines.push({
+      productId: String((product as any)._id),
+      quantity,
+      price: resolvedPrice.discountPrice ?? resolvedPrice.price,
     });
   }
 
@@ -181,5 +203,6 @@ export async function initiateShiprocketCheckout(
     token: result.token,
     expiresAt: result.expires_at ?? null,
     orderId: result.data?.order_id ?? null,
+    lines,
   };
 }

@@ -243,10 +243,13 @@ export function trackFindLocation() {
  * Fired when user starts checkout process
  * @param cartValue - Total cart value in INR
  * @param contents - One entry per cart line
+ * @param eventId - Set when the server sends the same event (Shiprocket
+ *   checkout, app/api/shiprocket/initiate-checkout) so Meta dedupes the two
  */
 export function trackInitiateCheckout(
   cartValue: number,
-  contents: PixelContent[]
+  contents: PixelContent[],
+  eventId?: string
 ) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
@@ -259,7 +262,11 @@ export function trackInitiateCheckout(
     content_type: 'product',
   }
 
+  if (eventId) {
+    ; (window as any).fbq('track', 'InitiateCheckout', data, { eventID: eventId })
+  } else {
     ; (window as any).fbq('track', 'InitiateCheckout', data)
+  }
 }
 
 /**
