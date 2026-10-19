@@ -162,7 +162,7 @@ export function RegisterForm() {
             <OtpForm
               email={email}
               onSuccess={() => {
-                trackCompleteRegistration(email, "completed");
+                trackCompleteRegistration("completed");
                 const params = new URLSearchParams({ registered: "true", verified: "true" });
                 if (redirectTo !== "/") params.set("redirect", redirectTo);
                 router.push(`/auth/login?${params.toString()}`);

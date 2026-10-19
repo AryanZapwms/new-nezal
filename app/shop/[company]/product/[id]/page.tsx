@@ -11,7 +11,7 @@ import { useCartStore } from "@/lib/store/cart-store"
 import ProductCard from "@/components/product-card"
 import FAQ from "@/components/FAQ"
 import { getCachedSync, fetchWithCache } from "@/lib/cacheClient"
-import { trackViewContent, trackAddToCart } from "@/lib/facebook-pixel"
+import { trackViewContent } from "@/lib/facebook-pixel"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import ProductDescription from "@/components/ProductDescription"
@@ -290,6 +290,39 @@ function parseProductReview(review: any): ProductReview {
   }
 }
 
+// ── Pricing ───────────────────────────────────────────────
+// The size the page opens on: the first one in stock (none when all are out).
+function getDefaultSize(product: Product): Size | null {
+  return product.sizes?.find((s) => s.stock > 0) ?? null
+}
+
+// Full and discounted price for a size, or for the product itself when no
+// size is selected. The rendered price and the ViewContent event both come
+// from here, so the value sent to Meta is the price on screen.
+function getSizePricing(product: Product, size: Size | null) {
+  const currentPrice = size ? size.price : product.price
+  // product.discountPrice already reflects whichever sale (flash, direct,
+  // or collection — see lib/sale.ts) is currently in effect on the base
+  // price. Sizes carry their own legacy per-size discountPrice
+  // independently, so a product-level sale would otherwise never show up
+  // once a size is selected — derive the sale's percentage-off here and
+  // apply it to the selected size's own price instead.
+  const basePrice = product.price ?? 0
+  const percentOff =
+    product.salePercentage != null && product.salePercentage > 0
+      ? product.salePercentage / 100
+      : product.discountPrice != null && product.discountPrice < basePrice && basePrice > 0
+      ? (basePrice - product.discountPrice) / basePrice
+      : 0
+
+  const currentDiscountPrice = product.flashSale
+    ? getFlashPrice(currentPrice, product.flashSale)
+    : size
+    ? size.discountPrice ?? (percentOff > 0 ? Math.round(size.price * (1 - percentOff)) : undefined)
+    : product.discountPrice
+  return { currentPrice, currentDiscountPrice, percentOff }
+}
+
 // ── Star renderer ─────────────────────────────────────────
 function StarRating({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
@@ -440,7 +473,8 @@ const initialReviews = null
         if (!mounted) return
         setProduct(data)
 
-        trackViewContent(data._id, data.name, data.discountPrice || data.price)
+        const shown = getSizePricing(data, getDefaultSize(data))
+        trackViewContent(data._id, data.name, shown.currentDiscountPrice || shown.currentPrice)
         if (data?.company?.slug) loadSuggested(data.company.slug, data.category?.slug)
       } catch (err) {
         console.error("Error fetching product:", err)
@@ -500,7 +534,7 @@ const initialReviews = null
 
   useEffect(() => {
     if (product?.sizes && product.sizes.length > 0 && !selectedSize) {
-      const first = product.sizes.find((s) => s.stock > 0)
+      const first = getDefaultSize(product)
       if (first) setSelectedSize(first)
     }
   }, [product, selectedSize])
@@ -531,10 +565,7 @@ const initialReviews = null
     : undefined,
   flashSale: product.flashSale,
 })
-const itemPrice = currentPrice
-const itemDiscountPrice = currentDiscountPrice
-    
-    trackAddToCart(product._id, product.name, itemDiscountPrice || itemPrice, quantity)
+    // addItem() fires the AddToCart pixel event itself (lib/store/cart-store.ts)
     toast({ title: "Added to cart!", description: `${quantity} × ${product.name}${selectedSize ? ` (${selectedSize.size}${selectedSize.unit})` : ""} added.` })
     setQuantity(1)
   }
@@ -634,26 +665,9 @@ initiateCheckout(event, useCartStore.getState().items, "/checkout")
   )
 
   // ── Derived ────────────────────────────────────────────
-      const currentPrice = selectedSize ? selectedSize.price : (product?.price ?? 0)
-      // product.discountPrice already reflects whichever sale (flash, direct,
-      // or collection — see lib/sale.ts) is currently in effect on the base
-      // price. Sizes carry their own legacy per-size discountPrice
-      // independently, so a product-level sale would otherwise never show up
-      // once a size is selected — derive the sale's percentage-off here and
-      // apply it to the selected size's own price instead.
-      const basePrice = product?.price ?? 0
-      const percentOff =
-  product?.salePercentage != null && product.salePercentage > 0
-    ? product.salePercentage / 100
-    : product?.discountPrice != null && product.discountPrice < basePrice && basePrice > 0
-    ? (basePrice - product.discountPrice) / basePrice
-    : 0
-
-      const currentDiscountPrice = product?.flashSale
-        ? getFlashPrice(currentPrice, product.flashSale)
-        : selectedSize
-        ? selectedSize.discountPrice ?? (percentOff > 0 ? Math.round(selectedSize.price * (1 - percentOff)) : undefined)
-        : product?.discountPrice
+      const { currentPrice, currentDiscountPrice, percentOff } = product
+        ? getSizePricing(product, selectedSize)
+        : { currentPrice: 0, currentDiscountPrice: undefined, percentOff: 0 }
       const displayPrice = currentDiscountPrice || currentPrice
       const discount = product?.flashSale
   ? Math.round(product.flashSale.discountPercent)

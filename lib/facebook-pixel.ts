@@ -9,6 +9,21 @@ export interface FacebookPixelEventData {
 }
 
 /**
+ * One line of a product event's `contents`. `id` is the product's Mongo _id,
+ * the same id the Meta catalog feed uses (lib/meta-catalog.ts).
+ */
+export interface PixelContent {
+  id: string
+  quantity: number
+  item_price: number
+}
+
+/** Rupee amount as a number rounded to paise. Meta wants numeric values. */
+function toValue(amount: number): number {
+  return Math.round(amount * 100) / 100
+}
+
+/**
  * Initialize Facebook Pixel base code
  * NOTE: the base pixel is already loaded by <Analytics /> in components/analytics.tsx
  * on every page. This is only a fallback for contexts where that component isn't mounted.
@@ -63,7 +78,7 @@ export function trackPageView() {
  * Fired when user views a product page
  * @param productId - Product ID
  * @param productName - Product name
- * @param price - Product price in INR
+ * @param price - Price shown for the default size, in INR
  */
 export function trackViewContent(
   productId: string,
@@ -76,7 +91,8 @@ export function trackViewContent(
     content_name: productName,
     content_ids: [productId],
     content_type: 'product',
-    value: price.toFixed(2),
+    contents: [{ id: productId, quantity: 1, item_price: toValue(price) }],
+    value: toValue(price),
     currency: 'INR',
   }
 
@@ -88,7 +104,7 @@ export function trackViewContent(
  * Fired when user adds item to cart
  * @param productId - Product ID
  * @param productName - Product name
- * @param price - Product price in INR
+ * @param price - Unit price in INR
  * @param quantity - Quantity added
  */
 export function trackAddToCart(
@@ -103,9 +119,9 @@ export function trackAddToCart(
     content_name: productName,
     content_ids: [productId],
     content_type: 'product',
-    value: (price * quantity).toFixed(2),
+    contents: [{ id: productId, quantity, item_price: toValue(price) }],
+    value: toValue(price * quantity),
     currency: 'INR',
-    quantity: quantity,
   }
 
     ; (window as any).fbq('track', 'AddToCart', data)
@@ -129,7 +145,7 @@ export function trackAddToWishlist(
     content_name: productName,
     content_ids: [productId],
     content_type: 'product',
-    ...(price !== undefined && { value: price.toFixed(2), currency: 'INR' }),
+    ...(price !== undefined && { value: toValue(price), currency: 'INR' }),
   }
 
     ; (window as any).fbq('track', 'AddToWishlist', data)
@@ -148,7 +164,7 @@ export function trackAddPaymentInfo(
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
-    ...(cartValue !== undefined && { value: cartValue.toFixed(2), currency: 'INR' }),
+    ...(cartValue !== undefined && { value: toValue(cartValue), currency: 'INR' }),
     ...(productIds && { content_ids: productIds }),
     content_type: 'product',
   }
@@ -159,15 +175,13 @@ export function trackAddPaymentInfo(
 /**
  * Track CompleteRegistration event
  * Fired when user successfully registers
- * @param email - User email (for data matching)
  * @param status - Registration status
  */
-export function trackCompleteRegistration(email?: string, status?: string) {
+export function trackCompleteRegistration(status?: string) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
     status: status || 'completed',
-    ...(email && { em: hashEmail(email) }),
   }
 
     ; (window as any).fbq('track', 'CompleteRegistration', data)
@@ -209,7 +223,7 @@ export function trackDonate(value?: number) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
-    ...(value !== undefined && { value: value.toFixed(2), currency: 'INR' }),
+    ...(value !== undefined && { value: toValue(value), currency: 'INR' }),
   }
 
     ; (window as any).fbq('track', 'Donate', data)
@@ -228,20 +242,20 @@ export function trackFindLocation() {
  * Track InitiateCheckout event
  * Fired when user starts checkout process
  * @param cartValue - Total cart value in INR
- * @param itemCount - Number of items in cart
+ * @param contents - One entry per cart line
  */
 export function trackInitiateCheckout(
   cartValue: number,
-  itemCount: number,
-  productIds?: string[]
+  contents: PixelContent[]
 ) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
-    value: cartValue.toFixed(2),
+    value: toValue(cartValue),
     currency: 'INR',
-    num_items: itemCount,
-    ...(productIds && { content_ids: productIds }),
+    num_items: contents.reduce((sum, item) => sum + item.quantity, 0),
+    content_ids: [...new Set(contents.map((item) => item.id))],
+    contents: contents.map((item) => ({ ...item, item_price: toValue(item.item_price) })),
     content_type: 'product',
   }
 
@@ -257,7 +271,7 @@ export function trackLead(value?: number) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
-    ...(value !== undefined && { value: value.toFixed(2), currency: 'INR' }),
+    ...(value !== undefined && { value: toValue(value), currency: 'INR' }),
   }
 
     ; (window as any).fbq('track', 'Lead', data)
@@ -268,27 +282,23 @@ export function trackLead(value?: number) {
  * Fired when order is completed
  * @param orderId - Order ID
  * @param orderValue - Total order value in INR
- * @param itemCount - Number of items purchased
- * @param productIds - Array of product IDs
- * @param email - Customer email (for data matching)
+ * @param contents - One entry per order line
  */
 export function trackPurchase(
   orderId: string,
   orderValue: number,
-  itemCount: number,
-  productIds?: string[],
-  email?: string
+  contents: PixelContent[]
 ) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
-    value: orderValue.toFixed(2),
+    value: toValue(orderValue),
     currency: 'INR',
     transaction_id: orderId,
-    num_items: itemCount,
-    ...(productIds && { content_ids: productIds }),
+    num_items: contents.reduce((sum, item) => sum + item.quantity, 0),
+    content_ids: [...new Set(contents.map((item) => item.id))],
+    contents: contents.map((item) => ({ ...item, item_price: toValue(item.item_price) })),
     content_type: 'product',
-    ...(email && { em: hashEmail(email) }),
   }
 
   // eventID must match the event_id sent server-side via the Conversions API
@@ -326,7 +336,7 @@ export function trackSearch(searchString?: string) {
  * @param value - Trial value in USD (per Meta's default event spec)
  * @param predictedLtv - Predicted lifetime value
  */
-export function trackStartTrial(value: string = '0.00', predictedLtv: string = '0.00') {
+export function trackStartTrial(value: number = 0, predictedLtv: number = 0) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
@@ -353,7 +363,7 @@ export function trackSubmitApplication() {
  * @param value - Subscription value in USD (per Meta's default event spec)
  * @param predictedLtv - Predicted lifetime value
  */
-export function trackSubscribe(value: string = '0.00', predictedLtv: string = '0.00') {
+export function trackSubscribe(value: number = 0, predictedLtv: number = 0) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
 
   const data: FacebookPixelEventData = {
@@ -373,17 +383,6 @@ export function trackSubscribe(value: string = '0.00', predictedLtv: string = '0
 export function trackCustomEvent(eventName: string, data?: FacebookPixelEventData) {
   if (typeof window === 'undefined' || !(window as any).fbq) return
     ; (window as any).fbq('track', eventName, data)
-}
-
-/**
- * Simple email hashing for data matching
- * SHA256 hash - Facebook expects hashed PII
- */
-function hashEmail(email: string): string {
-  // For production, use a proper SHA256 library
-  // This is a placeholder - Facebook also accepts un-hashed emails sometimes
-  // but hashing is recommended for better data matching
-  return email.toLowerCase().trim()
 }
 
 /**

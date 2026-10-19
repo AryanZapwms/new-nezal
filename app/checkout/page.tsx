@@ -153,8 +153,14 @@ function CheckoutPageInner() {
 
   useEffect(() => {
     if (items.length > 0) {
-      const productIds = items.map(item => item.productId)
-      trackInitiateCheckout(getTotalPrice(), items.length, productIds)
+      trackInitiateCheckout(
+        getTotalPrice(),
+        items.map((item) => ({
+          id: item.productId,
+          quantity: item.quantity,
+          item_price: item.discountPrice || item.price,
+        }))
+      )
     }
   }, [])
 
