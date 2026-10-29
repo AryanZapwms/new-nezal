@@ -46,6 +46,14 @@ const userSchema = new mongoose.Schema(
     },
     // Placeholder account created by a review import (see lib/imported-users.ts).
     isImported: { type: Boolean, default: false, index: true },
+    // Where the account came from: our own sign-up (email or Google), or a
+    // Shiprocket Fastrr checkout (lib/fastrr-customers.ts). It never changes —
+    // a Fastrr customer who later signs up stays "fastrr", and isVerified says
+    // whether they've claimed the account. Users created before this field
+    // don't have it, so filter with { source: { $ne: "fastrr" } }.
+    source: { type: String, enum: ["signup", "fastrr"], default: "signup" },
+    // No sign-up or checkout flow asks for marketing consent yet.
+    marketingConsent: { type: Boolean, default: false },
     resetOtpHash: { type: String },
     resetOtpExpires: { type: Date },
   },
