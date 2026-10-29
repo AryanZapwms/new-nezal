@@ -17,7 +17,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    phone: String,
+    // Indexed for lookups, not unique: existing phones are free text, and
+    // households share a number.
+    phone: { type: String, index: true },
     address: {
       street: String,
       city: String,
@@ -51,7 +53,7 @@ const userSchema = new mongoose.Schema(
     // a Fastrr customer who later signs up stays "fastrr", and isVerified says
     // whether they've claimed the account. Users created before this field
     // don't have it, so filter with { source: { $ne: "fastrr" } }.
-    source: { type: String, enum: ["signup", "fastrr"], default: "signup" },
+    source: { type: String, enum: ["signup", "fastrr"], default: "signup", index: true },
     // No sign-up or checkout flow asks for marketing consent yet.
     marketingConsent: { type: Boolean, default: false },
     resetOtpHash: { type: String },
