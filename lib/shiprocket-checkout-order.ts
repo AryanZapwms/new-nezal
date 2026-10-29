@@ -29,6 +29,7 @@ import { SHIPROCKET_VARIANT_ID_MULTIPLIER } from "@/lib/shiprocket-mapper";
 import { computeHmac } from "@/lib/shiprocket-hmac";
 import { sendCapiPurchaseEvent, type RequestMeta } from "@/lib/meta-capi";
 import { isWithinPurchaseTrackingWindow, purchaseTrackingData } from "@/lib/meta-purchase";
+import { saveFastrrCustomer, isFastrrPlaceholderEmail } from "@/lib/fastrr-customers";
 
 // Duplicated in app/api/orders/route.ts and lib/shiprocket.ts too — kept as
 // a local copy rather than a shared import since each of those call sites
@@ -215,6 +216,7 @@ export async function upsertShiprocketCheckoutOrder(
 
   if (payment.state === "paid" || payment.state === "cod") {
     await finalizeConfirmedOrder(order._id);
+    await saveFastrrCustomer(order);
     order = await Order.findById(order._id);
   } else {
     // TEMP DEBUG [SR-ADHOC-DEBUG]
@@ -339,8 +341,9 @@ async function buildOrderDocument(payload: any, payment: ReturnType<typeof class
 
   // Link to the customer's account when the checkout email belongs to a
   // verified user, so the order shows up in /profile/orders like any order
-  // placed on our own checkout. Orders left unlinked are still visible to
-  // the owner through the guestEmail match in lib/order-access.ts.
+  // placed on our own checkout. Otherwise saveFastrrCustomer links it to a
+  // Fastrr customer record once it's paid or COD; until then it's still
+  // visible to the owner through the guestEmail match in lib/order-access.ts.
   const checkoutEmail = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
   const linkedUser = checkoutEmail
     ? await User.findOne({ email: checkoutEmail, isVerified: true }).select("_id")
@@ -498,8 +501,10 @@ async function finalizeConfirmedOrder(orderId: any) {
     const customerName = populatedOrder.guestName || "Customer";
 
     // Skipped if literally nothing resolved — "your order is confirmed" with
-    // zero items would be confusing; the admin email below always fires.
-    if (itemsData.length > 0 && populatedOrder.guestEmail) {
+    // zero items would be confusing — and for the <phone>@fastrr.com
+    // placeholder Shiprocket sends when the customer gave no email. The admin
+    // email below always fires.
+    if (itemsData.length > 0 && populatedOrder.guestEmail && !isFastrrPlaceholderEmail(populatedOrder.guestEmail)) {
       await sendEmail({
         to: populatedOrder.guestEmail,
         ...getOrderConfirmationEmail({

@@ -44,6 +44,9 @@ export async function POST(req: Request) {
 
     // Hash and update password
     user.password = await hashPassword(newPassword)
+    // The OTP went to this inbox, so the email is proven. This is also how a
+    // Fastrr checkout customer (lib/fastrr-customers.ts) can claim their record.
+    user.isVerified = true
 
     // Clear OTP fields
     user.resetOtpHash = undefined
