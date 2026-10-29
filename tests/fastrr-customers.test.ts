@@ -226,7 +226,8 @@ describe("saving the customer of a Shiprocket checkout order", () => {
 
     const recipients = vi.mocked(sendEmail).mock.calls.map(([args]: any[]) => args.to)
     expect(recipients).toEqual([EMAIL])
-    expect((await Order.findById(placeholderOrder._id))?.orderStatus).toBe("cancelled")
+    const cancelled: any = await Order.findById(placeholderOrder._id).lean()
+    expect(cancelled.orderStatus).toBe("cancelled")
   })
 
   it("doesn't hold up the order when saving the customer fails", async () => {

@@ -101,8 +101,9 @@ export async function GET(request: NextRequest) {
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ])
     const overviewTotalProducts = await Product.countDocuments({ isActive: true })
-    // Review-import placeholder accounts are not customers — see lib/imported-users.ts.
-    const overviewTotalUsers = await User.countDocuments({ role: "user", ...realUserFilter() })
+    // Registered customers only: review-import placeholders (lib/imported-users.ts)
+    // and Fastrr checkout customers (lib/fastrr-customers.ts) are left out.
+    const overviewTotalUsers = await User.countDocuments({ role: "user", ...realUserFilter(), source: { $ne: "fastrr" } })
 
     const companyDocs = await Company.find({ isActive: true }).select("name slug logo").lean()
     const companyMap = new Map<string, { name: string; slug: string; logo?: string }>()

@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Trash2, Edit2, Eye, Search, Users, ShieldCheck, UserCheck, MessageSquareQuote } from "lucide-react"
+import { Trash2, Edit2, Eye, Search, Users, ShieldCheck, UserCheck, MessageSquareQuote, ShoppingBag } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -28,10 +28,30 @@ interface User {
   provider?: "credentials" | "google"
   wishlist?: string[]
   isImported?: boolean
+  source?: "signup" | "fastrr"
 }
 
 // Mirrors lib/imported-users.ts — review-import placeholder accounts.
 const isImportedUser = (u: User) => u.isImported === true || /@imported\.nezal$/i.test(u.email)
+
+// Mirrors lib/fastrr-customers.ts — customers saved from Shiprocket checkout
+// orders, and the <phone>@fastrr.com address Shiprocket sends when they gave none.
+const isFastrrUser = (u: User) => u.source === "fastrr"
+const isFastrrPlaceholderEmail = (email: string) => /@fastrr\.com$/i.test(email.trim())
+
+type SourceFilter = "all" | "registered" | "fastrr"
+const SOURCE_FILTERS: { value: SourceFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "registered", label: "Registered" },
+  { value: "fastrr", label: "Fastrr" },
+]
+
+const sourceLabel = (u: User) => (isFastrrUser(u) ? "Fastrr" : u.provider === "google" ? "Google" : "Email")
+
+const signInMethod = (u: User) => {
+  if (isFastrrUser(u) && !u.isVerified) return "No account yet (Fastrr checkout)"
+  return u.provider === "google" ? "Google" : "Email & password"
+}
 
 interface EditForm {
   name: string
@@ -83,6 +103,7 @@ export default function UsersPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showImported, setShowImported] = useState(false)
   const [importedCount, setImportedCount] = useState(0)
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all")
   const itemsPerPage = 8
 
   const [viewUser, setViewUser] = useState<User | null>(null)
@@ -178,20 +199,24 @@ export default function UsersPage() {
     const query = searchQuery.toLowerCase()
     return users.filter(
       (u) =>
-        u.name.toLowerCase().includes(query) ||
-        u.email.toLowerCase().includes(query) ||
-        u.role.toLowerCase().includes(query)
+        (sourceFilter === "all" || (sourceFilter === "fastrr") === isFastrrUser(u)) &&
+        (u.name.toLowerCase().includes(query) ||
+          u.email.toLowerCase().includes(query) ||
+          u.role.toLowerCase().includes(query) ||
+          (u.phone ?? "").toLowerCase().includes(query))
     )
-  }, [users, searchQuery])
+  }, [users, searchQuery, sourceFilter])
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
   const startIdx = (currentPage - 1) * itemsPerPage
   const paginatedUsers = filteredUsers.slice(startIdx, startIdx + itemsPerPage)
 
-  // Stats always describe real accounts, even while imported reviewers are shown.
-  const realUsers = users.filter((u) => !isImportedUser(u))
-  const adminCount = realUsers.filter((u) => u.role === "admin").length
-  const activeCount = realUsers.filter((u) => u.isActive).length
+  // Stats describe registered accounts only — never imported reviewers (even
+  // while shown) or Fastrr checkout customers, who get their own tile.
+  const registeredUsers = users.filter((u) => !isImportedUser(u) && !isFastrrUser(u))
+  const adminCount = registeredUsers.filter((u) => u.role === "admin").length
+  const activeCount = registeredUsers.filter((u) => u.isActive).length
+  const fastrrCount = users.filter(isFastrrUser).length
 
   if (loading) {
     return (
@@ -220,6 +245,12 @@ export default function UsersPage() {
         .page-btn { border: 1px solid #e7e5e4; background: white; border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #44403c; transition: all 0.15s ease; }
         .page-btn:hover:not(:disabled) { border-color: #d97706; color: #d97706; }
         .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .filter-btn { border: 1px solid #e7e5e4; background: white; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #78716c; transition: all 0.15s ease; }
+        .filter-btn:first-child { border-radius: 7px 0 0 7px; }
+        .filter-btn:last-child { border-radius: 0 7px 7px 0; }
+        .filter-btn + .filter-btn { border-left: none; }
+        .filter-btn:hover { color: #d97706; }
+        .filter-btn.active { background: #1c1917; border-color: #1c1917; color: white; }
       `}</style>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
@@ -236,9 +267,10 @@ export default function UsersPage() {
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 32 }}>
           {[
-            { icon: <Users size={15} />, label: "Total Users", value: realUsers.length },
+            { icon: <Users size={15} />, label: "Total Users", value: registeredUsers.length },
             { icon: <ShieldCheck size={15} />, label: "Admins", value: adminCount },
             { icon: <UserCheck size={15} />, label: "Active", value: activeCount },
+            { icon: <ShoppingBag size={15} />, label: "Fastrr customers", value: fastrrCount },
             { icon: <MessageSquareQuote size={15} />, label: "Imported reviewers", value: importedCount },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 12, padding: "18px 22px" }}>
@@ -267,12 +299,24 @@ export default function UsersPage() {
                 />
                 Show imported reviewers
               </label>
+              <div style={{ display: "flex" }}>
+                {SOURCE_FILTERS.map((f) => (
+                  <button
+                    key={f.value}
+                    type="button"
+                    className={`filter-btn${sourceFilter === f.value ? " active" : ""}`}
+                    onClick={() => { setSourceFilter(f.value); setCurrentPage(1) }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div style={{ position: "relative", width: 280 }}>
               <Search size={13} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#a8a29e" }} />
               <input
                 type="text"
-                placeholder="Search by name, email or role…"
+                placeholder="Search by name, email, phone or role…"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
                 className="search-input"
@@ -287,10 +331,10 @@ export default function UsersPage() {
 
           {/* Table */}
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", minWidth: 700, borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #f5f5f4" }}>
-                  {["Name", "Email", "Role", "Joined", "Actions"].map((h) => (
+                  {["Name", "Email", "Phone", "Source", "Role", "Joined", "Actions"].map((h) => (
                     <th key={h} style={{ padding: "10px 24px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "#a8a29e", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                       {h}
                     </th>
@@ -300,7 +344,7 @@ export default function UsersPage() {
               <tbody>
                 {paginatedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: "48px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13 }}>
+                    <td colSpan={7} style={{ padding: "48px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13 }}>
                       No users found
                     </td>
                   </tr>
@@ -320,7 +364,24 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td style={{ padding: "14px 24px" }}>
-                        <span style={{ fontSize: 12, color: "#78716c" }}>{user.email}</span>
+                        {isFastrrPlaceholderEmail(user.email) ? (
+                          <span title={user.email} style={{ fontSize: 12, color: "#a8a29e", fontStyle: "italic" }}>No email</span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: "#78716c" }}>{user.email}</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        <span style={{ fontSize: 12, color: "#78716c" }}>{user.phone || "—"}</span>
+                      </td>
+                      <td style={{ padding: "14px 24px" }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", padding: "3px 10px",
+                          borderRadius: 99, fontSize: 11, fontWeight: 500,
+                          background: isFastrrUser(user) ? "#e0f2fe" : "#f5f5f4",
+                          color: isFastrrUser(user) ? "#0369a1" : "#78716c",
+                        }}>
+                          {sourceLabel(user)}
+                        </span>
                       </td>
                       <td style={{ padding: "14px 24px" }}>
                         <span style={{
@@ -400,7 +461,9 @@ export default function UsersPage() {
                   </div>
                   <div>
                     <DialogTitle style={{ fontSize: 16, color: "#1c1917" }}>{viewUser.name}</DialogTitle>
-                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#78716c" }}>{viewUser.email}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#78716c" }}>
+                      {isFastrrPlaceholderEmail(viewUser.email) ? "No email" : viewUser.email}
+                    </p>
                   </div>
                 </div>
               </DialogHeader>
@@ -422,7 +485,7 @@ export default function UsersPage() {
                 <DetailField label="Status" value={viewUser.isActive ? "Active" : "Inactive"} />
                 <DetailField label="Phone" value={viewUser.phone || "—"} />
                 <DetailField label="Email verified" value={viewUser.isVerified ? "Yes" : "No"} />
-                <DetailField label="Sign-in method" value={viewUser.provider === "google" ? "Google" : "Email & password"} />
+                <DetailField label="Sign-in method" value={signInMethod(viewUser)} />
                 <DetailField label="Wishlist items" value={String(viewUser.wishlist?.length ?? 0)} />
                 <DetailField label="Joined" value={formatDate(viewUser.createdAt)} />
                 {viewUser.updatedAt && <DetailField label="Last updated" value={formatDate(viewUser.updatedAt)} />}
