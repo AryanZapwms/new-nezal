@@ -2,6 +2,7 @@ import { cancelShiprocketOrder } from "@/lib/shiprocket"
 import { refundCCAvenueOrder } from "@/lib/ccavenue"
 import { sendEmail } from "@/lib/email"
 import { getOrderCancelledEmail } from "@/lib/email-templates"
+import { isFastrrPlaceholderEmail } from "@/lib/fastrr-customers"
 
 interface FinalizeOptions {
   reason: string
@@ -89,7 +90,8 @@ export async function finalizeOrderCancellation(order: any, opts: FinalizeOption
 
   const email = order.guestEmail || order.shippingAddress?.email
   const name = order.guestName || order.shippingAddress?.name || "Customer"
-  if (email) {
+  // Not to Shiprocket's <phone>@fastrr.com placeholder — nobody reads it.
+  if (email && !isFastrrPlaceholderEmail(email)) {
     try {
       await sendEmail({
         to: email,

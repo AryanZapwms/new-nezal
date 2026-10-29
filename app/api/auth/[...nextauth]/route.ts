@@ -89,6 +89,15 @@ export const authOptions: NextAuthOptions = {
           role: "user",
           // no password field — schema now allows this
         });
+      } else if (!dbUser.isVerified) {
+        // Google has verified this email, which claims an unverified record —
+        // a Fastrr checkout customer (lib/fastrr-customers.ts) — in place, so
+        // its linked orders stay attached. A password on an unverified record
+        // was never proven to belong to this inbox, so it's dropped.
+        await User.updateOne(
+          { _id: dbUser._id, isVerified: { $ne: true } },
+          { $set: { isVerified: true, provider: "google" }, $unset: { password: 1 } }
+        );
       }
 
       return true;

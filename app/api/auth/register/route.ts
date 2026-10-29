@@ -97,8 +97,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User already exists" }, { status: 400 });
     }
 
-    // Clears abandoned unverified sign-ups — never an imported placeholder account.
-    await User.deleteMany({ email: normalizedEmail, isVerified: false, isImported: { $ne: true } });
+    // Clears abandoned unverified sign-ups — never an imported placeholder
+    // account, and never a Fastrr checkout customer (lib/fastrr-customers.ts):
+    // verify-otp claims that record in place, so its orders stay linked.
+    await User.deleteMany({
+      email: normalizedEmail,
+      isVerified: false,
+      isImported: { $ne: true },
+      source: { $ne: "fastrr" },
+    });
     await Otp.deleteMany({ email: normalizedEmail });
 
     const hashedPassword = await hashPassword(validation.data.password);

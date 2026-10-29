@@ -3,6 +3,7 @@ import mongoose from "mongoose"
 import { connectDB } from "@/lib/db"
 import { User } from "@/lib/models/user"
 import { Review } from "@/lib/models/review"
+import { Order } from "@/lib/models/order"
 import { isImportedUser } from "@/lib/imported-users"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
@@ -127,6 +128,10 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    // Don't leave orders pointing at a user that no longer exists: unlinked,
+    // they're owned through their guestEmail again (lib/order-access.ts).
+    await Order.updateMany({ user: id }, { $unset: { user: 1 } })
 
     return NextResponse.json({
       message: "User deleted successfully",

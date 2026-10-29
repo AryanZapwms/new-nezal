@@ -37,6 +37,7 @@ import {
 } from "@/lib/shiprocket-checkout-order"
 import { getRequestMetaFrom } from "@/lib/meta-capi"
 import { isWithinPurchaseTrackingWindow, purchaseTrackingData } from "@/lib/meta-purchase"
+import { isFastrrPlaceholderEmail } from "@/lib/fastrr-customers"
 import { cookies, headers } from "next/headers"
 import { after } from "next/server"
 import { CART_TOKEN_COOKIE, convertCartForOffsiteOrder, resolveCartIdentityFromGuestToken } from "@/lib/cart-server"
@@ -345,15 +346,18 @@ function OrderConfirmed({ order }: { order: any }) {
         )}
 
         {/* ── Confirmation email note ─────────────────────── */}
-        <div
-          className="rounded-2xl border p-4 mb-6 text-center"
-          style={{ backgroundColor: "#ffffff", borderColor: "#dde8de" }}
-        >
-          <p className="text-xs font-semibold" style={{ color: "#1e3a28" }}>Confirmation email</p>
-          <p className="text-xs mt-0.5" style={{ color: "#9cad9e" }}>
-            {customerEmail ? `Sent to ${customerEmail}` : "On its way to your inbox"}
-          </p>
-        </div>
+        {/* None is sent to Shiprocket's <phone>@fastrr.com placeholder. */}
+        {!isFastrrPlaceholderEmail(customerEmail) && (
+          <div
+            className="rounded-2xl border p-4 mb-6 text-center"
+            style={{ backgroundColor: "#ffffff", borderColor: "#dde8de" }}
+          >
+            <p className="text-xs font-semibold" style={{ color: "#1e3a28" }}>Confirmation email</p>
+            <p className="text-xs mt-0.5" style={{ color: "#9cad9e" }}>
+              {customerEmail ? `Sent to ${customerEmail}` : "On its way to your inbox"}
+            </p>
+          </div>
+        )}
 
         {/* ── CTAs ────────────────────────────────────────── */}
         <div className="space-y-3">

@@ -87,7 +87,7 @@ async function makeUser(email: string) {
   return User.create({ email, name: "Test Customer", isVerified: true })
 }
 
-async function deliverShiprocketWebhook(email: string, platformOrderId: string) {
+async function deliverShiprocketWebhook(email: string, platformOrderId: string, paymentStatus = "Success") {
   const res = await webhookPOST(
     new NextRequest(`http://localhost/api/shiprocket/order-webhook/${WEBHOOK_SECRET}`, {
       method: "POST",
@@ -95,7 +95,7 @@ async function deliverShiprocketWebhook(email: string, platformOrderId: string) 
       body: JSON.stringify({
         order_id: platformOrderId,
         fastrr_order_id: 987654,
-        payment_status: "Success",
+        payment_status: paymentStatus,
         email,
         total_amount_payable: 300,
         cart_data: { items: [{ variant_id: 4242 * SHIPROCKET_VARIANT_ID_MULTIPLIER, quantity: 1 }] },
@@ -161,13 +161,39 @@ describe("checkout → success page → order details", () => {
     expect(body.items[0].product.name).toBe("Neem Face Wash")
   })
 
-  it("loads a guest-checkout order after the customer signs in with the same email", async () => {
+  it("loads a guest-checkout order after the customer claims their account with the same email", async () => {
     await makeProduct()
     const webhook = await deliverShiprocketWebhook("newbuyer@test.com", "SR-1002")
+
+    // The confirmed order is linked to an unclaimed Fastrr customer record
+    // (lib/fastrr-customers.ts).
+    const saved: any = await Order.findById(webhook.orderId).lean()
+    const customer: any = await User.findOne({ email: "newbuyer@test.com" }).lean()
+    expect(String(saved.user)).toBe(String(customer._id))
+    expect(customer.isVerified).toBe(false)
+
+    // Customer signs up afterwards with the checkout email, which verifies
+    // that same record (tests/fastrr-customers.test.ts covers the real flows).
+    await User.updateOne({ _id: customer._id }, { $set: { isVerified: true } })
+    signInAs("newbuyer@test.com")
+
+    const { status, body } = await fetchOrderDetails(String(webhook.orderId))
+    expect(status).toBe(200)
+    expect(body.orderNumber).toBe(webhook.orderNumber)
+
+    const listRes = await ordersListGET(new NextRequest("http://localhost/api/orders"))
+    const list = await listRes.json()
+    expect(list.map((o: any) => o.orderNumber)).toContain(webhook.orderNumber)
+  })
+
+  it("loads an unlinked guest-checkout order for a customer who signs in with the same email", async () => {
+    await makeProduct()
+    // Still-pending prepaid: no customer is saved, so the order stays unlinked
+    // and is found through the guestEmail match in lib/order-access.ts.
+    const webhook = await deliverShiprocketWebhook("newbuyer@test.com", "SR-1003", "Pending")
     const saved = await Order.findById(webhook.orderId).lean()
     expect((saved as any).user).toBeUndefined()
 
-    // Customer registers/signs in afterwards with the checkout email.
     await makeUser("newbuyer@test.com")
     signInAs("newbuyer@test.com")
 
