@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import { Order } from "@/lib/models/order"
 import { sendEmail, getAbandonedPaymentEmail } from "@/lib/email"
+import { isFastrrPlaceholderEmail } from "@/lib/fastrr-customers"
 
 const ABANDONED_THRESHOLD_MS = 10 * 60 * 1000 // 10 minutes
 const SUPPORT_PHONE = process.env.SUPPORT_PHONE // the template falls back to the brand support number
@@ -33,7 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const recipientEmail = order.guestEmail || (order.shippingAddress as any)?.email
     const recipientName = order.guestName || order.shippingAddress?.name || "Customer"
 
-    if (recipientEmail) {
+    // Shiprocket's <phone>@fastrr.com placeholder isn't a real inbox.
+    if (recipientEmail && !isFastrrPlaceholderEmail(recipientEmail)) {
       const reminderEmail = getAbandonedPaymentEmail({
         customerName: recipientName,
         orderId: order.orderNumber,

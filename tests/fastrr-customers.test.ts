@@ -19,6 +19,7 @@ vi.mock("@/lib/email", () => ({
 }))
 vi.mock("@/lib/shiprocket", () => ({
   createShiprocketOrderForOrder: vi.fn().mockResolvedValue({ shiprocketOrderId: 777, shiprocketShipmentId: 888 }),
+  cancelShiprocketOrder: vi.fn().mockResolvedValue(undefined),
 }))
 vi.mock("@/lib/shiprocket-webhooks", () => ({ notifyProductWebhook: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/lib/whatsapp-order", () => ({ sendOrderConfirmationWhatsApp: vi.fn().mockResolvedValue(undefined) }))
@@ -30,6 +31,7 @@ import { createShiprocketOrderForOrder } from "@/lib/shiprocket"
 import { upsertShiprocketCheckoutOrder } from "@/lib/shiprocket-checkout-order"
 import { isFastrrPlaceholderEmail } from "@/lib/fastrr-customers"
 import { ownedOrdersFilter } from "@/lib/order-access"
+import { finalizeOrderCancellation } from "@/lib/orderCancellation"
 
 let registerPOST: typeof import("@/app/api/auth/register/route").POST
 let verifyOtpPOST: typeof import("@/app/api/auth/verify-otp/route").POST
@@ -211,6 +213,20 @@ describe("saving the customer of a Shiprocket checkout order", () => {
 
     const recipients = vi.mocked(sendEmail).mock.calls.map(([args]: any[]) => args.to)
     expect(recipients).toContain(EMAIL)
+  })
+
+  it("sends no cancellation email to a placeholder address, but does to a real one", async () => {
+    const placeholder = "9065686331@fastrr.com"
+    const { order: placeholderOrder } = await upsertShiprocketCheckoutOrder(payload({ email: placeholder }), "webhook")
+    const { order: realOrder } = await upsertShiprocketCheckoutOrder(payload(), "webhook")
+    vi.mocked(sendEmail).mockClear()
+
+    await finalizeOrderCancellation(placeholderOrder, { reason: "Customer asked" })
+    await finalizeOrderCancellation(realOrder, { reason: "Customer asked" })
+
+    const recipients = vi.mocked(sendEmail).mock.calls.map(([args]: any[]) => args.to)
+    expect(recipients).toEqual([EMAIL])
+    expect((await Order.findById(placeholderOrder._id))?.orderStatus).toBe("cancelled")
   })
 
   it("doesn't hold up the order when saving the customer fails", async () => {
