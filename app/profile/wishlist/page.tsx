@@ -1,7 +1,7 @@
 // app/profile/wishlist/page.tsx
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Image from "next/image"
@@ -48,6 +48,10 @@ export default function WishlistPage() {
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  // Every product fetched so far. Removing an item (or putting back one whose
+  // removal failed) rebuilds the list from here: no refetch, no "Loading
+  // your wishlist..." in between.
+  const loadedProductsRef = useRef(new Map<string, Product>())
 
   // Redirect if not logged in
   useEffect(() => {
@@ -82,6 +86,13 @@ export default function WishlistPage() {
       return
     }
 
+    const loaded = loadedProductsRef.current
+    if (wishlistIds.every((id) => loaded.has(id))) {
+      setProducts(wishlistIds.map((id) => loaded.get(id)!))
+      setLoading(false)
+      return
+    }
+
     async function fetchProducts() {
       setLoading(true)
       try {
@@ -89,6 +100,7 @@ export default function WishlistPage() {
         if (!res.ok) throw new Error()
         const data = await res.json()
         const list = Array.isArray(data) ? data : data.products ?? []
+        for (const p of list as Product[]) loaded.set(p._id, p)
         // Keep order matching wishlistIds
         const map = new Map(list.map((p: Product) => [p._id, p]))
         setProducts(wishlistIds.map((id) => map.get(id)).filter(Boolean) as Product[])
@@ -103,16 +115,21 @@ export default function WishlistPage() {
   }, [wishlistIds])
 
   async function handleRemove(productId: string) {
-    toggle(productId) // optimistic remove from store
+    const previousIds = wishlistIds
+    // Optimistic: the card goes now. The request doesn't put up the
+    // full-screen overlay (SILENT_REQUESTS in lib/fetch-interceptor.ts).
+    toggle(productId)
     try {
-      await fetch("/api/wishlist", {
+      const res = await fetch("/api/wishlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId }),
       })
+      if (!res.ok) throw new Error(`Wishlist update failed: ${res.status}`)
       toast({ title: "Removed from wishlist" })
     } catch {
-      toggle(productId) // revert
+      setItems(previousIds) // roll back, in its old place
+      toast({ title: "Couldn't remove it", description: "Please try again.", variant: "destructive" })
     }
   }
 

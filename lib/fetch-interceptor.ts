@@ -21,6 +21,7 @@ const SILENT_REQUESTS: { method: string; path: RegExp }[] = [
   { method: "POST", path: /^\/api\/coupons\/validate$/ },                // Apply button shows its own state
   { method: "POST", path: /^\/api\/products\/[^/]+\/reviews$/ },         // product page: Submit Review button spinner
   { method: "POST", path: /^\/api\/shiprocket\/initiate-checkout$/ },    // Shop Now / Buy Now / cart Checkout button spinner
+  { method: "POST", path: /^\/api\/wishlist$/ },                         // heart / wishlist remove: optimistic, toast on failure
 ]
 
 function isSilentRequest(url: string, method: string): boolean {

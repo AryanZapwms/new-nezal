@@ -92,6 +92,8 @@ describe("fetch interceptor overlay", () => {
       // Their buttons show an inline spinner instead
       windowFetch("/api/products/abc/reviews", { method: "POST" }),
       windowFetch("/api/shiprocket/initiate-checkout", { method: "POST" }),
+      // Optimistic, with a toast on failure
+      windowFetch("/api/wishlist", { method: "POST" }),
       windowFetch("/api/products/abc"),
       windowFetch("/api/products?category=face"),
     ]
