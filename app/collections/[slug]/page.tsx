@@ -1,12 +1,13 @@
 // app/collections/[slug]/page.tsx
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useParams } from "next/navigation"
 import { ChevronRight, Home, Leaf, ShieldCheck, FlaskConical, Star, ChevronDown, ChevronUp } from "lucide-react"
 import ProductCard from "@/components/product-card"
+import { engageCategory, engageTrack } from "@/lib/engage360"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -563,6 +564,9 @@ export default function CollectionPage() {
   const [relatedCollections, setRelatedCollections] = useState<RelatedCollection[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  // Slug of the collection Engage 360's categoryview went out for; also stops
+  // Strict Mode's second effect run from sending it again
+  const categoryViewSentRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!slug) return
@@ -591,6 +595,16 @@ export default function CollectionPage() {
 
     load()
   }, [slug])
+
+  // Engage 360 categoryview, once the collection has loaded
+  useEffect(() => {
+    if (!collection || categoryViewSentRef.current === collection.slug) return
+    categoryViewSentRef.current = collection.slug
+    engageTrack(
+      "categoryview",
+      engageCategory({ title: collection.name, path: `/collections/${collection.slug}`, image: collection.heroImage })
+    )
+  }, [collection])
 
   if (loading) return <CollectionSkeleton />
 

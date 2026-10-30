@@ -2,6 +2,12 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { trackAddToCart } from "@/lib/facebook-pixel"
+import {
+  engageProduct,
+  engageTrack,
+  getEngageSignedInFirstName,
+  type EngageProductDetails,
+} from "@/lib/engage360"
 
 export interface Size {
   size: string
@@ -37,7 +43,9 @@ export interface CartItem {
 
 interface CartStore {
   items: CartItem[]
-  addItem: (item: CartItem) => void
+  // `details`: what Engage 360's addtocart sends beyond the cart item's own
+  // fields, from callers that have them (the product page)
+  addItem: (item: CartItem, details?: EngageProductDetails) => void
   removeItem: (productId: string, selectedSize?: Size) => void
   removeRitual: (ritualSlug: string) => void
   updateQuantity: (productId: string, quantity: number, selectedSize?: Size) => void
@@ -73,7 +81,7 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
 
-     addItem: (item: CartItem) => {
+     addItem: (item: CartItem, details?: EngageProductDetails) => {
   set((state) => {
     const existingItem = state.items.find((i) => matchItem(i, item.productId, item.selectedSize))
 
@@ -98,6 +106,19 @@ export const useCartStore = create<CartStore>()(
   })
 
   trackAddToCart(item.productId, item.name, item.discountPrice || item.price, item.quantity)
+  engageTrack(
+    "addtocart",
+    engageProduct({
+      productId: item.productId,
+      name: item.name,
+      price: item.discountPrice || item.price,
+      fullPrice: item.price,
+      image: item.image,
+      companySlug: item.company?.slug,
+      firstname: getEngageSignedInFirstName(),
+      ...details,
+    })
+  )
 },
 
       removeItem: (productId: string, selectedSize?: Size) => {

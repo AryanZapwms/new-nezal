@@ -15,6 +15,7 @@ import ProductCard from "@/components/product-card"
 import FAQ from "@/components/FAQ"
 import { fetchWithCache } from "@/lib/cacheClient"
 import { trackViewContent, whenPixelReady } from "@/lib/facebook-pixel"
+import { engageProduct, engageTrack, firstNameOf, type EngageProductDetails } from "@/lib/engage360"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import ProductDescription from "@/components/ProductDescription"
@@ -244,6 +245,16 @@ function getSizePricing(product: Product, size: Size | null) {
   return { currentPrice, currentDiscountPrice, percentOff }
 }
 
+// What Engage 360's productview and addtocart send beyond the cart item's own
+// fields. Tags are the product's concerns and skin types, when it has any.
+function getEngageDetails(product: Product): EngageProductDetails {
+  return {
+    description: product.description,
+    category: product.category?.name,
+    tags: [...(product.concerns ?? []), ...(product.skinTypes ?? [])],
+  }
+}
+
 // ── Star renderer ─────────────────────────────────────────
 function StarRating({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
@@ -276,7 +287,7 @@ interface ProductDetailClientProps {
 
 const ProductDetailClient = memo(function ProductDetailClient({ product, initialReviews }: ProductDetailClientProps) {
   const id = product._id
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const { toast } = useToast()
   const addItem = useCartStore((state) => state.addItem)
   const getTotalItems = useCartStore((state) => state.getTotalItems)
@@ -309,6 +320,7 @@ const ProductDetailClient = memo(function ProductDetailClient({ product, initial
   const thumbStripRef = useRef<HTMLDivElement>(null)
 
   const viewContentSentRef = useRef(false)
+  const engageViewSentRef = useRef(false)
 
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -380,6 +392,30 @@ const ProductDetailClient = memo(function ProductDetailClient({ product, initial
     })
   }, [product])
 
+  // Engage 360 productview, once per product view, with the same price as
+  // ViewContent. The loader queues calls (lib/engage360.ts), but the session
+  // is fetched after the page loads: waits for it, so a signed-in customer's
+  // first name goes too.
+  const signedInName = sessionStatus === "authenticated" ? session?.user?.name : null
+  useEffect(() => {
+    if (engageViewSentRef.current || sessionStatus === "loading") return
+    engageViewSentRef.current = true
+    const shown = getSizePricing(product, getDefaultSize(product))
+    engageTrack(
+      "productview",
+      engageProduct({
+        productId: product._id,
+        name: product.name,
+        price: shown.currentDiscountPrice || shown.currentPrice,
+        fullPrice: shown.currentPrice,
+        image: product.image || product.images?.[0],
+        companySlug: product.company?.slug,
+        firstname: firstNameOf(signedInName),
+        ...getEngageDetails(product),
+      })
+    )
+  }, [product, sessionStatus, signedInName])
+
   useEffect(() => {
     let mounted = true
     async function loadSuggested(companySlug: string, categorySlug?: string) {
@@ -430,8 +466,8 @@ const ProductDetailClient = memo(function ProductDetailClient({ product, initial
     ? { ...selectedSize, discountPrice: currentDiscountPrice }
     : undefined,
   flashSale: product.flashSale,
-})
-    // addItem() fires the AddToCart pixel event itself (lib/store/cart-store.ts)
+}, getEngageDetails(product))
+    // addItem() fires the AddToCart pixel and Engage 360 addtocart events itself (lib/store/cart-store.ts)
     toast({ title: "Added to cart!", description: `${quantity} × ${product.name}${selectedSize ? ` (${selectedSize.size}${selectedSize.unit})` : ""} added.` })
     setQuantity(1)
   }
@@ -465,7 +501,7 @@ addItem({
     ? { ...selectedSize, discountPrice: currentDiscountPrice }
     : undefined,
   flashSale: product.flashSale,
-})
+}, getEngageDetails(product))
 
 // Shiprocket checkout needs the FULL current cart (same as /checkout
 // itself reads via useCartStore) — getState() for a synchronous read

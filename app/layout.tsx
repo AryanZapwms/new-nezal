@@ -14,6 +14,7 @@ import { GlobalLoader } from "@/components/ui/global-loader"
 import { FetchInterceptorInit } from "@/components/ui/fetch-interceptor-init"
 import { CartHydrator } from "@/components/cart-hydrator"
 import { ProfileCompletionNudge } from "@/components/profile-completion-nudge"
+import { Engage360Identify } from "@/components/engage360-identify"
 import NextTopLoader from "nextjs-toploader"
 
 // Load Nezal fonts
@@ -155,6 +156,7 @@ export default function RootLayout({
      <FetchInterceptorInit />
      <CartHydrator />
      <ProfileCompletionNudge />
+     <Engage360Identify />
     <StickyHeaderStack />
     <main className="flex-1">{children}</main>
     <Footer />
