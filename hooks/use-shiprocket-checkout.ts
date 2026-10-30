@@ -9,7 +9,7 @@
 // failure — our API erroring, or the widget script not being loaded yet —
 // falls back to a plain router.push(fallbackPath) to our own checkout page.
 
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import type { CartItem } from "@/lib/store/cart-store"
@@ -57,6 +57,10 @@ function toShiprocketCartItems(items: ShiprocketCheckoutInputItem[]) {
 export function useShiprocketCheckout() {
   const router = useRouter()
   const { toast } = useToast()
+  // True while our initiate-checkout request is in flight, so the button can
+  // show an inline spinner (the request doesn't put up the full-screen
+  // overlay — see SILENT_REQUESTS in lib/fetch-interceptor.ts)
+  const [starting, setStarting] = useState(false)
 
   // `event` is threaded straight through to HeadlessCheckout.addToCart(),
   // per Shiprocket's own integration example — first argument, same as
@@ -79,6 +83,7 @@ export function useShiprocketCheckout() {
       }
 
       const metaEventId = newMetaEventId()
+      setStarting(true)
 
       try {
         const res = await fetch("/api/shiprocket/initiate-checkout", {
@@ -123,10 +128,12 @@ export function useShiprocketCheckout() {
           variant: "destructive",
         })
         fallbackToOwnCheckout()
+      } finally {
+        setStarting(false)
       }
     },
     [router, toast]
   )
 
-  return { initiateCheckout }
+  return { initiateCheckout, starting }
 }

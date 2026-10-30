@@ -85,10 +85,13 @@ describe("fetch interceptor overlay", () => {
     expect(useLoadingStore.getState().isLoading).toBe(false)
   })
 
-  it("still keeps silent requests and plain GETs off the overlay", async () => {
+  it("keeps silent requests and plain GETs off the overlay", async () => {
     delayMs = 2000
     const requests = [
       windowFetch("/api/cart", { method: "PUT" }),
+      // Their buttons show an inline spinner instead
+      windowFetch("/api/products/abc/reviews", { method: "POST" }),
+      windowFetch("/api/shiprocket/initiate-checkout", { method: "POST" }),
       windowFetch("/api/products/abc"),
       windowFetch("/api/products?category=face"),
     ]

@@ -9,7 +9,7 @@
 import { FormEvent, MouseEvent, useCallback, useEffect, useRef, useState, useMemo, memo } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
-import { Star, ShoppingCart, Zap, Heart, Truck, RotateCcw, Leaf, Tag, ChevronLeft, ChevronRight, BadgeCheck, Clock, Package } from "lucide-react"
+import { Star, ShoppingCart, Zap, Heart, Truck, RotateCcw, Leaf, Tag, ChevronLeft, ChevronRight, BadgeCheck, Clock, Package, Loader2 } from "lucide-react"
 import { useCartStore } from "@/lib/store/cart-store"
 import ProductCard from "@/components/product-card"
 import FAQ from "@/components/FAQ"
@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import ProductDescription from "@/components/ProductDescription"
 import ProductSections from "@/components/ProductSections"
-import { useLoading } from "@/hooks/use-loading"
 import { WishlistButton } from "@/components/wishlist-button"
 import { useShiprocketCheckout } from "@/hooks/use-shiprocket-checkout"
 import type { ProductDetail as Product, ProductSize as Size } from "@/lib/product-detail"
@@ -282,8 +281,8 @@ const ProductDetailClient = memo(function ProductDetailClient({ product, initial
   const addItem = useCartStore((state) => state.addItem)
   const getTotalItems = useCartStore((state) => state.getTotalItems)
   const router = useRouter()
-  const { withLoading } = useLoading()
-  const { initiateCheckout } = useShiprocketCheckout()
+  // startingCheckout drives the Shop Now / Buy Now button spinners
+  const { initiateCheckout, starting: startingCheckout } = useShiprocketCheckout()
 
   // ── State ──────────────────────────────────────────────
   const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([])
@@ -451,7 +450,8 @@ const ProductDetailClient = memo(function ProductDetailClient({ product, initial
     return
   }
 
-  if (isOutOfStock) return
+  // Already starting checkout: don't add the item to the cart a second time
+  if (isOutOfStock || startingCheckout) return
 
 addItem({
   productId: product._id,
@@ -493,8 +493,8 @@ initiateCheckout(event, useCartStore.getState().items, "/checkout")
       toast({ title: "Details required", description: "Please provide your name and email.", variant: "destructive" })
       return
     }
+    // The Submit button shows the spinner; no full-screen overlay
     setSubmittingReview(true)
-    await withLoading(async () => { 
     try {
       const res = await fetch(`/api/products/${id}/reviews`, {
         method: "POST",
@@ -520,7 +520,6 @@ initiateCheckout(event, useCartStore.getState().items, "/checkout")
     } finally {
       setSubmittingReview(false)
     }
-     }, "Submitting your review...") 
   }
 
   const ratingPercentage = useCallback(
@@ -996,17 +995,18 @@ const currentImage =
                   Add to Cart
                 </button>
                 <button
-                  disabled={isOutOfStock}
+                  disabled={isOutOfStock || startingCheckout}
+                  aria-busy={startingCheckout}
                   className="flex-1 flex items-center justify-center gap-2.5 py-3 sm:py-4 rounded-xl text-base font-semibold border-2 transition-all duration-150 active:scale-95"
                   style={{
                     backgroundColor: isOutOfStock ? "#f0f7f0" : "#2a5c3a",
                     borderColor: isOutOfStock ? "#c8dac9" : "#2a5c3a",
                     color: "#ffffff",
-                    cursor: isOutOfStock ? "not-allowed" : "pointer",
+                    cursor: isOutOfStock ? "not-allowed" : startingCheckout ? "wait" : "pointer",
                   }}
-                  onClick={handleShopNow} 
+                  onClick={handleShopNow}
                 >
-                  <Zap className="w-5 h-5" />
+                  {startingCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
                   Shop Now
                 </button>
               </div>
@@ -1230,13 +1230,15 @@ const currentImage =
                 <button
                   type="submit"
                   disabled={submittingReview}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all active:scale-95"
+                  aria-busy={submittingReview}
+                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all active:scale-95 flex items-center justify-center gap-2"
                   style={{
                     backgroundColor: submittingReview ? "#c8dac9" : "#1e3a28",
                     color: "#ffffff",
                     cursor: submittingReview ? "wait" : "pointer",
                   }}
                 >
+                  {submittingReview && <Loader2 className="w-4 h-4 animate-spin" />}
                   {submittingReview ? "Submitting…" : "Submit Review"}
                 </button>
               </form>
@@ -1367,16 +1369,17 @@ const currentImage =
           </button>
           <button
             onClick={handleShopNow}
-            disabled={isOutOfStock}
+            disabled={isOutOfStock || startingCheckout}
+            aria-busy={startingCheckout}
             className="flex-1 flex items-center justify-center gap-1.5 h-12 rounded-xl text-sm font-semibold border-2 transition-all duration-150 active:scale-95"
             style={{
               backgroundColor: isOutOfStock ? "#f0f7f0" : "#2a5c3a",
               borderColor: isOutOfStock ? "#c8dac9" : "#2a5c3a",
               color: "#ffffff",
-              cursor: isOutOfStock ? "not-allowed" : "pointer",
+              cursor: isOutOfStock ? "not-allowed" : startingCheckout ? "wait" : "pointer",
             }}
           >
-            <Zap className="w-4 h-4" />
+            {startingCheckout ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
             Buy Now
           </button>
         </div>
