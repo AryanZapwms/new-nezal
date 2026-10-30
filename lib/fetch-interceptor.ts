@@ -45,8 +45,23 @@ const IGNORED_ROUTES: string[] = [
   "/api/facebook-pixel",  // analytics
 ]
 
+// Only our own API calls (all relative URLs) can put up the overlay. Third-party
+// scripts call window.fetch too, and this wrapper sees those calls: the
+// Shiprocket checkout widget POSTs a tracking event to events.pickrr.com as
+// soon as it loads, which used to cover the product and cart pages with
+// "Please wait..." until Shiprocket answered.
+function isSameOrigin(url: string): boolean {
+  try {
+    return new URL(url, window.location.origin).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
 function shouldShowLoader(url: string, method: string): boolean {
   const upperMethod = method.toUpperCase()
+
+  if (!isSameOrigin(url)) return false
 
   // Always skip ignored routes
   if (IGNORED_ROUTES.some((route) => url.includes(route))) return false
@@ -80,6 +95,10 @@ export function getLoaderMessage(url: string, method: string): string {
   return "Please wait..."
 }
 
+// The overlay only appears once a request has been pending this long, so
+// quick requests never flash it on screen.
+export const OVERLAY_DELAY_MS = 300
+
 let interceptorInstalled = false
 
 export function installFetchInterceptor() {
@@ -92,15 +111,20 @@ export function installFetchInterceptor() {
     const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url
     const method = init?.method ?? (input instanceof Request ? input.method : "GET")
 
-    const show = shouldShowLoader(url, method)
-    const { startLoading, stopLoading } = useLoadingStore.getState()
+    if (!shouldShowLoader(url, method)) return originalFetch(input, init)
 
-    if (show) startLoading(getLoaderMessage(url, method))
+    const { startLoading, stopLoading } = useLoadingStore.getState()
+    let shown = false
+    const timer = setTimeout(() => {
+      shown = true
+      startLoading(getLoaderMessage(url, method))
+    }, OVERLAY_DELAY_MS)
 
     try {
       return await originalFetch(input, init)
     } finally {
-      if (show) stopLoading()
+      clearTimeout(timer)
+      if (shown) stopLoading()
     }
   }
 }
