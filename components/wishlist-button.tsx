@@ -4,8 +4,9 @@ import { Heart } from "lucide-react";
 import { useWishlistStore } from "@/lib/store/wishlist-store";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trackAddToWishlist } from "@/lib/facebook-pixel";
+import { useToast } from "@/hooks/use-toast";
 
 interface WishlistButtonProps {
   productId: string;
@@ -22,8 +23,14 @@ export function WishlistButton({
 }: WishlistButtonProps) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
   const { has, toggle } = useWishlistStore();
-  const liked = has(productId);
+  // The store is saved in localStorage, which the server can't read. Show the
+  // saved state only after mount, so a server-rendered heart (product page)
+  // matches the browser's first render.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const liked = mounted && has(productId);
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
@@ -34,20 +41,28 @@ export function WishlistButton({
 
     const wasLiked = liked;
     setLoading(true);
-    toggle(productId); // optimistic
+    // Optimistic: the heart flips now. The request doesn't put up the
+    // full-screen overlay (SILENT_REQUESTS in lib/fetch-interceptor.ts).
+    toggle(productId);
 
     if (!wasLiked) {
       trackAddToWishlist(productId, productName || productId, productPrice);
     }
 
     try {
-      await fetch("/api/wishlist", {
+      const res = await fetch("/api/wishlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId }),
       });
+      if (!res.ok) throw new Error(`Wishlist update failed: ${res.status}`);
     } catch {
-      toggle(productId); // revert on error
+      toggle(productId); // roll back
+      toast({
+        title: "Couldn't update your wishlist",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

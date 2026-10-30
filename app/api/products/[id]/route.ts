@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import "@/lib/models/category";
 import "@/lib/models/collection";
-import { getActiveFlashSaleMap, applyFlashSale } from "@/lib/flashSale";
+import { getProductDetail } from "@/lib/product-detail";
 import { setDirectSale, clearDirectSale } from "@/lib/sale";
 import { notifyProductWebhook } from "@/lib/shiprocket-webhooks";
 
@@ -37,34 +37,15 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    await connectDB();
-
-    const product = await Product.findById(id)
-      .populate("company", "name slug")
-      .populate("category", "name slug")
-      .populate("collectionSaleId", "name slug");
+    // Shared with the server-rendered product page (lib/product-detail.ts)
+    const product = await getProductDetail(id);
 
     if (!product) {
       console.warn("⚠️ Product not found:", id);
      return NextResponse.json({ error: "Product not found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
     }
 
-    const productObj = product.toObject();
-
-    // Merge in flash-sale pricing so the product detail page shows the
-    // same sale price / ribbon as the shop grid, cart, etc.
-    const flashSaleMap = await getActiveFlashSaleMap();
-    const productWithSale = applyFlashSale(productObj, flashSaleMap);
-
-    const populatedProduct = {
-      ...productWithSale,
-      company: product.company || { name: "Unknown", slug: "unknown" },
-      // ── FIX: don't override a real populated category with a fake fallback object;
-      //    return null so the UI shows "Product" heading instead of a fake slug ──
-      category: product.category || null,
-    };
-
-    return NextResponse.json(populatedProduct);
+    return NextResponse.json(product);
   } catch (error) {
     console.error("Error fetching product:", error);
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });

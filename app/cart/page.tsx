@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
-import { Trash2, Phone, Zap, Sparkles } from "lucide-react"
+import { Trash2, Phone, Zap, Sparkles, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -49,7 +49,8 @@ export default function CartPage() {
 const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotalItems } = useCartStore()
   const totalPrice = getTotalPrice()
   const router = useRouter()
-  const { initiateCheckout } = useShiprocketCheckout()
+  // startingCheckout: inline spinner on Proceed to Checkout
+  const { initiateCheckout, starting: startingCheckout } = useShiprocketCheckout()
   const [showBulkOrderModal, setShowBulkOrderModal] = useState(false)
   const hydrated = useCartHydrated()
   // Live prices + GST from the database; changed lines get a "price updated" note
@@ -460,7 +461,10 @@ const totalGST = items.reduce((sum, item) => {
                   // phone/address itself, and /api/shiprocket/initiate-checkout
                   // accepts logged-in and guest carts alike.
                   onClick={(event) => initiateCheckout(event, items, "/checkout")}
+                  disabled={startingCheckout}
+                  aria-busy={startingCheckout}
                 >
+                  {startingCheckout && <Loader2 className="w-4 h-4 animate-spin" />}
                   Proceed to Checkout
                 </Button>
 

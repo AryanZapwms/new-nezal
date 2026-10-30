@@ -14,7 +14,17 @@ interface PageMetadataInput {
   description: string
   path: string // route path starting with "/", e.g. "/about-us"
   image?: string // absolute or root-relative image URL for OG/Twitter
+  // Declared OG image size; null when it isn't known (e.g. product photos)
+  imageSize?: { width: number; height: number } | null
   keywords?: string
+}
+
+/**
+ * A product page's path. Its canonical URL and the Meta catalog feed's
+ * product links (lib/meta-catalog.ts) both use it, so they always match.
+ */
+export function productPath(companySlug: string, productId: string): string {
+  return `/shop/${companySlug}/product/${productId}`
 }
 
 export function pageMetadata({
@@ -22,6 +32,7 @@ export function pageMetadata({
   description,
   path,
   image,
+  imageSize = { width: 1200, height: 630 },
   keywords,
 }: PageMetadataInput): Metadata {
   const url = `${BRAND.domain}${path}`
@@ -44,7 +55,7 @@ export function pageMetadata({
       siteName: BRAND.name,
       title: `${title} | ${BRAND.name}`,
       description,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+      images: [{ url: ogImage, ...imageSize, alt: title }],
     },
     twitter: {
       card: "summary_large_image",

@@ -112,7 +112,8 @@ export default function RootLayout({
         <Analytics />
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="canonical" href={BRAND.domain} />
+        {/* No hand-written canonical here: it duplicated metadata.alternates.canonical
+            on every page and contradicted pages that set their own (product pages). */}
         <link rel="icon" href="/nezallogo.png" />
         <link rel="preload" as="image" href="/nezallogo.png" />
 
