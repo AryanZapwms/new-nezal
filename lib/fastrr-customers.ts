@@ -21,11 +21,9 @@ import { User } from "@/lib/models/user"
 import { Order } from "@/lib/models/order"
 import { isImportedEmail } from "@/lib/imported-users"
 
-export const FASTRR_PLACEHOLDER_EMAIL_REGEX = /@fastrr\.com$/i
-
-export function isFastrrPlaceholderEmail(email: unknown): boolean {
-  return typeof email === "string" && FASTRR_PLACEHOLDER_EMAIL_REGEX.test(email.trim())
-}
+// Defined in lib/fastrr-email.ts so browser code can use it; re-exported here
+// for existing callers.
+export { FASTRR_PLACEHOLDER_EMAIL_REGEX, isFastrrPlaceholderEmail } from "@/lib/fastrr-email"
 
 // The order's email, or the same placeholder Shiprocket uses when it sent none.
 function customerEmailFor(order: any, phone: string | undefined): string | null {
