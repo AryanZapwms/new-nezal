@@ -4,7 +4,7 @@ import { Heart } from "lucide-react";
 import { useWishlistStore } from "@/lib/store/wishlist-store";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trackAddToWishlist } from "@/lib/facebook-pixel";
 
 interface WishlistButtonProps {
@@ -23,7 +23,12 @@ export function WishlistButton({
   const { data: session } = useSession();
   const router = useRouter();
   const { has, toggle } = useWishlistStore();
-  const liked = has(productId);
+  // The store is saved in localStorage, which the server can't read. Show the
+  // saved state only after mount, so a server-rendered heart (product page)
+  // matches the browser's first render.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const liked = mounted && has(productId);
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {

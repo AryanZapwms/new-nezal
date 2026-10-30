@@ -74,6 +74,31 @@ export function trackPageView() {
 }
 
 /**
+ * Runs `callback` once the base pixel (window.fbq) exists. <Analytics /> loads
+ * it with an afterInteractive script, so code that runs at hydration (a
+ * server-rendered page's mount effect) can get there first, and track* calls
+ * made before fbq exists are dropped. Gives up after `timeoutMs` (pixel
+ * blocked or not configured). Returns a function that cancels the wait.
+ */
+export function whenPixelReady(callback: () => void, timeoutMs = 10_000): () => void {
+  if (typeof window === 'undefined') return () => {}
+  if ((window as any).fbq) {
+    callback()
+    return () => {}
+  }
+  const startedAt = Date.now()
+  const timer = setInterval(() => {
+    if ((window as any).fbq) {
+      clearInterval(timer)
+      callback()
+    } else if (Date.now() - startedAt >= timeoutMs) {
+      clearInterval(timer)
+    }
+  }, 100)
+  return () => clearInterval(timer)
+}
+
+/**
  * Track ViewContent event
  * Fired when user views a product page
  * @param productId - Product ID
