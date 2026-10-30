@@ -40,6 +40,8 @@ export interface ProductDetail {
   benefits: string[]
   usage: string
   suitableFor?: string[]
+  concerns?: string[]
+  skinTypes?: string[]
   results?: ProductResult[]
   company?: { _id?: string; name: string; slug: string }
   category?: { name: string; slug: string } | null

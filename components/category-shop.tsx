@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Home, ChevronRight, Star, Filter } from "lucide-react"
 import { fetchWithCache } from "@/lib/cacheClient"
 import { ComingSoon } from "@/components/coming-soon"
+import { engageCategory, engageTrack } from "@/lib/engage360"
 
 // ===== Interfaces and constants (unchanged) =====
 interface Product {
@@ -41,6 +42,7 @@ interface Category {
   name: string
   slug: string
   description?: string
+  image?: string
   parent?: { name: string; slug: string }
   subCategories?: Category[]
 }
@@ -190,6 +192,19 @@ export function CategoryShop({ company, category, initialCategory, initialListin
   const [hasNext, setHasNext] = useState(initialListing ? initialListing.total > PRODUCTS_PER_PAGE : false)
   // True until the shopper leaves the server-rendered first page
   const onServerListing = useRef(!!initialListing)
+  // Page Engage 360's categoryview went out for; also stops Strict Mode's
+  // second effect run from sending it again
+  const categoryViewSentRef = useRef<string | null>(null)
+
+  // Engage 360 categoryview, once the category is known (server-loaded, or
+  // fetched below when the server couldn't load it)
+  useEffect(() => {
+    if (!categoryData) return
+    const path = `/shop/${company}/${categoryData.slug}`
+    if (categoryViewSentRef.current === path) return
+    categoryViewSentRef.current = path
+    engageTrack("categoryview", engageCategory({ title: categoryData.name, path, image: categoryData.image }))
+  }, [categoryData, company])
 
   useEffect(() => {
     if (initialCategory !== undefined) return

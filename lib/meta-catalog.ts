@@ -19,6 +19,11 @@ import { BRAND } from "@/lib/config"
 import { getActiveFlashSaleMap, type FlashSaleInfo } from "@/lib/flashSale"
 import { resolveCurrentPrice } from "@/lib/pricing"
 import { productPath } from "@/lib/seo"
+import { absoluteUrl, cleanDescription, cleanTitle, collapseWhitespace } from "@/lib/catalog-format"
+
+// The text and URL helpers live in lib/catalog-format.ts so browser code can
+// use them; re-exported here for existing callers.
+export { absoluteUrl, cleanDescription, cleanTitle }
 
 // The storefront's Company record is named "nh", which isn't a name customers
 // know, so every item carries this brand instead.
@@ -73,48 +78,8 @@ export interface FeedProduct {
   category?: { name?: string | null; slug?: string | null } | null
 }
 
-// Meta's field limits
-const TITLE_MAX_LENGTH = 200
-const DESCRIPTION_MAX_LENGTH = 9999
 // Gallery images listed per item after the main one, in gallery order
 const ADDITIONAL_IMAGES_MAX = 10
-
-/** Turns line breaks and runs of spaces into single spaces. */
-function collapseWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim()
-}
-
-export function cleanTitle(name: string): string {
-  // Some names were saved with a trailing ", "
-  return collapseWhitespace(name).replace(/[\s,]+$/, "").slice(0, TITLE_MAX_LENGTH)
-}
-
-/**
- * Descriptions are stored as a tagline line, a line break, then the body
- * (see components/ProductDescription.tsx). Joins the lines into one paragraph,
- * adding a full stop after a line that has no closing punctuation (usually
- * the tagline), and drops quote marks that wrap the whole text.
- */
-export function cleanDescription(text: string): string {
-  let body = text.trim()
-  if (body.length > 1 && body.startsWith('"') && body.indexOf('"', 1) === body.length - 1) {
-    body = body.slice(1, -1)
-  }
-  const lines = body.split(/\n/).map(collapseWhitespace).filter(Boolean)
-  return lines
-    .map((line, i) => (i < lines.length - 1 && !/[.!?:;,…]$/.test(line) ? `${line}.` : line))
-    .join(" ")
-    .slice(0, DESCRIPTION_MAX_LENGTH)
-}
-
-/** An absolute image URL Meta can fetch; site-relative paths resolve against the site. */
-function absoluteUrl(url: string | null | undefined, siteUrl: string): string | null {
-  const value = url?.trim()
-  if (!value) return null
-  const absolute = /^https?:\/\//i.test(value) ? value : value.startsWith("/") ? `${siteUrl}${value}` : null
-  // additional_image_link is a comma-separated list, so commas must be encoded
-  return absolute && absolute.replace(/ /g, "%20").replace(/,/g, "%2C")
-}
 
 function formatPrice(amount: number): string {
   return `${amount.toFixed(2)} INR`

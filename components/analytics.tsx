@@ -9,6 +9,9 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
+// Shiprocket Engage 360 (formerly Wigzo) org token. Unset: no tracker at all.
+const WIGZO_KEY = process.env.NEXT_PUBLIC_WIGZO_KEY;
+
 // Google Tag Manager container ID — this is now the ONLY place GA4 / Google Ads
 // tags are registered. Manage those tags inside the GTM-KGB6D4D container in
 // tagmanager.google.com, not in code, to avoid double-firing pageviews.
@@ -54,6 +57,20 @@ export function Analytics() {
           alt=""
         />
       </noscript>
+
+      {/* Shiprocket Engage 360 (formerly Wigzo) — Wigzo's own loader. It defines
+          window.wigzo as a queue straight away, so events sent before its script
+          arrives are kept. Every tracking call goes through lib/engage360.ts. */}
+      {WIGZO_KEY && (
+        <Script id="wigzo-loader" strategy="afterInteractive">
+          {`(function(w,i,g,z,o){
+          var a,m;w['WigzoObject']=o;w[o]=w[o]||function(){
+          (w[o].q=w[o].q||[]).push(arguments)},w[o].l=1*new Date();w[o].h=z;a=i.createElement(g),
+          m=i.getElementsByTagName(g)[0];a.async=1;a.src=z;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//app.wigzo.com/wigzo.compressed.js','wigzo');
+          wigzo('configure', ${JSON.stringify(WIGZO_KEY)});`}
+        </Script>
+      )}
     </>
   );
 }
