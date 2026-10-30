@@ -9,88 +9,22 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import "@/lib/models/product"
 import "@/lib/models/user"
-
-
-const emptySummary = {
-  total: 0,
-  averageRating: 0,
-  ratingCounts: {
-    1: 0,
-    2: 0,
-    3: 0,
-    4: 0,
-    5: 0,
-  },
-}
-
-function buildSummary(reviews: any[]) {
-  if (!reviews.length) {
-    return emptySummary
-  }
-  const ratingCounts = { ...emptySummary.ratingCounts }
-  let sum = 0
-  for (const review of reviews) {
-    const rating = review.rating || 0
-    if (ratingCounts[review.rating as keyof typeof ratingCounts] !== undefined) {
-      ratingCounts[review.rating as keyof typeof ratingCounts] += 1
-    }
-    sum += rating
-  }
-  const average = Number((sum / reviews.length).toFixed(1))
-  return {
-    total: reviews.length,
-    averageRating: average,
-    ratingCounts,
-  }
-}
-
-// Public response shape — never include userEmail (or any email) here.
-// Emails are only exposed through the admin-protected routes under
-// app/api/admin/reviews/**.
-function mapReview(review: any) {
-  return {
-    id: review._id.toString(),
-    productId: review.product.toString(),
-    companyId: review.company.toString(),
-    userId: review.user.toString(),
-    rating: review.rating,
-    comment: review.comment,
-    userName: review.userName,
-    reply: review.reply
-      ? {
-          message: review.reply.message,
-          repliedAt: review.reply.repliedAt,
-          repliedBy: review.reply.repliedBy.toString(),
-          repliedByName: review.reply.repliedByName,
-        }
-      : null,
-    createdAt: review.createdAt,
-    updatedAt: review.updatedAt,
-  }
-}
+// Shared with the server-rendered product page
+import { buildSummary, mapReview, getProductReviews } from "@/lib/product-reviews"
 
 export async function GET(
-  request: NextRequest, 
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Await params in Next.js 15+
     const { id: productId } = await params
-    
+
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return NextResponse.json({ error: "Invalid product id" }, { status: 400 })
     }
 
-    await connectDB()
-
-    const reviews = await Review.find({ product: productId, status: "approved" }).sort({ createdAt: -1 }).lean()
-    const summary = buildSummary(reviews)
-
-    
-    return NextResponse.json({
-      reviews: reviews.map(mapReview),
-      summary,
-    })
+    return NextResponse.json(await getProductReviews(productId))
   } catch (error) {
     console.error("Error fetching reviews:", error)
     return NextResponse.json({ error: "Failed to fetch reviews" }, { status: 500 })
