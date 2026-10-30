@@ -18,6 +18,7 @@ import { Product } from "@/lib/models/product"
 import { BRAND } from "@/lib/config"
 import { getActiveFlashSaleMap, type FlashSaleInfo } from "@/lib/flashSale"
 import { resolveCurrentPrice } from "@/lib/pricing"
+import { productPath } from "@/lib/seo"
 
 // The storefront's Company record is named "nh", which isn't a name customers
 // know, so every item carries this brand instead.
@@ -166,7 +167,8 @@ export function buildMetaFeedRow(
     condition: "new",
     price: formatPrice(onSale ? price : charged),
     sale_price: onSale ? formatPrice(charged) : "",
-    link: `${siteUrl}/shop/${company.slug}/product/${id}`,
+    // Same path as the product page's canonical URL
+    link: `${siteUrl}${productPath(company.slug, id)}`,
     image_link: imageLink,
     additional_image_link: additionalImages.join(","),
     brand: META_FEED_BRAND,
