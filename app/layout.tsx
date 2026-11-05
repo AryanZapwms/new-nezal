@@ -16,7 +16,7 @@ import { CartHydrator } from "@/components/cart-hydrator"
 import { ProfileCompletionNudge } from "@/components/profile-completion-nudge"
 import { Engage360Identify } from "@/components/engage360-identify"
 import { ShiprocketCartResume } from "@/components/shiprocket-cart-resume"
-import { SHIPROCKET_CHECKOUT_SCRIPT_URL } from "@/lib/shiprocket-checkout-urls"
+import { SHIPROCKET_CHECKOUT_CSS_URL, SHIPROCKET_CHECKOUT_SCRIPT_URL } from "@/lib/shiprocket-checkout-urls"
 import NextTopLoader from "nextjs-toploader"
 
 // Load Nezal fonts
@@ -146,7 +146,7 @@ export default function RootLayout({
        {/* Google Tag Manager (noscript) — must be immediately after <body> */}
        <GTMNoScript />
        {/* Shiprocket checkout widget for ?cart-resume-id= recovery links only */}
-       <ShiprocketCartResume src={SHIPROCKET_CHECKOUT_SCRIPT_URL} />
+       <ShiprocketCartResume src={SHIPROCKET_CHECKOUT_SCRIPT_URL} cssHref={SHIPROCKET_CHECKOUT_CSS_URL} />
        {/* Fires page_view / PageView on client-side route changes */}
        <PageViewTracker />
        <NextTopLoader
