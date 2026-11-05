@@ -15,6 +15,8 @@ import { FetchInterceptorInit } from "@/components/ui/fetch-interceptor-init"
 import { CartHydrator } from "@/components/cart-hydrator"
 import { ProfileCompletionNudge } from "@/components/profile-completion-nudge"
 import { Engage360Identify } from "@/components/engage360-identify"
+import { ShiprocketCartResume } from "@/components/shiprocket-cart-resume"
+import { SHIPROCKET_CHECKOUT_SCRIPT_URL } from "@/lib/shiprocket-checkout-urls"
 import NextTopLoader from "nextjs-toploader"
 
 // Load Nezal fonts
@@ -48,7 +50,9 @@ const getBaseUrl = () => {
 };
 
 // The Shiprocket Custom Checkout widget's script/CSS load only on the routes
-// that use it — see components/shiprocket-checkout-assets.tsx.
+// that use it — see components/shiprocket-checkout-assets.tsx — and, via
+// <ShiprocketCartResume /> below, on any page opened from an abandoned-cart
+// recovery link.
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
@@ -141,6 +145,8 @@ export default function RootLayout({
      <body className="font-sans antialiased min-h-screen flex flex-col">
        {/* Google Tag Manager (noscript) — must be immediately after <body> */}
        <GTMNoScript />
+       {/* Shiprocket checkout widget for ?cart-resume-id= recovery links only */}
+       <ShiprocketCartResume src={SHIPROCKET_CHECKOUT_SCRIPT_URL} />
        {/* Fires page_view / PageView on client-side route changes */}
        <PageViewTracker />
        <NextTopLoader
