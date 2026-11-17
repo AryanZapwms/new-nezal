@@ -4,7 +4,7 @@ import { User } from "@/lib/models/user"
 import { getServerSession } from "next-auth"
 import { type NextRequest, NextResponse } from "next/server"
 import { cancelShiprocketOrder } from "@/lib/shiprocket"
-import { isOrderOwnedBy } from "@/lib/order-access"
+import { isOrderOwnedBy, withoutInternalOrderFields } from "@/lib/order-access"
 import mongoose from "mongoose"
 
 const VALID_REASONS = [
@@ -75,7 +75,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         adminNote: null,
       }
       await order.save()
-      return NextResponse.json({ success: true, type: "cancel", order })
+      // Stripped from the response, not the query: this document is saved above
+      return NextResponse.json({ success: true, type: "cancel", order: withoutInternalOrderFields(order.toJSON()) })
     }
 
     order.cancellation = {
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       adminNote: null,
     }
     await order.save()
-    return NextResponse.json({ success: true, type: "return", order })
+    return NextResponse.json({ success: true, type: "return", order: withoutInternalOrderFields(order.toJSON()) })
   } catch (error) {
     console.error("Error processing cancellation request:", error)
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 })
