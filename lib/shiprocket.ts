@@ -33,7 +33,8 @@ function sanitizePhone(raw: string | undefined | null): string {
 export const SHIPROCKET_ADDRESS_MAX = 190;
 
 // Splits an address across address / address_2 instead of cutting it off:
-// whitespace collapsed, line 1 cut at the last space before the limit (a hard
+// whitespace and runs of commas collapsed, leading/trailing commas, spaces and
+// hyphens dropped, then line 1 cut at the last space before the limit (a hard
 // cut only if there's no space in its second half), the rest on line 2.
 // Throws if even line 2 would be over the limit — that needs a human, not a
 // truncated address.
@@ -41,7 +42,11 @@ export function splitShiprocketAddress(
   raw: string | undefined | null,
   max = SHIPROCKET_ADDRESS_MAX
 ): { address: string; address2: string } {
-  const full = String(raw ?? "").replace(/\s+/g, " ").trim();
+  const full = String(raw ?? "")
+    .replace(/\s+/g, " ")
+    // ",,,," or ", , ," → "," (empty address parts add length, not information)
+    .replace(/,(\s*,)+/g, ",")
+    .replace(/^[\s,-]+|[\s,-]+$/g, "");
   if (full.length <= max) return { address: full, address2: "" };
 
   const space = full.lastIndexOf(" ", max);

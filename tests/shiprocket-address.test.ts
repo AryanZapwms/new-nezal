@@ -15,6 +15,28 @@ describe("splitShiprocketAddress", () => {
     expect(splitShiprocketAddress("  12  Main\nRoad, Andheri ")).toEqual({ address: "12 Main Road, Andheri", address2: "" })
   })
 
+  it("drops a run of 100+ trailing commas", () => {
+    // 171 characters in all: under the limit, so this is the clean-up, not the split
+    expect(splitShiprocketAddress(`12 Main Road, Andheri${",".repeat(150)}`)).toEqual({
+      address: "12 Main Road, Andheri",
+      address2: "",
+    })
+  })
+
+  it("collapses a run of commas in the middle to a single comma", () => {
+    expect(splitShiprocketAddress("Flat 4, , , , Main Road, Andheri")).toEqual({
+      address: "Flat 4, Main Road, Andheri",
+      address2: "",
+    })
+  })
+
+  it("drops leading and trailing hyphens, commas and spaces, but not hyphens inside", () => {
+    expect(splitShiprocketAddress(" -, B-12 Main Road, Andheri - ")).toEqual({
+      address: "B-12 Main Road, Andheri",
+      address2: "",
+    })
+  })
+
   it("splits a long address at a word boundary without losing any of it", () => {
     const full = words(40)
     const { address, address2 } = splitShiprocketAddress(full)
