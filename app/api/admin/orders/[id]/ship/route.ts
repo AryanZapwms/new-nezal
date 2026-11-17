@@ -55,9 +55,11 @@ export async function POST(
 
     if (!result) {
       // Failure is already logged and recorded on the order itself
-      // (shippingStatus/shiprocketError) by createShiprocketOrderForOrder.
+      // (shippingStatus/shiprocketError) by createShiprocketOrderForOrder —
+      // pass that reason back so the admin sees why this attempt failed.
+      const failed: any = await Order.findById(id).select("shiprocketError").lean();
       return NextResponse.json(
-        { error: "Shiprocket order creation failed — see the order's shiprocketError for details." },
+        { error: failed?.shiprocketError || "Shiprocket order creation failed — see the order's shiprocketError for details." },
         { status: 500 }
       );
     }
