@@ -24,6 +24,39 @@ function sanitizePhone(raw: string | undefined | null): string {
   return digits.length === 10 ? digits : "";
 }
 
+// Shiprocket rejects a billing_address / shipping_address longer than this
+// (422 "may not be greater than 190 characters"). Its docs give no limit for
+// *_address_2, so the same one is assumed. Some integrations instead report
+// "Address 1 and Address 2 combined cannot be greater than 190 characters";
+// if Shiprocket applies that rule too, it fails here like any other error and
+// is recorded on the order.
+export const SHIPROCKET_ADDRESS_MAX = 190;
+
+// Splits an address across address / address_2 instead of cutting it off:
+// whitespace collapsed, line 1 cut at the last space before the limit (a hard
+// cut only if there's no space in its second half), the rest on line 2.
+// Throws if even line 2 would be over the limit — that needs a human, not a
+// truncated address.
+export function splitShiprocketAddress(
+  raw: string | undefined | null,
+  max = SHIPROCKET_ADDRESS_MAX
+): { address: string; address2: string } {
+  const full = String(raw ?? "").replace(/\s+/g, " ").trim();
+  if (full.length <= max) return { address: full, address2: "" };
+
+  const space = full.lastIndexOf(" ", max);
+  const cut = space >= max / 2 ? space : max;
+  const address = full.slice(0, cut).replace(/[\s,]+$/, "");
+  const address2 = full.slice(cut).replace(/^[\s,]+/, "");
+
+  if (address2.length > max) {
+    throw new Error(
+      `Address is ${full.length} characters — too long for Shiprocket even split across address and address_2 (${max} each). Create the shipment manually in Shiprocket with a shortened address.`
+    );
+  }
+  return { address, address2 };
+}
+
 // Which payment_method to tell Shiprocket's logistics API for an order —
 // "COD" makes the courier collect the order value on delivery, "Prepaid"
 // makes them hand it over without collecting anything, so getting this
@@ -123,7 +156,7 @@ export async function createShiprocketOrderForOrder(
     // silently (or, if something upstream ever retries this function,
     // failing identically on every retry forever).
     console.error(
-      `Shiprocket: order ${order._id} has an invalid phone ("${addr?.phone ?? order.guestPhone}"), skipping creation`
+      `[shiprocket-create-failed] order=${order._id} orderNumber=${(order as any).orderNumber}: invalid phone ("${addr?.phone ?? order.guestPhone}"), skipping creation`
     );
     console.error(`[SR-ADHOC-DEBUG] createShiprocketOrderForOrder SKIP order=${order._id} — invalid phone, apiv2 NOT called`);
     await Order.findByIdAndUpdate(order._id, {
@@ -142,7 +175,7 @@ export async function createShiprocketOrderForOrder(
     // Same treatment as an invalid phone: don't send Shiprocket something we
     // know may be wrong — surface it in admin instead.
     console.error(
-      `Shiprocket: order ${order._id} is a Shiprocket Checkout order with no payment type, no completed payment and no COD charge — can't tell COD from Prepaid, skipping creation`
+      `[shiprocket-create-failed] order=${order._id} orderNumber=${(order as any).orderNumber}: Shiprocket Checkout order with no payment type, no completed payment and no COD charge — can't tell COD from Prepaid, skipping creation`
     );
     await Order.findByIdAndUpdate(order._id, {
       shippingStatus: "needs_attention",
@@ -190,7 +223,9 @@ export async function createShiprocketOrderForOrder(
     console.log(`[SR-ADHOC-DEBUG] createShiprocketOrderForOrder OK order=${order._id} result=${JSON.stringify(result)}`);
     return result;
   } catch (err) {
-    console.error(`Shiprocket order creation failed for order ${order._id}:`, err);
+    // One tag for every failed creation (see also the two skips above), so
+    // they can be found with: grep "[shiprocket-create-failed]"
+    console.error(`[shiprocket-create-failed] order=${order._id} orderNumber=${(order as any).orderNumber}:`, err);
     console.error(
       `[SR-ADHOC-DEBUG] createShiprocketOrderForOrder FAILED order=${order._id} error=${err instanceof Error ? err.message : String(err)}`
     );
@@ -352,6 +387,11 @@ export interface ShiprocketOrderResult {
 export async function createShiprocketOrder(
   params: CreateShiprocketOrderParams
 ): Promise<ShiprocketOrderResult> {
+  // Before logging in: an address too long even for two lines throws here,
+  // and the caller records it on the order.
+  const billingAddress = splitShiprocketAddress(params.billing.address);
+  const shippingAddress = splitShiprocketAddress(params.shipping.address);
+
   const token = await getToken();
 
   const totalWeight = params.items.reduce(
@@ -375,8 +415,8 @@ export async function createShiprocketOrder(
 
     billing_customer_name: params.billing.name,
     billing_last_name: "",
-    billing_address: params.billing.address,
-    billing_address_2: "",
+    billing_address: billingAddress.address,
+    billing_address_2: billingAddress.address2,
     billing_city: params.billing.city,
     billing_pincode: params.billing.pincode,
     billing_state: params.billing.state,
@@ -387,8 +427,8 @@ export async function createShiprocketOrder(
     shipping_is_billing: false,
     shipping_customer_name: params.shipping.name,
     shipping_last_name: "",
-    shipping_address: params.shipping.address,
-    shipping_address_2: "",
+    shipping_address: shippingAddress.address,
+    shipping_address_2: shippingAddress.address2,
     shipping_city: params.shipping.city,
     shipping_pincode: params.shipping.pincode,
     shipping_state: params.shipping.state,
@@ -462,7 +502,7 @@ export async function createShiprocketOrder(
 
   if (!res.ok) {
     throw new Error(
-      `Shiprocket order creation failed: ${JSON.stringify(data)}`
+      `Shiprocket order creation failed (HTTP ${res.status}): ${JSON.stringify(data)}`
     );
   }
 
