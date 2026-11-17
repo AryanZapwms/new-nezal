@@ -1,67 +1,101 @@
-// Shiprocket rejects a billing/shipping address longer than 190 characters
-// (422 "may not be greater than 190 characters"). Shiprocket Checkout stores
-// line1 + line2 as one string, so long addresses happen; they're now split
-// across address / address_2 at a word boundary instead of failing. These
-// tests need no database and never reach Shiprocket (fetch is stubbed).
+// Shiprocket allows 190 characters for address + address_2 COMBINED (400
+// "Address 1 and Address 2 combined cannot be greater 190 than characters").
+// fitShiprocketAddress keeps the whole address in *_address within that:
+// repeated PIN code/state/country out first, then a cut at a word boundary
+// only if it must. No database; fetch is stubbed, so nothing reaches
+// Shiprocket.
 
 import { describe, it, expect, afterEach, vi } from "vitest"
-import { splitShiprocketAddress, createShiprocketOrder, SHIPROCKET_ADDRESS_MAX } from "@/lib/shiprocket"
+import {
+  SHIPROCKET_ADDRESS_MAX,
+  fitShiprocketAddress,
+  normalizeShiprocketAddress,
+  shortenedAddressNote,
+} from "@/lib/shiprocket-address"
+import { createShiprocketOrder } from "@/lib/shiprocket"
 
-// "word0 word1 … word{n-1}": 40 words ≈ 270 characters, 80 ≈ 550
+// "word0 word1 … word{n-1}": 20 words = 129 characters, 40 = 269
 const words = (n: number) => Array.from({ length: n }, (_, i) => `word${i}`).join(" ")
 
-describe("splitShiprocketAddress", () => {
-  it("keeps an address within the limit on one line, whitespace collapsed", () => {
-    expect(splitShiprocketAddress("  12  Main\nRoad, Andheri ")).toEqual({ address: "12 Main Road, Andheri", address2: "" })
+const MUMBAI = { pincode: "400001", state: "Maharashtra", country: "India" }
+
+describe("normalizeShiprocketAddress", () => {
+  it("collapses whitespace", () => {
+    expect(normalizeShiprocketAddress("  12  Main\nRoad, Andheri ")).toBe("12 Main Road, Andheri")
   })
 
   it("drops a run of 100+ trailing commas", () => {
-    // 171 characters in all: under the limit, so this is the clean-up, not the split
-    expect(splitShiprocketAddress(`12 Main Road, Andheri${",".repeat(150)}`)).toEqual({
-      address: "12 Main Road, Andheri",
-      address2: "",
-    })
+    expect(normalizeShiprocketAddress(`12 Main Road, Andheri${",".repeat(150)}`)).toBe("12 Main Road, Andheri")
   })
 
   it("collapses a run of commas in the middle to a single comma", () => {
-    expect(splitShiprocketAddress("Flat 4, , , , Main Road, Andheri")).toEqual({
-      address: "Flat 4, Main Road, Andheri",
-      address2: "",
-    })
+    expect(normalizeShiprocketAddress("Flat 4, , , , Main Road, Andheri")).toBe("Flat 4, Main Road, Andheri")
   })
 
   it("drops leading and trailing hyphens, commas and spaces, but not hyphens inside", () => {
-    expect(splitShiprocketAddress(" -, B-12 Main Road, Andheri - ")).toEqual({
-      address: "B-12 Main Road, Andheri",
-      address2: "",
+    expect(normalizeShiprocketAddress(" -, B-12 Main Road, Andheri - ")).toBe("B-12 Main Road, Andheri")
+  })
+})
+
+describe("fitShiprocketAddress", () => {
+  it("leaves an address that fits alone, even if it repeats the PIN code/state/country", () => {
+    const address = "B-12 Main Road, Andheri East, Mumbai, Maharashtra 400001, India"
+    expect(fitShiprocketAddress(address, MUMBAI)).toEqual({
+      address,
+      originalLength: address.length,
+      removedRepeats: false,
+      shortened: false,
     })
   })
 
-  it("splits a long address at a word boundary without losing any of it", () => {
-    const full = words(40)
-    const { address, address2 } = splitShiprocketAddress(full)
+  it("removes the repeated PIN code, state and country when that makes it fit", () => {
+    const street = `B-12 Sunshine Apartments, ${words(20)}, Andheri East, Mumbai`
+    const full = `${street}, Maharashtra 400001, India`
+    expect(full.length).toBeGreaterThan(SHIPROCKET_ADDRESS_MAX)
 
-    expect(address.length).toBeLessThanOrEqual(SHIPROCKET_ADDRESS_MAX)
-    expect(address2.length).toBeGreaterThan(0)
-    expect(address2.length).toBeLessThanOrEqual(SHIPROCKET_ADDRESS_MAX)
-    expect(`${address} ${address2}`).toBe(full)
+    expect(fitShiprocketAddress(full, MUMBAI)).toEqual({
+      address: street,
+      originalLength: full.length,
+      removedRepeats: true,
+      shortened: false,
+    })
   })
 
-  it("drops only the separator at the cut", () => {
-    // The last space before character 190 is the one after the comma
-    const full = `${"x".repeat(186)}, Near Station Road, Andheri East`
-    expect(splitShiprocketAddress(full)).toEqual({
-      address: "x".repeat(186),
-      address2: "Near Station Road, Andheri East",
-    })
+  it("matches whole tokens/parts only, in any case: B-110001 and New Delhi stay", () => {
+    const kept = `Flat 7 Block B-110001, ${words(20)}, Connaught Place, New Delhi`
+    const full = `${kept}, DELHI, 110001, india`
+    expect(full.length).toBeGreaterThan(SHIPROCKET_ADDRESS_MAX)
+
+    const fitted = fitShiprocketAddress(full, { pincode: "110001", state: "Delhi", country: "India" })
+    expect(fitted.address).toBe(kept)
+    expect(fitted.shortened).toBe(false)
+  })
+
+  it("cuts at a word boundary when it's still over 190 (the combined limit)", () => {
+    const full = `${words(40)}, Mumbai, Maharashtra 400001, India`
+    const fitted = fitShiprocketAddress(full, MUMBAI)
+
+    expect(fitted.shortened).toBe(true)
+    expect(fitted.removedRepeats).toBe(true)
+    expect(fitted.address.length).toBeLessThanOrEqual(SHIPROCKET_ADDRESS_MAX)
+    expect(words(40).startsWith(`${fitted.address} `)).toBe(true)
   })
 
   it("hard-cuts a long run with no spaces", () => {
-    expect(splitShiprocketAddress("a".repeat(250))).toEqual({ address: "a".repeat(190), address2: "a".repeat(60) })
+    expect(fitShiprocketAddress("a".repeat(250), MUMBAI)).toEqual({
+      address: "a".repeat(190),
+      originalLength: 250,
+      removedRepeats: false,
+      shortened: true,
+    })
   })
 
-  it("throws instead of truncating when it won't fit in two lines", () => {
-    expect(() => splitShiprocketAddress(words(80))).toThrow(/too long for Shiprocket/)
+  it("explains a shortened address in the review note", () => {
+    const note = shortenedAddressNote({ address: "Flat 4, Main Road", originalLength: 312, removedRepeats: true, shortened: true })
+    expect(note).toContain("312 characters")
+    expect(note).toContain("Shiprocket allows 190")
+    expect(note).toContain("Check the shipment label before pickup")
+    expect(note).toContain('Sent: "Flat 4, Main Road"')
   })
 })
 
@@ -92,7 +126,7 @@ describe("createShiprocketOrder address fields", () => {
     vi.unstubAllGlobals()
   })
 
-  it("sends a long address as address + address_2, for billing and shipping", async () => {
+  it("sends the whole address in *_address with *_address_2 empty, so the combined length stays within 190", async () => {
     const bodies: any[] = []
     vi.stubGlobal(
       "fetch",
@@ -108,24 +142,24 @@ describe("createShiprocketOrder address fields", () => {
       })
     )
 
-    const address = words(40)
+    const address = "x".repeat(SHIPROCKET_ADDRESS_MAX)
     await createShiprocketOrder(order(address))
 
     expect(bodies).toHaveLength(1)
     for (const prefix of ["billing", "shipping"]) {
-      const line1: string = bodies[0][`${prefix}_address`]
-      const line2: string = bodies[0][`${prefix}_address_2`]
-      expect(line1.length).toBeLessThanOrEqual(SHIPROCKET_ADDRESS_MAX)
-      expect(line2.length).toBeGreaterThan(0)
-      expect(`${line1} ${line2}`).toBe(address)
+      expect(bodies[0][`${prefix}_address`]).toBe(address)
+      expect(bodies[0][`${prefix}_address_2`]).toBe("")
+      expect(bodies[0][`${prefix}_address`].length + bodies[0][`${prefix}_address_2`].length).toBeLessThanOrEqual(
+        SHIPROCKET_ADDRESS_MAX
+      )
     }
   })
 
-  it("fails before contacting Shiprocket when the address can't fit", async () => {
+  it("refuses an address over 190 without contacting Shiprocket", async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
 
-    await expect(createShiprocketOrder(order(words(80)))).rejects.toThrow(/too long for Shiprocket/)
+    await expect(createShiprocketOrder(order("x".repeat(SHIPROCKET_ADDRESS_MAX + 1)))).rejects.toThrow(/allows 190/)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

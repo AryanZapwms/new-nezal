@@ -7,60 +7,13 @@
  */
 
 import { Order } from "@/lib/models/order";
-import "@/lib/models/product";  
-
-// Strips spaces/dashes/parens/country-code prefixes and returns a clean
-// 10-digit Indian mobile number, or "" if it can't be normalized to one.
-// Kept here too (not just in app/api/orders/route.ts) as a defensive
-// second layer — this function is a shared module that other callers
-// (admin retry actions, migrations, cron jobs) may invoke directly, and
-// it shouldn't assume every caller already sanitized the phone before
-// saving it to the order.
-function sanitizePhone(raw: string | undefined | null): string {
-  if (!raw) return "";
-  let digits = String(raw).replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
-  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
-  return digits.length === 10 ? digits : "";
-}
-
-// Shiprocket rejects a billing_address / shipping_address longer than this
-// (422 "may not be greater than 190 characters"). Its docs give no limit for
-// *_address_2, so the same one is assumed. Some integrations instead report
-// "Address 1 and Address 2 combined cannot be greater than 190 characters";
-// if Shiprocket applies that rule too, it fails here like any other error and
-// is recorded on the order.
-export const SHIPROCKET_ADDRESS_MAX = 190;
-
-// Splits an address across address / address_2 instead of cutting it off:
-// whitespace and runs of commas collapsed, leading/trailing commas, spaces and
-// hyphens dropped, then line 1 cut at the last space before the limit (a hard
-// cut only if there's no space in its second half), the rest on line 2.
-// Throws if even line 2 would be over the limit — that needs a human, not a
-// truncated address.
-export function splitShiprocketAddress(
-  raw: string | undefined | null,
-  max = SHIPROCKET_ADDRESS_MAX
-): { address: string; address2: string } {
-  const full = String(raw ?? "")
-    .replace(/\s+/g, " ")
-    // ",,,," or ", , ," → "," (empty address parts add length, not information)
-    .replace(/,(\s*,)+/g, ",")
-    .replace(/^[\s,-]+|[\s,-]+$/g, "");
-  if (full.length <= max) return { address: full, address2: "" };
-
-  const space = full.lastIndexOf(" ", max);
-  const cut = space >= max / 2 ? space : max;
-  const address = full.slice(0, cut).replace(/[\s,]+$/, "");
-  const address2 = full.slice(cut).replace(/^[\s,]+/, "");
-
-  if (address2.length > max) {
-    throw new Error(
-      `Address is ${full.length} characters — too long for Shiprocket even split across address and address_2 (${max} each). Create the shipment manually in Shiprocket with a shortened address.`
-    );
-  }
-  return { address, address2 };
-}
+import "@/lib/models/product";
+import {
+  SHIPROCKET_ADDRESS_MAX,
+  fitShiprocketAddress,
+  sanitizePhone,
+  shortenedAddressNote,
+} from "@/lib/shiprocket-address";
 
 // Which payment_method to tell Shiprocket's logistics API for an order —
 // "COD" makes the courier collect the order value on delivery, "Prepaid"
@@ -190,11 +143,19 @@ export async function createShiprocketOrderForOrder(
     return null;
   }
 
+  // Within Shiprocket's 190 characters (address + address_2 combined). The
+  // order keeps the full address; a shortened one is flagged for review below.
+  const fittedAddress = fitShiprocketAddress(addr?.address ?? addr?.street ?? "", {
+    pincode: String(addr?.pincode ?? addr?.zipCode ?? ""),
+    state: addr?.state,
+    country: addr?.country,
+  });
+
   const shippingAddress = {
     name: addr?.name ?? order.guestName ?? "Customer",
     phone: cleanPhone,
     email: order.guestEmail ?? addr?.email ?? process.env.SHIPROCKET_FALLBACK_EMAIL ?? "orders@nezalherbocare.com",
-    address: addr?.address ?? addr?.street ?? "",
+    address: fittedAddress.address,
     city: addr?.city ?? "",
     state: addr?.state ?? "",
     pincode: String(addr?.pincode ?? addr?.zipCode ?? ""),
@@ -226,6 +187,19 @@ export async function createShiprocketOrderForOrder(
     });
 
     console.log(`[SR-ADHOC-DEBUG] createShiprocketOrderForOrder OK order=${order._id} result=${JSON.stringify(result)}`);
+
+    if (fittedAddress.shortened) {
+      // Part of the address isn't on the label: flag it so someone checks the
+      // label before pickup. Lengths only in the log, no address text.
+      console.warn(
+        `[shiprocket-address-shortened] order=${order._id} orderNumber=${(order as any).orderNumber} from=${fittedAddress.originalLength} to=${fittedAddress.address.length}`
+      );
+      await Order.findByIdAndUpdate(order._id, {
+        $set: { needsReview: true },
+        $push: { reviewNotes: shortenedAddressNote(fittedAddress) },
+      }).catch((updateErr) => console.error(`Failed to flag the shortened address on order ${order._id}:`, updateErr));
+    }
+
     return result;
   } catch (err) {
     // One tag for every failed creation (see also the two skips above), so
@@ -392,10 +366,16 @@ export interface ShiprocketOrderResult {
 export async function createShiprocketOrder(
   params: CreateShiprocketOrderParams
 ): Promise<ShiprocketOrderResult> {
-  // Before logging in: an address too long even for two lines throws here,
-  // and the caller records it on the order.
-  const billingAddress = splitShiprocketAddress(params.billing.address);
-  const shippingAddress = splitShiprocketAddress(params.shipping.address);
+  // Callers fit the address first (fitShiprocketAddress, as
+  // createShiprocketOrderForOrder does). Before logging in, refuse one that
+  // Shiprocket is known to reject; the caller records the error on the order.
+  for (const party of [params.billing, params.shipping]) {
+    if (party.address.length > SHIPROCKET_ADDRESS_MAX) {
+      throw new Error(
+        `Address is ${party.address.length} characters; Shiprocket allows ${SHIPROCKET_ADDRESS_MAX} for address + address_2 combined.`
+      );
+    }
+  }
 
   const token = await getToken();
 
@@ -420,8 +400,10 @@ export async function createShiprocketOrder(
 
     billing_customer_name: params.billing.name,
     billing_last_name: "",
-    billing_address: billingAddress.address,
-    billing_address_2: billingAddress.address2,
+    billing_address: params.billing.address,
+    // Always empty: the 190-character limit is for address + address_2
+    // combined, so splitting gains nothing (lib/shiprocket-address.ts)
+    billing_address_2: "",
     billing_city: params.billing.city,
     billing_pincode: params.billing.pincode,
     billing_state: params.billing.state,
@@ -432,8 +414,8 @@ export async function createShiprocketOrder(
     shipping_is_billing: false,
     shipping_customer_name: params.shipping.name,
     shipping_last_name: "",
-    shipping_address: shippingAddress.address,
-    shipping_address_2: shippingAddress.address2,
+    shipping_address: params.shipping.address,
+    shipping_address_2: "",
     shipping_city: params.shipping.city,
     shipping_pincode: params.shipping.pincode,
     shipping_state: params.shipping.state,
