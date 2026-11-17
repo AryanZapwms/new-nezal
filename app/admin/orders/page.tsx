@@ -79,11 +79,15 @@ interface Order {
   razorpayPaymentId?: string
   createdAt?: string
   shiprocketOrderId?: number
+  shiprocketLogisticsOrderId?: number | null
   shiprocketShipmentId?: number
   awbCode?: string
   courierName?: string
   trackingUrl?: string
   shippingStatus?: string
+  shiprocketError?: string | null
+  needsReview?: boolean
+  reviewNotes?: string[]
   cancellation?: {
   status: "none" | "requested" | "approved" | "rejected" | "completed"
   type?: "cancel" | "return" | null
@@ -110,6 +114,21 @@ function paymentMethodLabel(method: string | undefined, long = false): string {
   if (method === "ccavenue") return "CCAvenue"
   if (method === SHIPROCKET_CHECKOUT) return "Shiprocket Checkout"
   return "Razorpay"
+}
+
+// Shiprocket shipment creation failed (lib/shiprocket.ts records
+// shippingStatus "needs_attention" + shiprocketError) and no shipment exists
+// since. Same "has a shipment" rule as app/api/admin/orders/[id]/ship:
+// shiprocket_checkout orders keep Shiprocket's checkout id in
+// shiprocketOrderId, so only shiprocketLogisticsOrderId counts for them.
+function shipmentFailed(order: Order): boolean {
+  const hasShipment =
+    order.paymentMethod === SHIPROCKET_CHECKOUT ? !!order.shiprocketLogisticsOrderId : !!order.shiprocketOrderId
+  return (
+    (order.shippingStatus === "needs_attention" || !!order.shiprocketError) &&
+    !hasShipment &&
+    order.orderStatus !== "cancelled"
+  )
 }
 
 export default function AdminOrdersPage() {
@@ -587,7 +606,27 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
       </td>
       <td className="py-3.5 px-3 text-xs text-gray-500 border-gray-300 border">₹{(order.totalGstAmount ?? 0).toFixed(2)}</td>
       <td className="py-3.5 px-3 border-gray-300 border">
-        {order.shiprocketOrderId ? (
+        {shipmentFailed(order) ? (
+          // Checked first: a shiprocket_checkout order always has
+          // shiprocketOrderId (its checkout id), so it would show "Shipped" below
+          <div className="space-y-1 max-w-[220px]">
+            <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">Shipment failed</Badge>
+            <p className="text-xs text-red-600 line-clamp-2 break-words" title={order.shiprocketError ?? undefined}>
+              {shipError[order._id] || order.shiprocketError || "Needs attention"}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleShipOrder(order._id)}
+              disabled={shippingId === order._id}
+              className="h-7 text-xs"
+              title="Create the shipment in Shiprocket again"
+            >
+              <RotateCw className={`w-3 h-3 mr-1 ${shippingId === order._id ? "animate-spin" : ""}`} />
+              Retry
+            </Button>
+          </div>
+        ) : order.shiprocketOrderId ? (
           <div className="space-y-1">
             <Badge className="bg-blue-50 text-blue-700 border-blue-100 text-xs">Shipped</Badge>
             {order.awbCode && <p className="text-xs text-gray-400 font-mono">AWB: {order.awbCode}</p>}
@@ -896,6 +935,20 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
                   <Truck className="w-3.5 h-3.5" />
                   Shiprocket
                 </h3>
+                {shipmentFailed(selectedOrder) && (
+                  <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    <p className="font-medium">Shipment not created in Shiprocket</p>
+                    <p className="mt-1 break-words">{selectedOrder.shiprocketError || "Needs attention"}</p>
+                    {!!selectedOrder.reviewNotes?.length && (
+                      <ul className="mt-2 list-disc pl-5 text-xs">
+                        {selectedOrder.reviewNotes.map((note, i) => (
+                          <li key={i}>{note}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-2 text-xs">Use Retry in the Shipping column of the orders list.</p>
+                  </div>
+                )}
                 {selectedOrder.shiprocketOrderId ? (
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
