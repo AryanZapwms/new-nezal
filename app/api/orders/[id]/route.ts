@@ -8,7 +8,7 @@ import { orderSummaryFields } from "@/lib/email-templates"
 import "@/lib/models/product"
 import "@/lib/models/user"
 import { BRAND } from "@/lib/config"
-import { isOrderOwnedBy } from "@/lib/order-access"
+import { CUSTOMER_ORDER_PROJECTION, isOrderOwnedBy } from "@/lib/order-access"
 import mongoose from "mongoose"
 
 
@@ -43,6 +43,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     }
 
     const order = await Order.findById(id)
+      // No admin review notes, review flag or Shiprocket errors (lib/order-access.ts)
+      .select(CUSTOMER_ORDER_PROJECTION)
       .populate({
         path: "items.product",
         populate: { path: "company", select: "name slug" },

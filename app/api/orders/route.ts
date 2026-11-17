@@ -17,7 +17,7 @@ import { CART_TOKEN_COOKIE, getOrCreateActiveCart, markCartConverted, setCartTok
 import { getActiveFlashSaleMap } from "@/lib/flashSale";
 import { resolveCurrentPrice } from "@/lib/pricing";
 import { validateCouponServerSide, redeemCoupon } from "@/lib/coupon-server";
-import { ownedOrdersFilter } from "@/lib/order-access";
+import { CUSTOMER_ORDER_PROJECTION, ownedOrdersFilter } from "@/lib/order-access";
 
 // Strips spaces/dashes/parens/country-code prefixes and returns a clean
 // 10-digit Indian mobile number, or "" if it can't be normalized to one.
@@ -383,6 +383,8 @@ export async function GET(request: NextRequest) {
       ...ownedOrdersFilter(user),
       paymentStatus: { $ne: "failed" }
     })
+      // No admin review notes, review flag or Shiprocket errors (lib/order-access.ts)
+      .select(CUSTOMER_ORDER_PROJECTION)
       .sort({ createdAt: -1 })
       .populate("items.product");
 
