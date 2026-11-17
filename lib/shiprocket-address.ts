@@ -1,7 +1,9 @@
 // lib/shiprocket-address.ts
 //
-// Address and phone rules for Shiprocket's create-order API (lib/shiprocket.ts).
-// No database or server-only imports.
+// Address and phone rules for Shiprocket's create-order API (lib/shiprocket.ts)
+// and for an admin editing an order's shipping address
+// (app/api/admin/orders/[id]/shipping-address). No database or server-only
+// imports, so the admin page can show the same limits.
 
 // Shiprocket accepts at most this many characters of address: one field over
 // it gets a 422 ("may not be greater than 190 characters"), and address +
@@ -9,6 +11,9 @@
 // be greater 190 than characters"). Their API docs state no address limit at
 // all. So the whole address goes in *_address and *_address_2 stays empty.
 export const SHIPROCKET_ADDRESS_MAX = 190;
+
+// Shiprocket's create-order docs: "billing_city — Max char: 30."
+export const SHIPROCKET_CITY_MAX = 30;
 
 // Strips spaces/dashes/parens/country-code prefixes and returns a clean
 // 10-digit Indian mobile number, or "" if it can't be normalized to one.
@@ -116,4 +121,83 @@ export function shortenedAddressNote(fitted: FittedShiprocketAddress, max = SHIP
     `${fitted.removedRepeats ? " (still over after removing the repeated PIN code/state/country)" : ""}. ` +
     `Check the shipment label before pickup. Sent: "${fitted.address}". The full address is unchanged on this order.`
   );
+}
+
+// ── Admin edits ──────────────────────────────────────────────────────────────
+
+export interface ShippingAddressEdit {
+  name: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+}
+
+type ParseResult = { ok: true; value: ShippingAddressEdit } | { ok: false; error: string };
+
+// Validates an admin's edit of an order's shipping address. The address must
+// fit Shiprocket's limit as typed, so what the admin saves is exactly what
+// goes on the label.
+export function parseShippingAddressEdit(body: unknown): ParseResult {
+  const input = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const text = (value: unknown) => (typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "");
+
+  const name = text(input.name);
+  const phone = sanitizePhone(typeof input.phone === "string" ? input.phone : "");
+  const address = normalizeShiprocketAddress(typeof input.address === "string" ? input.address : "");
+  const city = text(input.city);
+  const state = text(input.state);
+  const pincode = text(input.pincode).replace(/\s/g, "");
+  const country = text(input.country) || "India";
+
+  if (!name || name.length > 100) return { ok: false, error: "Enter the customer's name (up to 100 characters)." };
+  if (!phone) return { ok: false, error: "Enter a valid 10-digit phone number." };
+  if (address.length < 3) return { ok: false, error: "Enter the address (at least 3 characters)." };
+  if (address.length > SHIPROCKET_ADDRESS_MAX) {
+    return {
+      ok: false,
+      error: `The address is ${address.length} characters; Shiprocket allows ${SHIPROCKET_ADDRESS_MAX}. Leave out the city, state and PIN code — they're sent separately.`,
+    };
+  }
+  if (!city || city.length > SHIPROCKET_CITY_MAX) {
+    return { ok: false, error: `Enter the city (up to ${SHIPROCKET_CITY_MAX} characters).` };
+  }
+  if (!state || state.length > 50) return { ok: false, error: "Enter the state (up to 50 characters)." };
+  if (!/^[1-9]\d{5}$/.test(pincode)) return { ok: false, error: "Enter a valid 6-digit PIN code." };
+  if (country.length > 50) return { ok: false, error: "Enter the country (up to 50 characters)." };
+
+  return { ok: true, value: { name, phone, address, city, state, pincode, country } };
+}
+
+// One line, e.g. "Asha K, 9876543210, Flat 4, Main Road, Mumbai, Maharashtra 400001, India",
+// so an edit can keep the previous address in the order's review notes.
+export function formatShippingAddress(
+  a:
+    | {
+        name?: string | null;
+        phone?: string | null;
+        address?: string | null;
+        street?: string | null;
+        city?: string | null;
+        state?: string | null;
+        pincode?: string | null;
+        zipCode?: string | null;
+        country?: string | null;
+      }
+    | null
+    | undefined
+): string {
+  if (!a) return "(none)";
+  return [
+    a.name,
+    a.phone,
+    a.address || a.street,
+    a.city,
+    [a.state, a.pincode || a.zipCode].filter(Boolean).join(" "),
+    a.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
 }

@@ -2,14 +2,16 @@
 // "Address 1 and Address 2 combined cannot be greater 190 than characters").
 // fitShiprocketAddress keeps the whole address in *_address within that:
 // repeated PIN code/state/country out first, then a cut at a word boundary
-// only if it must. No database; fetch is stubbed, so nothing reaches
-// Shiprocket.
+// only if it must. Also covers validating an admin's address edit. No
+// database; fetch is stubbed, so nothing reaches Shiprocket.
 
 import { describe, it, expect, afterEach, vi } from "vitest"
 import {
   SHIPROCKET_ADDRESS_MAX,
   fitShiprocketAddress,
+  formatShippingAddress,
   normalizeShiprocketAddress,
+  parseShippingAddressEdit,
   shortenedAddressNote,
 } from "@/lib/shiprocket-address"
 import { createShiprocketOrder } from "@/lib/shiprocket"
@@ -174,5 +176,59 @@ describe("createShiprocketOrder address fields", () => {
     )
 
     await expect(createShiprocketOrder(order("12 Main Road"))).rejects.toThrow(/HTTP 422/)
+  })
+})
+
+describe("parseShippingAddressEdit (admin edits)", () => {
+  const valid = {
+    name: " Asha  K ",
+    phone: "+91 98765-43210",
+    address: "Flat 4, , Main Road,",
+    city: "Mumbai",
+    state: "Maharashtra",
+    pincode: " 400001 ",
+  }
+
+  it("accepts and normalizes a valid address", () => {
+    expect(parseShippingAddressEdit(valid)).toEqual({
+      ok: true,
+      value: {
+        name: "Asha K",
+        phone: "9876543210",
+        address: "Flat 4, Main Road",
+        city: "Mumbai",
+        state: "Maharashtra",
+        pincode: "400001",
+        country: "India",
+      },
+    })
+  })
+
+  it.each([
+    ["no body", null, /name/],
+    ["a missing name", { ...valid, name: " " }, /name/],
+    ["a bad phone", { ...valid, phone: "12345" }, /phone/],
+    ["an address over 190", { ...valid, address: "y".repeat(191) }, /Shiprocket allows 190/],
+    ["a city over 30", { ...valid, city: "c".repeat(31) }, /city/],
+    ["a bad PIN code", { ...valid, pincode: "012345" }, /PIN code/],
+  ])("rejects %s", (_label, body, error) => {
+    const result = parseShippingAddressEdit(body)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toMatch(error)
+  })
+
+  it("formats the previous address on one line for the review note", () => {
+    expect(
+      formatShippingAddress({
+        name: "Asha K",
+        phone: "9876543210",
+        address: "Flat 4, Main Road",
+        city: "Mumbai",
+        state: "Maharashtra",
+        pincode: "400001",
+        country: "India",
+      })
+    ).toBe("Asha K, 9876543210, Flat 4, Main Road, Mumbai, Maharashtra 400001, India")
+    expect(formatShippingAddress(null)).toBe("(none)")
   })
 })

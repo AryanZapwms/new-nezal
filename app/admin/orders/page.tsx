@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Eye, MapPin, CreditCard, Package, Truck, ExternalLink, Search, ShoppingBag, RefreshCw, Ban, RotateCw, Trash2 } from "lucide-react"
+import { SHIPROCKET_ADDRESS_MAX } from "@/lib/shiprocket-address"
 
 interface OrderItem {
   product?: {
@@ -116,18 +117,57 @@ function paymentMethodLabel(method: string | undefined, long = false): string {
   return "Razorpay"
 }
 
-// Shiprocket shipment creation failed (lib/shiprocket.ts records
-// shippingStatus "needs_attention" + shiprocketError) and no shipment exists
-// since. Same "has a shipment" rule as app/api/admin/orders/[id]/ship:
+// Same "has a shipment" rule as app/api/admin/orders/[id]/ship:
 // shiprocket_checkout orders keep Shiprocket's checkout id in
 // shiprocketOrderId, so only shiprocketLogisticsOrderId counts for them.
+function hasShiprocketShipment(order: Order): boolean {
+  return order.paymentMethod === SHIPROCKET_CHECKOUT ? !!order.shiprocketLogisticsOrderId : !!order.shiprocketOrderId
+}
+
+// Shiprocket shipment creation failed (lib/shiprocket.ts records
+// shippingStatus "needs_attention" + shiprocketError) and no shipment exists since.
 function shipmentFailed(order: Order): boolean {
-  const hasShipment =
-    order.paymentMethod === SHIPROCKET_CHECKOUT ? !!order.shiprocketLogisticsOrderId : !!order.shiprocketOrderId
   return (
     (order.shippingStatus === "needs_attention" || !!order.shiprocketError) &&
-    !hasShipment &&
+    !hasShiprocketShipment(order) &&
     order.orderStatus !== "cancelled"
+  )
+}
+
+// The shipping address can be corrected until a shipment exists — after that,
+// Shiprocket's copy is the one the courier uses
+// (app/api/admin/orders/[id]/shipping-address).
+function canEditShippingAddress(order: Order): boolean {
+  return !hasShiprocketShipment(order) && order.orderStatus !== "cancelled"
+}
+
+type AddressForm = { name: string; phone: string; address: string; city: string; state: string; pincode: string }
+
+function AddressField({
+  label,
+  value,
+  onChange,
+  multiline,
+  hint,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  multiline?: boolean
+  hint?: React.ReactNode
+}) {
+  const className =
+    "mt-0.5 w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
+  return (
+    <label className="block">
+      <span className="text-xs text-gray-400">{label}</span>
+      {multiline ? (
+        <textarea rows={3} value={value} onChange={(e) => onChange(e.target.value)} className={className} />
+      ) : (
+        <input value={value} onChange={(e) => onChange(e.target.value)} className={className} />
+      )}
+      {hint}
+    </label>
   )
 }
 
@@ -141,6 +181,11 @@ export default function AdminOrdersPage() {
   const [shipError, setShipError] = useState<Record<string, string>>({})
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  // Editing the shipping address in the details dialog
+  const [editingAddress, setEditingAddress] = useState(false)
+  const [addressForm, setAddressForm] = useState<AddressForm>({ name: "", phone: "", address: "", city: "", state: "", pincode: "" })
+  const [addressSaving, setAddressSaving] = useState(false)
+  const [addressError, setAddressError] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -401,7 +446,47 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
 
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order)
+    setEditingAddress(false)
     setShowDetails(true)
+  }
+
+  const startEditingAddress = (order: Order) => {
+    const a = order.shippingAddress ?? {}
+    setAddressForm({
+      name: a.name ?? "",
+      phone: a.phone ?? "",
+      address: a.address || a.street || "",
+      city: a.city ?? "",
+      state: a.state ?? "",
+      pincode: a.pincode || a.zipCode || "",
+    })
+    setAddressError(null)
+    setEditingAddress(true)
+  }
+
+  const saveShippingAddress = async (orderId: string) => {
+    setAddressSaving(true)
+    setAddressError(null)
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/shipping-address`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(addressForm),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Couldn't save the address")
+      setSelectedOrder((prev) =>
+        prev && prev._id === orderId
+          ? { ...prev, shippingAddress: data.shippingAddress, reviewNotes: data.reviewNotes, needsReview: data.needsReview }
+          : prev
+      )
+      setEditingAddress(false)
+      await fetchOrders()
+    } catch (err: any) {
+      setAddressError(err.message)
+    } finally {
+      setAddressSaving(false)
+    }
   }
 
   if (loading) {
@@ -606,6 +691,14 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
       </td>
       <td className="py-3.5 px-3 text-xs text-gray-500 border-gray-300 border">₹{(order.totalGstAmount ?? 0).toFixed(2)}</td>
       <td className="py-3.5 px-3 border-gray-300 border">
+        {order.needsReview && (
+          <Badge
+            className="mb-1 bg-amber-50 text-amber-800 border-amber-200 text-xs"
+            title={order.reviewNotes?.[order.reviewNotes.length - 1] ?? undefined}
+          >
+            Needs review
+          </Badge>
+        )}
         {shipmentFailed(order) ? (
           // Checked first: a shiprocket_checkout order always has
           // shiprocketOrderId (its checkout id), so it would show "Shipped" below
@@ -810,7 +903,65 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5" />
                     Shipping address
+                    {canEditShippingAddress(selectedOrder) && !editingAddress && (
+                      <button
+                        type="button"
+                        onClick={() => startEditingAddress(selectedOrder)}
+                        className="ml-auto normal-case tracking-normal text-xs font-medium text-emerald-700 hover:underline"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </h3>
+                  {editingAddress ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        saveShippingAddress(selectedOrder._id)
+                      }}
+                      className="space-y-2 text-sm"
+                    >
+                      <AddressField label="Name" value={addressForm.name} onChange={(v) => setAddressForm((f) => ({ ...f, name: v }))} />
+                      <AddressField label="Phone" value={addressForm.phone} onChange={(v) => setAddressForm((f) => ({ ...f, phone: v }))} />
+                      <AddressField
+                        label="Address"
+                        multiline
+                        value={addressForm.address}
+                        onChange={(v) => setAddressForm((f) => ({ ...f, address: v }))}
+                        hint={
+                          <span
+                            className={`text-xs ${
+                              addressForm.address.trim().length > SHIPROCKET_ADDRESS_MAX ? "text-red-600" : "text-gray-400"
+                            }`}
+                          >
+                            {addressForm.address.trim().length}/{SHIPROCKET_ADDRESS_MAX} — goes on the label as typed; city, state and PIN code
+                            are sent separately
+                          </span>
+                        }
+                      />
+                      <div className="grid grid-cols-3 gap-3">
+                        <AddressField label="City" value={addressForm.city} onChange={(v) => setAddressForm((f) => ({ ...f, city: v }))} />
+                        <AddressField label="State" value={addressForm.state} onChange={(v) => setAddressForm((f) => ({ ...f, state: v }))} />
+                        <AddressField
+                          label="PIN code"
+                          value={addressForm.pincode}
+                          onChange={(v) => setAddressForm((f) => ({ ...f, pincode: v }))}
+                        />
+                      </div>
+                      {addressError && <p className="text-xs text-red-600">{addressError}</p>}
+                      <div className="flex gap-2 pt-1">
+                        <Button type="submit" size="sm" disabled={addressSaving} className="bg-emerald-700 hover:bg-emerald-800">
+                          {addressSaving ? "Saving…" : "Save address"}
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setEditingAddress(false)} disabled={addressSaving}>
+                          Cancel
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        The previous address is kept in the order's review notes. Then use Retry in the orders list to create the shipment.
+                      </p>
+                    </form>
+                  ) : (
                   <div className="space-y-2 text-sm">
                     <div>
                       <p className="text-xs text-gray-400">Name</p>
@@ -845,6 +996,7 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
               )}
 
@@ -939,14 +1091,25 @@ const handleCancellationAction = async (orderId: string, action: "approve" | "re
                   <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     <p className="font-medium">Shipment not created in Shiprocket</p>
                     <p className="mt-1 break-words">{selectedOrder.shiprocketError || "Needs attention"}</p>
-                    {!!selectedOrder.reviewNotes?.length && (
-                      <ul className="mt-2 list-disc pl-5 text-xs">
-                        {selectedOrder.reviewNotes.map((note, i) => (
-                          <li key={i}>{note}</li>
-                        ))}
-                      </ul>
-                    )}
-                    <p className="mt-2 text-xs">Use Retry in the Shipping column of the orders list.</p>
+                    <p className="mt-2 text-xs">
+                      Fix the shipping address above if needed, then use Retry in the Shipping column of the orders list.
+                    </p>
+                  </div>
+                )}
+                {!!selectedOrder.reviewNotes?.length && (
+                  <div
+                    className={`mb-3 rounded-lg border p-3 text-sm ${
+                      selectedOrder.needsReview ? "border-amber-200 bg-amber-50 text-amber-900" : "border-gray-200 bg-white text-gray-700"
+                    }`}
+                  >
+                    <p className="font-medium">{selectedOrder.needsReview ? "Needs review" : "Review notes"}</p>
+                    <ul className="mt-1 list-disc pl-5 text-xs space-y-1">
+                      {selectedOrder.reviewNotes.map((note, i) => (
+                        <li key={i} className="break-words">
+                          {note}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
                 {selectedOrder.shiprocketOrderId ? (
