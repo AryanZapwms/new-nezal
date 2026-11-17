@@ -292,8 +292,8 @@ const ProductDetailClient = memo(function ProductDetailClient({ product, initial
   const addItem = useCartStore((state) => state.addItem)
   const getTotalItems = useCartStore((state) => state.getTotalItems)
   const router = useRouter()
-  // startingCheckout drives the Shop Now / Buy Now button spinners
-  const { initiateCheckout, starting: startingCheckout } = useShiprocketCheckout()
+  // startingCheckout and checkoutScriptLoading drive the Shop Now / Buy Now button spinners
+  const { initiateCheckout, starting: startingCheckout, scriptLoading: checkoutScriptLoading } = useShiprocketCheckout()
 
   // ── State ──────────────────────────────────────────────
   const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([])
@@ -580,6 +580,9 @@ initiateCheckout(event, useCartStore.getState().items, "/checkout")
   : 0
       const hasSizes = product?.sizes && product.sizes.length > 0
       const isOutOfStock = hasSizes ? !selectedSize || selectedSize.stock <= 0 : (product?.stock ?? 0) <= 0
+      // Spinner while checkout starts or the widget script is still loading
+      // (the button stays clickable for the latter — the tap waits for it)
+      const checkoutBusy = !isOutOfStock && (startingCheckout || checkoutScriptLoading)
 
   // No loading or "not found" states here: page.tsx renders this only once it
   // has the product, and answers 404 itself (error.tsx covers a failed load).
@@ -1032,7 +1035,7 @@ const currentImage =
                 </button>
                 <button
                   disabled={isOutOfStock || startingCheckout}
-                  aria-busy={startingCheckout}
+                  aria-busy={checkoutBusy}
                   className="flex-1 flex items-center justify-center gap-2.5 py-3 sm:py-4 rounded-xl text-base font-semibold border-2 transition-all duration-150 active:scale-95"
                   style={{
                     backgroundColor: isOutOfStock ? "#f0f7f0" : "#2a5c3a",
@@ -1042,7 +1045,7 @@ const currentImage =
                   }}
                   onClick={handleShopNow}
                 >
-                  {startingCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                  {checkoutBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
                   Shop Now
                 </button>
               </div>
@@ -1406,7 +1409,7 @@ const currentImage =
           <button
             onClick={handleShopNow}
             disabled={isOutOfStock || startingCheckout}
-            aria-busy={startingCheckout}
+            aria-busy={checkoutBusy}
             className="flex-1 flex items-center justify-center gap-1.5 h-12 rounded-xl text-sm font-semibold border-2 transition-all duration-150 active:scale-95"
             style={{
               backgroundColor: isOutOfStock ? "#f0f7f0" : "#2a5c3a",
@@ -1415,7 +1418,7 @@ const currentImage =
               cursor: isOutOfStock ? "not-allowed" : startingCheckout ? "wait" : "pointer",
             }}
           >
-            {startingCheckout ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            {checkoutBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
             Buy Now
           </button>
         </div>

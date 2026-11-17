@@ -10,11 +10,20 @@
 //
 // Server component on purpose: SHIPROCKET_CHECKOUT_ENV is a server-only env var.
 
+import { preload } from "react-dom"
 import { DeferredStylesheet } from "@/components/deferred-stylesheet"
 import { ShiprocketCheckoutScript } from "@/components/shiprocket-checkout-script"
 import { SHIPROCKET_CHECKOUT_CSS_URL, SHIPROCKET_CHECKOUT_SCRIPT_URL } from "@/lib/shiprocket-checkout-urls"
 
 export function ShiprocketCheckoutAssets() {
+  // <link rel="preload"> in <head>: the browser starts downloading the widget
+  // script while it parses the HTML, in parallel with our own JS, instead of
+  // only after hydration. <ShiprocketCheckoutScript> (afterInteractive) still
+  // decides when it runs, so it runs once, from the cache, and its onLoad
+  // (abandoned-cart resume) is unchanged. No crossOrigin, to match that tag's
+  // request — otherwise the browser would download it twice.
+  preload(SHIPROCKET_CHECKOUT_SCRIPT_URL, { as: "script" })
+
   return (
     <>
       <ShiprocketCheckoutScript src={SHIPROCKET_CHECKOUT_SCRIPT_URL} />
