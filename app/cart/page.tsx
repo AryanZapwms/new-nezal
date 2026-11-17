@@ -49,8 +49,9 @@ export default function CartPage() {
 const { items, removeItem, removeRitual, updateQuantity, getTotalPrice, getTotalItems } = useCartStore()
   const totalPrice = getTotalPrice()
   const router = useRouter()
-  // startingCheckout: inline spinner on Proceed to Checkout
-  const { initiateCheckout, starting: startingCheckout } = useShiprocketCheckout()
+  // Inline spinner on Proceed to Checkout while checkout starts or the widget script is still loading
+  const { initiateCheckout, starting: startingCheckout, scriptLoading: checkoutScriptLoading } = useShiprocketCheckout()
+  const checkoutBusy = startingCheckout || checkoutScriptLoading
   const [showBulkOrderModal, setShowBulkOrderModal] = useState(false)
   const hydrated = useCartHydrated()
   // Live prices + GST from the database; changed lines get a "price updated" note
@@ -462,9 +463,9 @@ const totalGST = items.reduce((sum, item) => {
                   // accepts logged-in and guest carts alike.
                   onClick={(event) => initiateCheckout(event, items, "/checkout")}
                   disabled={startingCheckout}
-                  aria-busy={startingCheckout}
+                  aria-busy={checkoutBusy}
                 >
-                  {startingCheckout && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {checkoutBusy && <Loader2 className="w-4 h-4 animate-spin" />}
                   Proceed to Checkout
                 </Button>
 
