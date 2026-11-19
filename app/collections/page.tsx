@@ -456,7 +456,7 @@ const activeCategory =
             </p>
           </div>
           <div className="flex flex-wrap gap-3 justify-center">
-            {["acne", "pigmentation", "open-pores", "hydration", "hairfall", "dryness"].map((slug) => (
+            {["acne", "pigmentation", "hydration", "hairfall", "dryness"].map((slug) => (
               <Link
                 key={slug}
                 href={`/concerns/${slug}`}
