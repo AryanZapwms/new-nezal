@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useParams } from "next/navigation"
-import { ChevronRight, Leaf, Home, ArrowRight, Sparkles, CheckCircle2, CircleDot } from "lucide-react"
+import { ChevronRight, ChevronDown, Leaf, Home, ArrowRight, ArrowDown, Sparkles, CheckCircle2, CircleDot } from "lucide-react"
 import ProductCard from "@/components/product-card"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -460,6 +460,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   "gift-kits": "Gift Kits",
 }
 
+// Below md the hero card shows this many Key Benefits until "Show more" is tapped.
+// Desktop always shows them all.
+const MOBILE_BENEFITS_LIMIT = 3
+
 function toLabel(slug: string) {
   return slug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
@@ -527,11 +531,13 @@ export default function ConcernPage() {
   const [collections, setCollections] = useState<RelatedCollection[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [showAllBenefits, setShowAllBenefits] = useState(false)
 
   const meta = CONCERN_META[slug] ?? DEFAULT_META
 
   useEffect(() => {
     if (!slug) return
+    setShowAllBenefits(false)
     async function load() {
       setLoading(true)
       try {
@@ -555,6 +561,19 @@ export default function ConcernPage() {
 
   if (loading) return <ConcernSkeleton />
 
+  const hasProducts = !notFound && products.length > 0
+  const benefitCount = meta.keyBenefits?.length ?? 0
+
+  // Mobile "View products" jump. scrollIntoView honours the heading's
+  // scroll-margin, which clears the sticky header stack.
+  function scrollToProducts(e: React.MouseEvent<HTMLAnchorElement>) {
+    const target = document.getElementById("concern-products")
+    if (!target) return
+    e.preventDefault()
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
+  }
+
   return (
     <main className="min-h-screen bg-[var(--color-bg-page)]">
 
@@ -574,12 +593,24 @@ export default function ConcernPage() {
             <span className="text-[var(--color-text-heading)] font-medium">{meta.label}</span>
           </nav>
 
-          <div className="flex flex-row  gap-4 max-[100%]">
+          {/* Below md: copy stacks above the card. md and up: the original two columns, unchanged. */}
+          <div className="flex flex-row  gap-4 max-[100%] max-md:flex-col max-md:gap-6">
             <div className="">
-            <span className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)] text-sm font-medium">
-              <Leaf size={13} /> Skin Concern
-            </span>
-            <h1 className="text-3xl md:text-5xl font-extrabold text-[var(--color-text-heading)] leading-tight">
+            <div className="max-md:flex max-md:items-center max-md:justify-between max-md:gap-3 max-md:mb-3">
+              <span className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)] text-sm font-medium">
+                <Leaf size={13} /> Skin Concern
+              </span>
+              {hasProducts && (
+                <a
+                  href="#concern-products"
+                  onClick={scrollToProducts}
+                  className="md:hidden inline-flex shrink-0 items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-brand-primary)] text-white text-sm font-semibold"
+                >
+                  View products <ArrowDown size={13} aria-hidden="true" />
+                </a>
+              )}
+            </div>
+            <h1 className="text-2xl md:text-5xl font-extrabold text-[var(--color-text-heading)] leading-tight">
               {meta.headline}
             </h1>
             <p className="text-lg text-[#f1ab08] leading-relaxed  my-4 italic ">
@@ -594,16 +625,16 @@ export default function ConcernPage() {
               </p>
             )}
             </div>
-            <div className=" rounded-xl ">
+            <div className=" rounded-xl max-md:empty:hidden">
               {/* ── Did You Know / Key Benefits / Helps Address ── */}
               {(meta.didYouKnow || (meta.keyBenefits && meta.keyBenefits.length > 0) || (meta.helpsAddress && meta.helpsAddress.length > 0)) && (
                 <section className="bg-white border-b border-[var(--color-border)] rounded-xl">
-                  <div className="container-nezal py-10 flex flex-col gap-8 rounded-xl">
+                  <div className="container-nezal py-10 flex flex-col gap-8 rounded-xl max-md:px-4 max-md:py-5 max-md:gap-5">
 
                     {meta.didYouKnow && (
-                      <div className="flex gap-3 items-start p-5 rounded-2xl bg-[var(--color-brand-primary)]/5 border border-[var(--color-brand-primary)]/20">
+                      <div className="flex gap-3 items-start p-5 rounded-2xl bg-[var(--color-brand-primary)]/5 border border-[var(--color-brand-primary)]/20 max-md:p-3.5 max-md:gap-2.5">
                         <Sparkles size={18} className="text-[var(--color-brand-primary)] shrink-0 mt-0.5" />
-                        <p className="text-sm text-[var(--color-text-body)] leading-relaxed">
+                        <p className="text-sm text-[var(--color-text-body)] leading-relaxed max-md:text-[13px]">
                           <span className="font-bold text-[var(--color-brand-primary)]">Did you know? </span>
                           {meta.didYouKnow}
                         </p>
@@ -616,14 +647,35 @@ export default function ConcernPage() {
                           <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-heading)]">
                             Key Benefits
                           </h3>
-                          <ul className="flex flex-col gap-2.5">
+                          <ul id="concern-key-benefits" className="flex flex-col gap-2.5 max-md:gap-2">
                             {meta.keyBenefits.map((benefit, i) => (
-                              <li key={i} className="flex items-start gap-2.5 text-sm text-[var(--color-text-body)] leading-relaxed">
+                              <li
+                                key={i}
+                                className={`flex items-start gap-2.5 text-sm text-[var(--color-text-body)] leading-relaxed max-md:gap-2 max-md:text-[13px]${
+                                  i >= MOBILE_BENEFITS_LIMIT && !showAllBenefits ? " max-md:hidden" : ""
+                                }`}
+                              >
                                 <CheckCircle2 size={16} className="text-[var(--color-brand-primary)] shrink-0 mt-0.5" />
                                 <span>{benefit}</span>
                               </li>
                             ))}
                           </ul>
+                          {benefitCount > MOBILE_BENEFITS_LIMIT && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllBenefits((v) => !v)}
+                              aria-expanded={showAllBenefits}
+                              aria-controls="concern-key-benefits"
+                              className="md:hidden self-start inline-flex items-center gap-1 py-1 text-[13px] font-semibold text-[var(--color-brand-primary)]"
+                            >
+                              {showAllBenefits ? "Show less" : "Show more"}
+                              <ChevronDown
+                                size={14}
+                                aria-hidden="true"
+                                className={`transition-transform ${showAllBenefits ? "rotate-180" : ""}`}
+                              />
+                            </button>
+                          )}
                         </div>
                       )}
                       </div>
@@ -634,11 +686,11 @@ export default function ConcernPage() {
                           <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-heading)]">
                             Helps Address
                           </h3>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-2 max-md:gap-1.5">
                             {meta.helpsAddress.map((item, i) => (
                               <span
                                 key={i}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-bg-cream)] border border-[var(--color-border)] text-sm text-[var(--color-text-heading)]"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-bg-cream)] border border-[var(--color-border)] text-sm text-[var(--color-text-heading)] max-md:gap-1 max-md:px-2.5 max-md:py-1 max-md:text-xs"
                               >
                                 <CircleDot size={12} className="text-[var(--color-brand-primary)]" />
                                 {item}
@@ -699,7 +751,10 @@ export default function ConcernPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            <h2 className="text-xl font-bold text-[var(--color-text-heading)]">
+            <h2
+              id="concern-products"
+              className="text-xl font-bold text-[var(--color-text-heading)] scroll-mt-[calc(var(--sticky-header-stack-height)_+_16px)]"
+            >
               All Products for {meta.label}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
