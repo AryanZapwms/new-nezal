@@ -1077,30 +1077,32 @@ const currentImage =
 
                 
 
-            {/* Trust badges */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            {/* Trust badges: one row of three at every width. Below md they're compact
+                and Easy Return comes first; every md: value matches what sm: set before,
+                so md and up render exactly as they did. */}
+            <div className="grid grid-cols-3 gap-1.5 md:gap-3">
               {[
-                { icon: <Truck className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Free Delivery", sub: "Orders ₹650+" },
-                { icon: <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Easy Return", sub: "7 Day Policy" },
-                { icon: <Package className="w-4 h-4 sm:w-5 sm:h-5" />, title: "Bulk Purchase", sub: "Get Special Offers" },
+                { icon: <Truck className="w-3.5 h-3.5 md:w-5 md:h-5" />, title: "Free Delivery", sub: "Orders ₹650+" },
+                { icon: <RotateCcw className="w-3.5 h-3.5 md:w-5 md:h-5" />, title: "Easy Return", sub: "7 Day Policy", order: "order-first md:order-none" },
+                { icon: <Package className="w-3.5 h-3.5 md:w-5 md:h-5" />, title: "Bulk Purchase", sub: "Get Special Offers" },
               ].map((b) => (
                 <div
                   key={b.title}
-                  className="rounded-2xl border p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2"
+                  className={`min-w-0 rounded-2xl border px-1.5 py-2.5 md:p-4 flex flex-col items-center text-center gap-1 md:gap-2 ${b.order ?? ""}`}
                   style={{ backgroundColor: "#ffffff", borderColor: "#dde8de" }}
                 >
                   <div
-                    className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center"
+                    className="w-6 h-6 md:w-9 md:h-9 rounded-xl flex items-center justify-center"
                     style={{ backgroundColor: "#e0f0e4", color: "#1e3a28" }}
                   >
-                    
+
                     {b.icon}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold leading-tight" style={{ color: "#1e3a28" }}>
+                    <p className="text-[11px] md:text-xs font-semibold leading-tight" style={{ color: "#1e3a28" }}>
                       {b.title}
                     </p>
-                    <p className="text-xs leading-tight mt-0.5" style={{ color: "#6b7c70" }}>
+                    <p className="text-[10px] md:text-xs leading-tight mt-0.5" style={{ color: "#6b7c70" }}>
                       {b.sub}
                     </p>
                   </div>
