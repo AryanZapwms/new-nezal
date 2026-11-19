@@ -1010,7 +1010,7 @@ const currentImage =
                 </div>
                 <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "#1e6636" }}>
                   <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: "#1e6636" }} />
-                  {isOutOfStock ? "Out of stock" : "In stock · Ships in 2 days"}
+                  {isOutOfStock ? "Out of stock" : "In stock"}
                 </div>
               </div>
             </div>
