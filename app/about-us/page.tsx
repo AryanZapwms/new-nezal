@@ -514,7 +514,7 @@ export default function AboutUs() {
           className="w-40 h-40 sm:w-48 sm:h-48 rounded-3xl flex items-center justify-center p-6 border"
           style={{ backgroundColor: "#fdf6e3", borderColor: "#e8dcb0" }}
         >
-          <img src="/oldlogo/old-logo.jpg" alt="Nezal — previous logo" className="w-full h-full object-contain" />
+          <img src="/oldlogo/old-logo-maroon-trimmed.jpg" alt="Nezal — previous logo" className="w-full h-full object-contain bg-white rounded-xl" />
         </div>
         <span
           className="mt-4 text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full"
@@ -537,7 +537,7 @@ export default function AboutUs() {
           className="w-40 h-40 sm:w-48 sm:h-48 rounded-3xl flex items-center justify-center p-6 border-2"
           style={{ backgroundColor: "#f4f9f4", borderColor: "#4a7c59" }}
         >
-          <img src="/oldlogo/new-logo.jpg" alt="Nezal — current logo" className="w-full h-full object-contain" />
+          <img src="/nezallogo.png" alt="Nezal — current logo" className="w-full h-full object-contain bg-white rounded-xl" />
         </div>
         <span
           className="mt-4 text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full"
