@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useParams } from "next/navigation"
 import { ChevronRight, ChevronDown, Leaf, Home, ArrowRight, ArrowDown, Sparkles, CheckCircle2, CircleDot } from "lucide-react"
 import ProductCard from "@/components/product-card"
+import { CONCERN_SLUG_ALIASES, CONCERN_DB_SLUG_BY_TEMPLATE } from "@/lib/concern-slug-aliases.mjs"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -453,6 +454,41 @@ const DEFAULT_META = {
   color: "#FAF7F2",
 }
 
+type ConcernMeta = (typeof CONCERN_META)[string]
+
+// Copy fields the concern API returns from the database.
+interface ConcernCopy {
+  label?: unknown
+  headline?: unknown
+  subheadline?: unknown
+  description?: unknown
+  color?: unknown
+}
+
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
+
+// The CONCERN_META key for a URL slug: an exact key first, then the database
+// slug's alias (see lib/concern-slug-aliases.mjs).
+function templateKeyFor(slug: string): string | undefined {
+  if (Object.hasOwn(CONCERN_META, slug)) return slug
+  const alias = Object.hasOwn(CONCERN_SLUG_ALIASES, slug) ? CONCERN_SLUG_ALIASES[slug] : undefined
+  return alias && Object.hasOwn(CONCERN_META, alias) ? alias : undefined
+}
+
+// Concerns with no template copy (e.g. ones added in the admin) show their own
+// database copy. No card. No subheadline means no quote line, not generic text.
+function metaFromDatabase(copy: ConcernCopy): ConcernMeta {
+  const text = (value: unknown) => (typeof value === "string" && value.trim()) || undefined
+  const color = text(copy.color)
+  return {
+    label: text(copy.label) ?? DEFAULT_META.label,
+    headline: text(copy.headline) ?? text(copy.label) ?? DEFAULT_META.headline,
+    subheadline: text(copy.subheadline) ?? "",
+    description: text(copy.description) ?? DEFAULT_META.description,
+    color: color && HEX_COLOR.test(color) ? color : DEFAULT_META.color,
+  }
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   "face-care": "Face Care",
   "body-care": "Body Care",
@@ -532,12 +568,17 @@ export default function ConcernPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [showAllBenefits, setShowAllBenefits] = useState(false)
+  const [dbCopy, setDbCopy] = useState<ConcernCopy | null>(null)
 
-  const meta = CONCERN_META[slug] ?? DEFAULT_META
+  // Template copy (exact slug, then alias) wins; otherwise the concern's own
+  // database copy; otherwise generic text.
+  const templateKey = templateKeyFor(slug)
+  const meta = templateKey ? CONCERN_META[templateKey] : dbCopy ? metaFromDatabase(dbCopy) : DEFAULT_META
 
   useEffect(() => {
     if (!slug) return
     setShowAllBenefits(false)
+    setDbCopy(null)
     async function load() {
       setLoading(true)
       try {
@@ -545,6 +586,13 @@ export default function ConcernPage() {
         if (!res.ok) throw new Error("Failed")
        const data = await res.json()
         const concern = data.concern ?? data          // unwrap the nested object
+        setDbCopy({
+          label: concern.label,
+          headline: concern.headline,
+          subheadline: concern.subheadline,
+          description: concern.description,
+          color: concern.color,
+        })
         setProducts(concern.products ?? [])
         setCollections(data.collections ?? [])
         if ((concern.products ?? []).length === 0 && (data.collections ?? []).length === 0) {
@@ -613,10 +661,12 @@ export default function ConcernPage() {
             <h1 className="text-2xl md:text-5xl font-extrabold text-[var(--color-text-heading)] leading-tight">
               {meta.headline}
             </h1>
-            <p className="text-lg text-[#f1ab08] leading-relaxed  my-4 italic ">
-              "{meta.subheadline}"
-            </p>
-            <p className="text-sm text-[var(--color-text-body)] my-4 leading-relaxed max-w-xl">
+            {meta.subheadline && (
+              <p className="text-lg text-[#f1ab08] leading-relaxed  my-4 italic ">
+                "{meta.subheadline}"
+              </p>
+            )}
+            <p className="text-sm text-[var(--color-text-body)] my-4 leading-relaxed max-w-xl whitespace-pre-line">
               {meta.description}
             </p>
             {!notFound && (
@@ -796,14 +846,15 @@ export default function ConcernPage() {
             </h2>
             <div className="flex flex-wrap gap-2">
               {CONCERN_ORDER
-                .filter((s) => s !== slug)
+                .filter((s) => s !== templateKey)
                 .map((s) => {
                   const m = CONCERN_META[s]
                   if (!m) return null
                   return (
                     <Link
                       key={s}
-                      href={`/concerns/${s}`}
+                      // The database slug: that's the page with the products.
+                      href={`/concerns/${CONCERN_DB_SLUG_BY_TEMPLATE[s] ?? s}`}
                       className="px-4 py-2 rounded-full border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text-heading)] hover:border-[var(--color-brand-primary)] hover:text-[var(--color-brand-primary)] transition-colors"
                     >
                       {m.label}

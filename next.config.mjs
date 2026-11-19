@@ -1,5 +1,7 @@
 // next.config.mjs
 
+import { concernSlugRedirects } from './lib/concern-slug-aliases.mjs'
+
 // Images are served from Bunny.net's pull zone (see lib/bunny.ts) and resized
 // there by Bunny Optimizer through the custom loader in lib/image-loader.ts,
 // which reads this hostname (inlined below as NEXT_PUBLIC_BUNNY_HOSTNAME).
@@ -57,6 +59,12 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+  },
+  async redirects() {
+    // 301s from old /concerns/<template slug> URLs to the database-slug pages.
+    // Generated from the alias map; read its REDIRECTS note before adding a
+    // concern whose slug matches one of the template slugs.
+    return concernSlugRedirects()
   },
   async rewrites() {
     return [
