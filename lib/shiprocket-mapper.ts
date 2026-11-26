@@ -10,7 +10,8 @@
 // should be populated with at least `name` (fallbacks below cover the case
 // where they aren't, but vendor/product_type will be generic in that case).
 
-import { computeSalePrice } from "@/lib/sale";
+import { resolveCurrentPrice } from "@/lib/pricing";
+import type { FlashSaleInfo } from "@/lib/flashSale";
 
 // Single source of truth for Shiprocket's variant-id scheme, used to build
 // ids here AND to reverse them (see the checkout initiator
@@ -25,34 +26,29 @@ export function computeVariantId(numericId: number, sizeIndex: number | null): n
 }
 
 // ── Price computation ──────────────────────────────────────────────────
-// sizes[].discountPrice is NOT kept in sync with the product's active sale —
-// it's frequently just equal to sizes[].price even when the parent product
-// has a live discount. So the real selling price for a size/variant is
-// derived by re-applying the product's own salePercentage to size.price
-// (the same computeSalePrice() call lib/sale.ts uses to produce the
-// top-level discountPrice), rather than trusting size.discountPrice.
+// Shiprocket charges the price we send here (checkout only sends it variant
+// ids), so it goes through lib/pricing.ts — the same function the product
+// page, cart, our own checkout and the saved order lines use — flash sales
+// included: a size's own discountPrice (e.g. a 3+1 pack) wins over the
+// product's sale percentage. compare_at_price is the size's full price, sent
+// only when a discount actually applies. tests/shiprocket-mapper-pricing.test.ts
+// checks this against every size in a catalog backup.
 function computeVariantPricing(
-  basePrice: number,
-  product: any
+  product: any,
+  size: any | null,
+  flashSaleMap: Map<string, FlashSaleInfo>
 ): { price: number; compareAtPrice: number | null } {
-  const hasActiveSale =
-    product.saleSource && product.saleSource !== "none" && product.salePercentage;
-
-  if (hasActiveSale) {
-    return {
-      price: computeSalePrice(basePrice, product.salePercentage),
-      compareAtPrice: basePrice,
-    };
-  }
-  return { price: basePrice, compareAtPrice: null };
+  const resolved = resolveCurrentPrice(product, flashSaleMap, size);
+  const price = resolved.discountPrice ?? resolved.price;
+  return { price, compareAtPrice: price < resolved.price ? resolved.price : null };
 }
 
-function buildVariants(product: any, imageSrc: string) {
+function buildVariants(product: any, imageSrc: string, flashSaleMap: Map<string, FlashSaleInfo>) {
   const numericId = product.numericId;
 
   if (Array.isArray(product.sizes) && product.sizes.length > 0) {
     return product.sizes.map((size: any, index: number) => {
-      const { price, compareAtPrice } = computeVariantPricing(size.price, product);
+      const { price, compareAtPrice } = computeVariantPricing(product, size, flashSaleMap);
       const weightKg = typeof size.weight === "number" ? size.weight : product.weight ?? 0.3;
 
       return {
@@ -75,7 +71,7 @@ function buildVariants(product: any, imageSrc: string) {
   }
 
   // No sizes — single fallback variant using the product's own price/stock/sku.
-  const { price, compareAtPrice } = computeVariantPricing(product.price, product);
+  const { price, compareAtPrice } = computeVariantPricing(product, null, flashSaleMap);
   const weightKg = product.weight ?? 0.3;
 
   return [
@@ -98,7 +94,9 @@ function buildVariants(product: any, imageSrc: string) {
   ];
 }
 
-export function mapProductToShiprocket(product: any) {
+// flashSaleMap: getActiveFlashSaleMap(), fetched by the caller (once per
+// request/batch), so a running flash sale is priced the way the site prices it.
+export function mapProductToShiprocket(product: any, flashSaleMap: Map<string, FlashSaleInfo>) {
   const imageSrc = product.image || product.images?.[0] || "";
 
   return {
@@ -117,7 +115,7 @@ export function mapProductToShiprocket(product: any) {
       product.sizes && product.sizes.length > 0
         ? [{ name: "Size", values: product.sizes.map((s: any) => s.size) }]
         : [],
-    variants: buildVariants(product, imageSrc),
+    variants: buildVariants(product, imageSrc, flashSaleMap),
   };
 }
 

@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { Product } from "@/lib/models/product";
 import { Collection } from "@/lib/models/collection";
 import { mapProductToShiprocket } from "@/lib/shiprocket-mapper";
+import { getActiveFlashSaleMap } from "@/lib/flashSale";
 
 /**
  * Shiprocket Custom Checkout catalog feed. Shiprocket polls this endpoint
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       query.collectionSlug = (collection as any).slug;
     }
 
-    const [products, total] = await Promise.all([
+    const [products, total, flashSaleMap] = await Promise.all([
       Product.find(query)
         .populate("company", "name")
         .populate("category", "name")
@@ -64,9 +65,10 @@ export async function GET(request: NextRequest) {
         .limit(limit)
         .lean(),
       Product.countDocuments(query),
+      getActiveFlashSaleMap(),
     ]);
 
-    const shopifyProducts = (products as any[]).map(mapProductToShiprocket);
+    const shopifyProducts = (products as any[]).map((product) => mapProductToShiprocket(product, flashSaleMap));
 
     return NextResponse.json({
       data: {
