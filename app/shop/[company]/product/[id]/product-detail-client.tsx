@@ -571,9 +571,12 @@ initiateCheckout(event, useCartStore.getState().items, "/checkout")
         ? getSizePricing(product, selectedSize)
         : { currentPrice: 0, currentDiscountPrice: undefined, percentOff: 0 }
       const displayPrice = currentDiscountPrice || currentPrice
+      // A size with its own sale price (e.g. a 3+1 pack) isn't priced by the
+      // product's sale %, so its badge comes from the prices on screen
+      const sizeHasOwnSalePrice = selectedSize?.discountPrice != null
       const discount = product?.flashSale
   ? Math.round(product.flashSale.discountPercent)
-  : product?.salePercentage != null && product.salePercentage > 0
+  : !sizeHasOwnSalePrice && product?.salePercentage != null && product.salePercentage > 0
   ? Math.round(product.salePercentage)
   : currentDiscountPrice
   ? Math.round(((currentPrice - currentDiscountPrice) / currentPrice) * 100)

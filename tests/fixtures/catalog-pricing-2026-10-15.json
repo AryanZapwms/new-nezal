@@ -1,0 +1,2230 @@
+{
+ "source": "nezal-db-backup-2026-10-15/products.json — pricing fields only, for tests/shiprocket-mapper-pricing.test.ts",
+ "products": [
+  {
+   "_id": "6a0d7e252f7e0d5d2c727c86",
+   "numericId": 2,
+   "name": "Nezal Hair Fall Control & Scalp Hydration Black Pepper & Cucumber Shampoo for Men & Women, with Aloe vera, ",
+   "isActive": true,
+   "price": 265,
+   "discountPrice": 252,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 140,
+     "stock": 100,
+     "sku": "NZ-SH-CBS-250"
+    },
+    {
+     "size": "500ml",
+     "unit": "ml",
+     "price": 265,
+     "stock": 100,
+     "sku": "NZ-SH-CBS-500"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727c93",
+   "numericId": 1,
+   "name": "Nezal Conditioning, Hydrating & Hair Strengthening  Amla Shikakai Shampoo for Men & Women, with Aloe Vera",
+   "isActive": true,
+   "price": 265,
+   "discountPrice": 252,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 140,
+     "discountPrice": 140,
+     "stock": 100,
+     "sku": "NZ-SH-AAAS-250"
+    },
+    {
+     "size": "500ml",
+     "unit": "ml",
+     "price": 265,
+     "discountPrice": 265,
+     "stock": 10,
+     "sku": "SAMS08"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727c98",
+   "numericId": 3,
+   "name": "Nezal Aloe Vera with Neem & Tulsi Shampoo, For Men & Women (500 ml)",
+   "isActive": true,
+   "price": 265,
+   "discountPrice": 252,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 140,
+     "stock": 100,
+     "sku": "NZ-SH-NTA-250"
+    },
+    {
+     "size": "500ml",
+     "unit": "ml",
+     "price": 265,
+     "stock": 100,
+     "sku": "NZ-SH-NTA-500"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727c9e",
+   "numericId": 7,
+   "name": "Black Grapes Conditioner with Seaweed Extract",
+   "isActive": true,
+   "price": 180,
+   "discountPrice": 171,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 180,
+     "stock": 100,
+     "sku": "NZ-CN-BG-250"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727ca2",
+   "numericId": 11,
+   "name": "Hair Regrowth Serum",
+   "isActive": true,
+   "price": 2100,
+   "discountPrice": 1995,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 2100,
+     "stock": 50,
+     "sku": "NZ-HS-AR-250"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cac",
+   "numericId": 8,
+   "name": "Aloe Vera Gel",
+   "isActive": true,
+   "price": 275,
+   "discountPrice": 261,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "500",
+     "unit": "ml",
+     "price": 275,
+     "stock": 89,
+     "sku": "NZ-BG-ALOE-500-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cb1",
+   "numericId": 6,
+   "name": "Honey Cream Body Lotion",
+   "isActive": true,
+   "price": 240,
+   "discountPrice": 228,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100ml",
+     "unit": "ml",
+     "price": 140,
+     "stock": 100,
+     "sku": "NZ-BL-HONE-100-01"
+    },
+    {
+     "size": "200ml",
+     "unit": "ml",
+     "price": 240,
+     "stock": 100,
+     "sku": "NZ-BL-HONE-200-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cb8",
+   "numericId": 5,
+   "name": "Caramel Crush Body Lotion",
+   "isActive": true,
+   "price": 140,
+   "discountPrice": 133,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100ml",
+     "unit": "ml",
+     "price": 140,
+     "stock": 100,
+     "sku": "NZ-BL-CC-100"
+    },
+    {
+     "size": "200ml",
+     "unit": "ml",
+     "price": 240,
+     "stock": 100,
+     "sku": "NZ-BL-CC-200"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cbf",
+   "numericId": 13,
+   "name": "Cedarwood Body Massage Oil",
+   "isActive": true,
+   "price": 400,
+   "discountPrice": 380,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "180ml",
+     "unit": "ml",
+     "price": 400,
+     "stock": 100,
+     "sku": "NZ-MO-CW-180"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cc3",
+   "numericId": 4,
+   "name": "Orange Fresh Shower Gel",
+   "isActive": true,
+   "price": 250,
+   "discountPrice": 238,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 250,
+     "stock": 99,
+     "sku": "NZ-SG-ORAN-250-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cc8",
+   "numericId": 10,
+   "name": "Coffee Beans Shower Gel",
+   "isActive": true,
+   "price": 250,
+   "discountPrice": 238,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 250,
+     "stock": 99,
+     "sku": "NZ-SG-CB-250"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727ccc",
+   "numericId": 14,
+   "name": "Sea Fresh Shower Gel",
+   "isActive": true,
+   "price": 250,
+   "discountPrice": 238,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 250,
+     "stock": 99,
+     "sku": "NZ-SG-SF-250"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cd1",
+   "numericId": 12,
+   "name": "Rose Bath Salt",
+   "isActive": true,
+   "price": 340,
+   "discountPrice": 323,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "500g",
+     "unit": "g",
+     "price": 340,
+     "stock": 100,
+     "sku": "NZ-BS-RO-500"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cd6",
+   "numericId": 9,
+   "name": "Lavender Bath Salt",
+   "isActive": true,
+   "price": 340,
+   "discountPrice": 323,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "500g",
+     "unit": "g",
+     "price": 340,
+     "stock": 100,
+     "sku": "NZ-BS-LV-500"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cda",
+   "numericId": 21,
+   "name": "SeaFresh Bath Salt",
+   "isActive": true,
+   "price": 340,
+   "discountPrice": 323,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "500g",
+     "unit": "g",
+     "price": 340,
+     "stock": 100,
+     "sku": "NZ-BS-SEA-500"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cde",
+   "numericId": 17,
+   "name": "Tulsi & Green Apple Handwash",
+   "isActive": true,
+   "price": 129,
+   "discountPrice": 123,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 129,
+     "stock": 100,
+     "sku": "NZ-HW-TGA-250"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727ce3",
+   "numericId": 16,
+   "name": "Tulsi & Lime Handwash",
+   "isActive": true,
+   "price": 129,
+   "discountPrice": 123,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 129,
+     "stock": 100,
+     "sku": "NZ-HW-TL-250"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727ce8",
+   "numericId": 25,
+   "name": "Tulsi & Peach Handwash",
+   "isActive": true,
+   "price": 129,
+   "discountPrice": 123,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 129,
+     "stock": 100,
+     "sku": "NZ-HW-TP-250"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cf1",
+   "numericId": 18,
+   "name": "Intimate Hygiene Unisex Foam Wash",
+   "isActive": true,
+   "price": 350,
+   "discountPrice": 333,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "150ml",
+     "unit": "ml",
+     "price": 350,
+     "stock": 100,
+     "sku": "NZ-IC-INTI-150-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cf6",
+   "numericId": 15,
+   "name": "Brightening Lemon Designer Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-DS-LEMO-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-DS-LEMO-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727cfb",
+   "numericId": 19,
+   "name": "Juicy Watermelon Designer Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-DS-WATE-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-DS-WATE-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d05",
+   "numericId": 24,
+   "name": "Papaya Whitening Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-PAPA-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-PAPA-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d0a",
+   "numericId": 23,
+   "name": "Chocolate Vanilla Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 99,
+     "sku": "NZ-PS-CHOC-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-CHOC-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d0f",
+   "numericId": 22,
+   "name": "Saffron, Turmeric & Sandalwood Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-SAFF-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-SAFF-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d15",
+   "numericId": 20,
+   "name": "Strawberry with Mulberry Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-STRA-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-STRA-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d1a",
+   "numericId": 37,
+   "name": "Charcoal Lemon Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-CHAR-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 80,
+     "sku": "NZ-PS-CHAR-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d1f",
+   "numericId": 39,
+   "name": "Rose Aqua Moisturising Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-ROSE-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 446,
+     "stock": 100,
+     "sku": "NZ-PS-ROSE-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d24",
+   "numericId": 31,
+   "name": "Black Grapes Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-BLAC-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-BLAC-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d28",
+   "numericId": 35,
+   "name": "Pineapple Aqua Moisturizing Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-PINE-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-PINE-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d2d",
+   "numericId": 26,
+   "name": "Lemongrass, Lemon, Peppermint & Thyme Leaf Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-LEMO-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-LEMO-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d32",
+   "numericId": 29,
+   "name": "Coconut Milk & Honey Premium Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-PS-COCO-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-PS-COCO-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d37",
+   "numericId": 36,
+   "name": "Green Tea Scrub Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 99,
+     "sku": "NZ-AS-GRET-120-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-GRET-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d3b",
+   "numericId": 27,
+   "name": "Jasmine Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 150,
+     "sku": "NZ-AS-JASM-120-01"
+    },
+    {
+     "size": "3+1 (120g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-JASM-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d40",
+   "numericId": 38,
+   "name": "Rose Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-AS-ROSE-120-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-ROSE-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d44",
+   "numericId": 32,
+   "name": "Orange Peel Scrub Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-AS-ORAN-120-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-ORAN-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d48",
+   "numericId": 30,
+   "name": "Peppermint & Cucumber Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-AS-PEPP-120-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-PEPP-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d4d",
+   "numericId": 33,
+   "name": "Sandalwood & Almond Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-AS-SAND-120-01"
+    },
+    {
+     "size": "3+1 (120g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-SAND-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d52",
+   "numericId": 34,
+   "name": "Seafresh Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-AS-SEAF-120-01"
+    },
+    {
+     "size": "3+1 (120g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-SEAF-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d56",
+   "numericId": 28,
+   "name": "Tropical Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-AS-TROP-120-01"
+    },
+    {
+     "size": "3+1 (120g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-TROP-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d5a",
+   "numericId": 46,
+   "name": "Green Apple Aissis Soap",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 87,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "120g",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-AS-GREE-120-01"
+    },
+    {
+     "size": "3+1 (120g x 4)",
+     "unit": "g",
+     "price": 380,
+     "discountPrice": 285,
+     "stock": 100,
+     "sku": "NZ-AS-GREE-120-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d5e",
+   "numericId": 44,
+   "name": "Jasmine Rock Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-RS-JASM-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-RS-JASM-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d65",
+   "numericId": 42,
+   "name": "Lavender Rock Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-RS-LAVE-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-RS-LAVE-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d6b",
+   "numericId": 45,
+   "name": "Peppermint & Cucumber Rock Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 98,
+     "sku": "NZ-RS-PEPP-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-RS-PEPP-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d71",
+   "numericId": 41,
+   "name": "Rose Rock Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-RS-ROSE-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-RS-ROSE-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d76",
+   "numericId": 49,
+   "name": "Strawberry Rock Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-RS-STRA-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-RS-STRA-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d7c",
+   "numericId": 47,
+   "name": "Sandalwood Rock Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 99,
+     "sku": "NZ-RS-SAND-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-RS-SAND-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d82",
+   "numericId": 43,
+   "name": "Strawberry Chip Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 98,
+     "sku": "NZ-CS-STRA-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-CS-STRA-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d87",
+   "numericId": 50,
+   "name": "Seafresh Chip Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-CS-SEAF-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-CS-SEAF-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d8d",
+   "numericId": 40,
+   "name": "Lemongrass Chip Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-CS-LEMO-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-CS-LEMO-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d93",
+   "numericId": 52,
+   "name": "Milk & Rose Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85 g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RD-MILK-085-01"
+    },
+    {
+     "size": "3+1 (85 g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-MILK-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d98",
+   "numericId": 48,
+   "name": "Apple Blossom Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85 g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RD-APPL-085-01"
+    },
+    {
+     "size": "3+1 (85 g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-APPL-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727d9c",
+   "numericId": 51,
+   "name": "Peach & Mix Fruit Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85 g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RD-PEAC-085-01"
+    },
+    {
+     "size": "3+1 (85 g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-PEAC-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727da1",
+   "numericId": 53,
+   "name": "Doobie Cincinnati White Bath Soap",
+   "isActive": true,
+   "price": 40,
+   "discountPrice": 37,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "75g",
+     "unit": "g",
+     "price": 40,
+     "stock": 100,
+     "sku": "NZ-DB-CINC-075-01"
+    },
+    {
+     "size": "3+1 (75 g x 4)",
+     "unit": "g",
+     "price": 160,
+     "discountPrice": 120,
+     "stock": 100,
+     "sku": "NZ-DB-CINC-075-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727da4",
+   "numericId": 54,
+   "name": "Sapphire Hamper",
+   "isActive": true,
+   "price": 610,
+   "discountPrice": 549,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": []
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727da5",
+   "numericId": 56,
+   "name": "Pearl Hamper",
+   "isActive": true,
+   "price": 465,
+   "discountPrice": 419,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": []
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727da6",
+   "numericId": 57,
+   "name": "Emerald Hamper",
+   "isActive": true,
+   "price": 795,
+   "discountPrice": 716,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": []
+  },
+  {
+   "_id": "6a0d7e252f7e0d5d2c727da7",
+   "numericId": 55,
+   "name": "Ruby Hamper",
+   "isActive": true,
+   "price": 1355,
+   "discountPrice": 1220,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": []
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5a6",
+   "numericId": 58,
+   "name": "Almond Bliss Face Moisturizer",
+   "isActive": true,
+   "price": 125,
+   "discountPrice": null,
+   "salePercentage": null,
+   "saleSource": "none",
+   "sizes": [
+    {
+     "size": "50gm",
+     "unit": "g",
+     "price": 125,
+     "stock": 100,
+     "sku": "NZ-MC-ALMO-050-01"
+    },
+    {
+     "size": "100gm",
+     "unit": "g",
+     "price": 225,
+     "stock": 100,
+     "sku": "NZ-MC-ALMO-100-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5ac",
+   "numericId": 63,
+   "name": "Aloe Vera & Vitamin C Foaming Face Wash",
+   "isActive": true,
+   "price": 350,
+   "discountPrice": 333,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "150ml",
+     "unit": "ml",
+     "price": 350,
+     "stock": 99,
+     "sku": "NZ-FW-ALOE-150-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5b2",
+   "numericId": 64,
+   "name": "Apple Cider Vinegar Foaming Face Wash",
+   "isActive": true,
+   "price": 350,
+   "discountPrice": 333,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "150ml",
+     "unit": "ml",
+     "price": 350,
+     "stock": 98,
+     "sku": "NZ-FW-APPL-150-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5b6",
+   "numericId": 61,
+   "name": "Ubtan D Tan Face Wash",
+   "isActive": true,
+   "price": 120,
+   "discountPrice": 114,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100ml",
+     "unit": "ml",
+     "price": 120,
+     "stock": 100,
+     "sku": "NZ-FW-NATU-100-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5bd",
+   "numericId": 60,
+   "name": "Neem & Tulsi Face Wash",
+   "isActive": true,
+   "price": 120,
+   "discountPrice": 114,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 120,
+     "stock": 100,
+     "sku": "NZ-FW-NEEM-100-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5c7",
+   "numericId": 65,
+   "name": "Acne Control Face Serum",
+   "isActive": true,
+   "price": 750,
+   "discountPrice": 713,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "50ml",
+     "unit": "ml",
+     "price": 750,
+     "stock": 0,
+     "sku": "NZ-FS-TTS-30"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5cc",
+   "numericId": 62,
+   "name": "Anti-Aging Face Serum",
+   "isActive": true,
+   "price": 750,
+   "discountPrice": 713,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "50ml",
+     "unit": "ml",
+     "price": 750,
+     "stock": 0,
+     "sku": "NZ-FS-HAN-30"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5d0",
+   "numericId": 59,
+   "name": "Glow Face Serum",
+   "isActive": true,
+   "price": 750,
+   "discountPrice": 713,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "50ml",
+     "unit": "ml",
+     "price": 750,
+     "stock": 0,
+     "sku": "NZ-FS-VCN-30"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5d9",
+   "numericId": 71,
+   "name": "Apricot Scrub",
+   "isActive": true,
+   "price": 95,
+   "discountPrice": 90,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100gm",
+     "unit": "g",
+     "price": 95,
+     "stock": 99,
+     "sku": "NZ-FS-APN-100"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5de",
+   "numericId": 66,
+   "name": "Pastry Designer Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-DS-STRA-100-01"
+    },
+    {
+     "size": "3+1 (100 g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": "NZ-DS-STRA-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5e2",
+   "numericId": 68,
+   "name": "Citrus Blast Bathing Bar",
+   "isActive": true,
+   "price": 60,
+   "discountPrice": 55,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 60,
+     "stock": 100,
+     "sku": "NZ-BB-CITR-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 240,
+     "discountPrice": 180,
+     "stock": 80,
+     "sku": "NZ-BB-CITR-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5e8",
+   "numericId": 69,
+   "name": "Fasli Gulab Bathing Bar",
+   "isActive": true,
+   "price": 60,
+   "discountPrice": 55,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 60,
+     "stock": 150,
+     "sku": "NZ-BB-FASL-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 240,
+     "discountPrice": 180,
+     "stock": 100,
+     "sku": "NZ-BB-FASL-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5ed",
+   "numericId": 70,
+   "name": "Morning Fresh Bathing Bar",
+   "isActive": true,
+   "price": 60,
+   "discountPrice": 55,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 60,
+     "stock": 100,
+     "sku": "NZ-BB-MORN-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 240,
+     "discountPrice": 180,
+     "stock": 100,
+     "sku": "NZ-BB-MORN-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5f2",
+   "numericId": 67,
+   "name": "Neem & Tulsi Bathing Bar",
+   "isActive": true,
+   "price": 60,
+   "discountPrice": 55,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 60,
+     "stock": 100,
+     "sku": "NZ-BB-NEEM-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 240,
+     "discountPrice": 180,
+     "stock": 100,
+     "sku": "NZ-BB-NEEM-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5f8",
+   "numericId": 74,
+   "name": "Passion Bathing Bar",
+   "isActive": true,
+   "price": 60,
+   "discountPrice": 55,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 60,
+     "stock": 100,
+     "sku": "NZ-BB-PASS-100-01-3P1"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 240,
+     "discountPrice": 180,
+     "stock": 100,
+     "sku": "NZ-BB-PASS-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d5fd",
+   "numericId": 73,
+   "name": "Doobie Neem & Tulsi Bath Soap",
+   "isActive": true,
+   "price": 40,
+   "discountPrice": 37,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "75g",
+     "unit": "g",
+     "price": 40,
+     "stock": 100,
+     "sku": "NZ-DB-NEEM-075-01"
+    },
+    {
+     "size": "3+1 (75 g x 4)",
+     "unit": "g",
+     "price": 160,
+     "discountPrice": 120,
+     "stock": 100,
+     "sku": "NZ-DB-NEEM-075-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0d9d9edf37fac29c20d601",
+   "numericId": 72,
+   "name": "Doobie Rustic Sandal Bath Soap",
+   "isActive": true,
+   "price": 40,
+   "discountPrice": 37,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "75g",
+     "unit": "g",
+     "price": 40,
+     "stock": 99,
+     "sku": "NZ-DB-RUST-075-01"
+    },
+    {
+     "size": "3+1 (75 g x 4)",
+     "unit": "g",
+     "price": 160,
+     "discountPrice": 120,
+     "stock": 100,
+     "sku": "NZ-DB-RUST-075-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a0e969fd70eacf9b5bb0041",
+   "numericId": 75,
+   "name": "Frangipani Body Lotion                                                            ",
+   "isActive": true,
+   "price": 240,
+   "discountPrice": 228,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100ml",
+     "unit": "ml",
+     "price": 140,
+     "stock": 100,
+     "sku": "NZ-BL-FRAN-100-01"
+    },
+    {
+     "size": "200ml",
+     "unit": "ml",
+     "price": 240,
+     "stock": 100,
+     "sku": "NZ-BL-FRAN-100-02"
+    }
+   ]
+  },
+  {
+   "_id": "6a34df6a0856964531528283",
+   "numericId": 76,
+   "name": "Saffron Chip Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-CS-SAFF-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-CS-SAFF-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e11c37a4e3220bfbf3e2",
+   "numericId": 77,
+   "name": "Orange Designer Soap",
+   "isActive": true,
+   "price": 149,
+   "discountPrice": 137,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100 g",
+     "unit": "g",
+     "price": 149,
+     "stock": 100,
+     "sku": "NZ-DS-ORAN-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 596,
+     "discountPrice": 447,
+     "stock": 100,
+     "sku": " NZ-DS-ORAN-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e4bd2d10235bec79b3c2",
+   "numericId": 78,
+   "name": "Tulsi & Orange Hand Wash",
+   "isActive": true,
+   "price": 129,
+   "discountPrice": 123,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "250ml",
+     "unit": "ml",
+     "price": 129,
+     "stock": 99,
+     "sku": "NZ-HW-ORAN-250-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e5762d10235bec79b3d4",
+   "numericId": 79,
+   "name": "Jasmine Chip Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-CS-ROSE-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-CS-LEMO-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e6052d10235bec79b3e6",
+   "numericId": 80,
+   "name": "Rose & Rosemary Chip Soap",
+   "isActive": true,
+   "price": 90,
+   "discountPrice": 83,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100g",
+     "unit": "g",
+     "price": 90,
+     "stock": 100,
+     "sku": "NZ-CS-ROSE-100-01"
+    },
+    {
+     "size": "3+1 (100g x 4)",
+     "unit": "g",
+     "price": 360,
+     "discountPrice": 270,
+     "stock": 100,
+     "sku": "NZ-CS-ROSE-100-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e7082d10235bec79b3f8",
+   "numericId": 81,
+   "name": "Lavender & Geranium Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85 g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RS-LAVE-100-01"
+    },
+    {
+     "size": "3+1 (85 g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-LAVE-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e78b0be17def6de4399f",
+   "numericId": 82,
+   "name": "Multani Mitti Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85 g",
+     "unit": "g",
+     "price": 70,
+     "stock": 97,
+     "sku": "NZ-RD-MULT-085-01"
+    },
+    {
+     "size": "3+1 (85 g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-MULT-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e839c26d15fc78ef4d39",
+   "numericId": 83,
+   "name": "Honey & Oatmeal Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RND-HO-70"
+    },
+    {
+     "size": "3+1 (85 g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-HONE-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e8e72d10235bec79b40a",
+   "numericId": 84,
+   "name": "Tea Tree & Peppermint Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85 g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RND-TP-70"
+    },
+    {
+     "size": "3+1 (85g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-TEAT-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34e99f9221f622848d1134",
+   "numericId": 85,
+   "name": "Orange & Bergamot Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85 g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RND-OB-70"
+    },
+    {
+     "size": "3+1 (85g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-ORAN-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34ea4d2d10235bec79b41c",
+   "numericId": 86,
+   "name": "Tropical Island Round Soap",
+   "isActive": true,
+   "price": 70,
+   "discountPrice": 64,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "85g",
+     "unit": "g",
+     "price": 70,
+     "stock": 100,
+     "sku": "NZ-RND-TI-70"
+    },
+    {
+     "size": "3+1 (85 g x 4)",
+     "unit": "g",
+     "price": 280,
+     "discountPrice": 210,
+     "stock": 100,
+     "sku": "NZ-RD-TROP-085-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a34eb979221f622848d1168",
+   "numericId": 87,
+   "name": "Doobie French Rose Bath Soap",
+   "isActive": true,
+   "price": 40,
+   "discountPrice": 37,
+   "salePercentage": 8,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "75g",
+     "unit": "g",
+     "price": 40,
+     "discountPrice": 40,
+     "stock": 99,
+     "sku": "NZ-DB-FREN-075-01"
+    },
+    {
+     "size": "3+1 (75 g x 4)",
+     "unit": "g",
+     "price": 160,
+     "discountPrice": 120,
+     "stock": 100,
+     "sku": "NZ-DB-FREN-075-01-3P1"
+    }
+   ]
+  },
+  {
+   "_id": "6a3ba3bfdaa233713535089b",
+   "numericId": 88,
+   "name": "Apricot Body Scrub",
+   "isActive": true,
+   "price": 340,
+   "discountPrice": 323,
+   "salePercentage": 5,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "100",
+     "unit": "g",
+     "price": 95,
+     "stock": 100,
+     "sku": "NZ-BS-APRI-100-01"
+    },
+    {
+     "size": "500g",
+     "unit": "g",
+     "price": 340,
+     "stock": 100,
+     "sku": "NZ-BS-APRI-500-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a71c28eaa9c6153ab259ec0",
+   "numericId": 89,
+   "name": "Diamond Hamper",
+   "isActive": true,
+   "price": 1499,
+   "discountPrice": 1349,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": []
+  },
+  {
+   "_id": "6a71cf7589146949c2456f78",
+   "numericId": 90,
+   "name": "Platinum Hamper",
+   "isActive": true,
+   "price": 2153,
+   "discountPrice": 1938,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": []
+  },
+  {
+   "_id": "6a772e225333dee6086f7ac0",
+   "numericId": 91,
+   "name": "Rakhi Glow & Care Gift Box",
+   "isActive": true,
+   "price": 880,
+   "discountPrice": 792,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": " Rakhi Glow & Care Gift Box ",
+     "unit": "g",
+     "price": 900,
+     "discountPrice": 748,
+     "stock": 10,
+     "sku": "NZ-GK-GLOW-700-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a77326e5333dee6086f7aca",
+   "numericId": 92,
+   "name": "Rakhi Nature & Care Gift Box",
+   "isActive": true,
+   "price": 880,
+   "discountPrice": 792,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": " Rakhi Nature & Care Gift Box",
+     "unit": "g",
+     "price": 880,
+     "discountPrice": 748,
+     "stock": 10,
+     "sku": "NZ-GK-NATU-700-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a7736c34341aadd56c02836",
+   "numericId": 93,
+   "name": "Rakhi Herbal Wellness Gift Box",
+   "isActive": true,
+   "price": 1250,
+   "discountPrice": 1125,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": " Rakhi Herbal Wellness Gift Box",
+     "unit": "g",
+     "price": 1250,
+     "discountPrice": 1062,
+     "stock": 10,
+     "sku": "NZ-GK-HERB-950-01"
+    }
+   ]
+  },
+  {
+   "_id": "6a7737734341aadd56c02913",
+   "numericId": 94,
+   "name": "Rakhi Indulgence & Glow Gift Box",
+   "isActive": true,
+   "price": 1250,
+   "discountPrice": 1125,
+   "salePercentage": 10,
+   "saleSource": "collection",
+   "sizes": [
+    {
+     "size": "Rakhi Indulgence & Glow Gift Box",
+     "unit": "g",
+     "price": 1250,
+     "discountPrice": 1062,
+     "stock": 10,
+     "sku": "NZ-GK-INDU-950-01"
+    }
+   ]
+  }
+ ]
+}

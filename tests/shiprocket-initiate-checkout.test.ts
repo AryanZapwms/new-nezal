@@ -16,7 +16,10 @@ vi.mock("next/server", async (importOriginal) => ({
 
 import { NextRequest } from "next/server"
 import { Product } from "@/lib/models/product"
+import { FlashSale } from "@/lib/models/flashsale"
 import { POST } from "@/app/api/shiprocket/initiate-checkout/route"
+import { getActiveFlashSaleMap } from "@/lib/flashSale"
+import { mapProductToShiprocket } from "@/lib/shiprocket-mapper"
 import { connectTestDb, disconnectTestDb } from "./setup-db"
 
 const EVENT_ID = "0b6f4f8e-2f1a-4c55-9d0e-3c1b6a7d9e21"
@@ -135,5 +138,93 @@ describe("POST /api/shiprocket/initiate-checkout and Meta InitiateCheckout", () 
     const res = await initiate({ cartItems: cartItems(), metaEventId: EVENT_ID })
     expect(res.status).toBe(502)
     expect(afterCallbacks).toHaveLength(0)
+  })
+})
+
+// Shiprocket charges the price its catalog copy has for each variant id we
+// send (lib/shiprocket-mapper.ts), so the InitiateCheckout value must equal
+// the catalog feed's price for exactly those variants.
+describe("InitiateCheckout value matches the price Shiprocket charges", () => {
+  let packProductId: string
+
+  beforeAll(async () => {
+    // Shaped like the 3+1 soaps: an 8% collection sale, and a 3+1 pack with
+    // its own sale price (₹180, not 8% off ₹240)
+    const product = await Product.create({
+      name: "Passion Bathing Bar",
+      slug: "passion-bathing-bar-ic",
+      price: 60,
+      discountPrice: 55,
+      salePercentage: 8,
+      saleSource: "collection",
+      company: new mongoose.Types.ObjectId(),
+      sku: "SKU-PBB-IC",
+      numericId: 78,
+      sizes: [
+        { size: "100g", unit: "g", price: 60, stock: 10, sku: "PBB-100" },
+        { size: "3+1 (100g x 4)", unit: "g", price: 240, discountPrice: 180, stock: 10, sku: "PBB-31" },
+      ],
+    })
+    packProductId = String(product._id)
+  })
+
+  afterEach(async () => {
+    await FlashSale.deleteMany({})
+  })
+
+  // Each variant id sent to Shiprocket, with the price the catalog feed gives it right now
+  async function feedPricesSent() {
+    const call = fetchMock.mock.calls.find(([url]) => String(url).startsWith("https://checkout-api.shiprocket.com/"))
+    const items: { variant_id: string; quantity: number }[] = JSON.parse(call![1].body).cart_data.items
+    const product = await Product.findById(packProductId).lean()
+    const variants = mapProductToShiprocket(product, await getActiveFlashSaleMap()).variants
+    return items.map(({ variant_id, quantity }) => ({
+      quantity,
+      price: Number(variants.find((v: any) => String(v.id) === variant_id)!.price),
+    }))
+  }
+
+  async function checkout() {
+    const res = await initiate({
+      cartItems: [
+        { productId: packProductId, quantity: 1, selectedSize: { size: "3+1 (100g x 4)", sku: "PBB-31" } },
+        { productId: packProductId, quantity: 2, selectedSize: { size: "100g", sku: "PBB-100" } },
+      ],
+      metaEventId: EVENT_ID,
+    })
+    expect(res.status).toBe(200)
+    return (await res.json()).tracking as { value: number; contents: { item_price: number; quantity: number }[] }
+  }
+
+  it("uses the 3+1 pack's own sale price on both sides", async () => {
+    const tracking = await checkout()
+    const charged = await feedPricesSent()
+
+    expect(charged).toEqual([
+      { quantity: 1, price: 180 },
+      { quantity: 2, price: 55 },
+    ])
+    expect(tracking.contents.map(({ item_price, quantity }) => ({ quantity, price: item_price }))).toEqual(charged)
+    expect(tracking.value).toBe(180 + 2 * 55)
+  })
+
+  it("uses the flash-sale price on both sides while one runs", async () => {
+    await FlashSale.create({
+      name: "Test Flash Sale",
+      discountPercent: 20,
+      startsAt: new Date(Date.now() - 60_000),
+      endsAt: new Date(Date.now() + 60 * 60_000),
+      products: [packProductId],
+    })
+
+    const tracking = await checkout()
+    const charged = await feedPricesSent()
+
+    expect(charged).toEqual([
+      { quantity: 1, price: 192 },
+      { quantity: 2, price: 48 },
+    ])
+    expect(tracking.contents.map(({ item_price, quantity }) => ({ quantity, price: item_price }))).toEqual(charged)
+    expect(tracking.value).toBe(192 + 2 * 48)
   })
 })
