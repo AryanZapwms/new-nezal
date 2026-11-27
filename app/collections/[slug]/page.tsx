@@ -166,16 +166,6 @@ function CollectionHero({ collection }: { collection: Collection }) {
               </div>
             ))}
           </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <a
-                href="#variants"
-                className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[var(--color-brand-primary)] text-white font-semibold hover:opacity-90 transition-opacity"
-              >
-                Explore the Collection
-              </a>
-              
-            </div>
           </div>
 
           {/* Image */}
